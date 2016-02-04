@@ -1,13 +1,23 @@
+# directory to host database (may not be needed)
 data_base_dir,/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/
+# owner/user of directory for data base - this will be different when Robert is running?
 data_base_host,eld256
+# name for the new database = was ICOADS_test.db
 data_base_name,had_mdb
+# This is the location of the raw IMMA2 data
 ICOADS_dir,/project/earthobs/ICOADS/ICOADS.2.5.1/
+# These are preexisting climatologies I think, 1by1 deg pentad resolution
+# These could be updated as we move through iterations?
+# Do we need a clim and st dev file for all vars or just T and Td?
 SST_climatology,/project/hadobs2/hadisdh/marine/otherdata/HadSST2_pentad_climatology.nc
 MAT_climatology,/project/hadobs2/hadisdh/marine/otherdata/HadNMAT2_pentad_climatology.nc
 SST_stdev_climatology,/project/hadobs2/hadisdh/marine/otherdata/OSTIA_pentad_stdev_climatology.nc
+# This is currently empty, awaiting input from NOCS
 NOC_adjustment_dir,/project/hadobs2/hadisdh/marine/otherdata/NMAT/
 IDs_to_exclude,/project/hadobs2/hadisdh/marine/otherdata/list_of_ids_that_are_not_ships.txt
+# Not yet sure why we need an old and new stdev_climatology - maybe for pre-1970s data?
 Old_SST_stdev_climatology,/project/hadobs2/hadisdh/marine/otherdata/HadSST2_pentad_stdev_climatology.nc
+# Will need to think about equivalent files for MAT and DWP
 SST_buddy_one_box_to_buddy_avg,/project/hadobs2/hadisdh/marine/otherdata/OSTIA_compare_1x1x5box_to_buddy_average.nc
 SST_buddy_one_ob_to_box_avg,/project/hadobs2/hadisdh/marine/otherdata/OSTIA_compare_one_ob_to_1x1x5box.nc
 SST_buddy_avg_sampling,/project/hadobs2/hadisdh/marine/otherdata/OSTIA_buddy_range_sampling_error.nc

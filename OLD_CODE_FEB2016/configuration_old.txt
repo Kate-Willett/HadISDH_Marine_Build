@@ -1,7 +1,6 @@
 data_base_dir,/data/local/hadjj/ICOADS.2.5.1/
-data_base_host,eld446
-data_base_name,had_mdb
-ICOADS_dir,/project/earthobs/ICOADS/ICOADS.2.5.1/
+data_base_name,ICOADS_test.db
+ICOADS_dir,/data/local/hadjj/ICOADS.2.5.1/
 SST_climatology,/home/h04/hadjj/HadSST2_pentad_climatology.nc
 MAT_climatology,/home/h04/hadjj/HadNMAT2_pentad_climatology.nc
 SST_stdev_climatology,/home/h04/hadjj/OSTIA_pentad_stdev_climatology.nc
