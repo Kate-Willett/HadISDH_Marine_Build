@@ -461,6 +461,7 @@ class MarineReport:
         sstanom = int(pvar(self.getanom('SST'), -32768,  100))
         slp     = int(pvar(self.data['SLP'],    -32768,  10))
 
+# KW NOtes DS = ship course and VS = ship speed - not sure what units.
         dsvs = 9999
         if self.data['DS'] != None and self.data['VS'] != None:
             dsvs = (self.data['DS']*100+self.data['VS'])
@@ -1390,6 +1391,8 @@ class Deck:
     #finally loop over all reports and update buddy QC
         for this_report in self.reps:
 
+# KW I think we could put an if (this_report(getvar('YR') == CandYr && this_report(getvar('MO') == CandYr): clause in here
+# This would require CandYR and CandMO being parsed somehow though.
             key = Gridpt(this_report.getvar('LAT'), this_report.getvar('LON'), 
                          this_report.getvar('YR'),  this_report.getvar('MO'), 
                          this_report.getvar('DY'))
@@ -1433,6 +1436,9 @@ class Deck:
         grid.get_new_buddy_limits(stdev1, stdev2, stdev3, sigma_m)
 
         for this_report in self.reps:
+
+# KW I think we could put an if (this_report(getvar('YR') == CandYr && this_report(getvar('MO') == CandYr): clause in here
+# This would require CandYR and CandMO being parsed somehow though.
         
             key = Gridpt(this_report.getvar('LAT'), this_report.getvar('LON'), 
                          this_report.getvar('YR'), this_report.getvar('MO'), 

@@ -1,10 +1,13 @@
 #!/usr/local/sci/bin/python2.7
 '''
-make_and_qc_db.py invoked by typing::
+# KW changed make_and_qc_db.py to make_and_full_qc.py
+# KW changed by adding --month1 and --month2
+make_and_full_qc.py invoked by typing::
 
-  python2.7 make_and_qc_db.py -i configuration.txt --year1 1850 --year2 1855
+  python2.7 make_and_full_qc.py -i configuration.txt --year1 1850 --year2 1855 --month 1 --month2 12
 
-This builds a database for the chosen years. The location 
+# KW edited to reflect that code now produces QC'd ascii files rather than setting up a database
+This builds an ascii database for the chosen years. The location 
 of the data base, the locations of the climatology files are 
 all to be specified in the configuration files.
 '''
@@ -12,8 +15,10 @@ all to be specified in the configuration files.
 import gzip
 from netCDF4 import Dataset
 import qc
+# KW This isn't used here but is called by Extended_IMMA.py
 import qc_new_track_check as tc
-import qc_buddy_check as bc
+# KW I don't think this is used
+#import qc_buddy_check as bc
 import spherical_geometry as sph
 from IMMA2 import IMMA
 import Extended_IMMA as ex
@@ -191,6 +196,9 @@ def main(argv):
     This program builds the marine data base which will be used to store the subset of ICOADS used in QC and 
     other data processing. The current version reads in IMMA1 data from ICOADS.2.5.1 and the UID is used as the 
     primary key for the data base so that it can be easily matched to individual obs if need be.
+    
+    #KW added para
+    The database is now just a set of ascii files for each year/month. Later it may be the SQL database.
 
     The first step of the process is to read in the SST and MAT climatologies from file. These are 1degree latitude 
     by 1 degree longitude by 73 pentad fields in NetCDF format. The data are read into numpy arrays.
@@ -212,7 +220,8 @@ def main(argv):
     month2 = 1
     year1 = 1880
     year2 = 1880
-    inputfile = 'configuration_local.txt'
+# KW Querying second instance of inputfile - I have commented this out for now    
+#    inputfile = 'configuration_local.txt'
     
     try:
         opts, args = getopt.getopt(argv, "hi:", 
@@ -222,7 +231,8 @@ def main(argv):
                                     "month1=",
                                     "month2="])
     except getopt.GetoptError:
-        print 'Usage Make_DB.py -i <configuration_file> '+\
+# KW changed Make_DB.py to make_and_full_qc.py
+        print 'Usage make_and_full_qc.py -i <configuration_file> '+\
         '--year1 <start year> --year2 <end year> '+\
         '--month1 <start month> --month2 <end month>'
         sys.exit(2)
@@ -239,7 +249,10 @@ def main(argv):
     nmat_climatology_file = config['MAT_climatology'] 
     icoads_dir            = config['ICOADS_dir'] 
     bad_id_file           = config['IDs_to_exclude']
-        
+# KW added an item for the database dir to write out the QC'd ascii data to - hijacking SQL data_base_dir for now
+    data_base_dir	  = config['data_base_dir']
+
+# KW Noting this is set to read the OLD SST stdevs - nothing reads in the newer OSTIA one yet.       
     sst_stdev_climatology_file  = config['Old_SST_stdev_climatology']
     
     sst_stdev_1_file = config['SST_buddy_one_box_to_buddy_avg']
@@ -250,6 +263,8 @@ def main(argv):
     print 'NMAT climatology =', nmat_climatology_file
     print 'ICOADS directory =', icoads_dir
     print 'List of bad IDs =', bad_id_file 
+# KW added an item for the database dir to write out the QC'd ascii data to - hijacking SQL data_base_dir for now
+    print 'QCd Database directory =', data_base_dir 
     print ''
 
     ids_to_exclude = process_bad_id_file(bad_id_file)
@@ -278,13 +293,18 @@ def main(argv):
         next_year, next_month = qc.next_month_is(year, month)
 
         if last_year < 1850:
-            last_year = 1850
+            last_year = 1850 # KW don't understand why last year forced to be 1850 yet
             last_month = 1
 
         print last_year, last_month, next_year, next_month
 
         reps = ex.Deck()
         count = 0
+
+# KW This takes a long time to read in each year/month and process
+# For every candidate year/month the year/month before and after are also read in
+# Can we store the candidate year/month and following year/month for the next loop?
+# Hopefully there will be enough memory on spice
 
         for readyear, readmonth in qc.year_month_gen(last_year, 
                                                      last_month, 
@@ -297,11 +317,16 @@ def main(argv):
             smn = "%02d" % (readmonth)
     
             filename = icoads_dir+'/R2.5.1.'+syr+'.'+smn+'.gz'
-            if year > 2007:
+# KW FOUND A BUG - changed 'year' to 'readyear' below because it was trying to 
+# read R2.5.2.2007.12.gz because 'year'=2008, 'month'=1
+            if readyear > 2007:
                 filename = icoads_dir+'/R2.5.2.'+syr+'.'+smn+'.gz'
     
             icoads_file = gzip.open(filename,"r")
-    
+
+# KW Noted that this creates an object of whole month of IMMA data separated into all available parameters from all available attachments
+# The rec.read bit later could be speeded up by ignoring the attachments we are not interested in in the first place?    
+# The rec object has a .data dictionary of all variables (see IMMA2.py for variable IDs/keys
             rec = IMMA()
    
             EOF = False
@@ -315,7 +340,9 @@ def main(argv):
                     result = rec.read(icoads_file)
                     if result == None:
                         EOF = True
-                        rec.data['ID'] = ids_to_exclude[0]
+                        # KW are we sure this isn't doing anything silly later when rec is overwritten with a new rec - could
+			# this overwrite ids_to_exclude[0]?
+			rec.data['ID'] = ids_to_exclude[0]
                 except:
                     rec.data['ID'] = ids_to_exclude[0]
 
@@ -327,6 +354,7 @@ def main(argv):
                     for key in rec.data:
                         keys.append(key)
                     for key in keys:
+# KW Need to add quite a few things in here - assume these don't have to be all from attachment 0
                         if not(key in ['YR','MO','DY','HR','LAT','LON',
                                        'SST','AT','DCK','ID','PT','SI',
                                        'SIM','DS','VS','SLP','UID','SID']):
@@ -362,6 +390,9 @@ def main(argv):
         print count, " obs read and base QC ", tim1-tim0
         
 #filter the obs into passes and fails of basic positional QC        
+# KW NOtes that this uses the month before and after to apply track check - and so actually spends time applying
+# track check to the month before and month after too, which will then be ignored and redone later, with its following month
+# Is there scope to save effort here by only checking the candidate month while still passing the surrounding months for info
         reps.sort()
         filt = ex.QC_filter()
         filt.add_qc_filter('POS', 'date',   0)
@@ -372,6 +403,9 @@ def main(argv):
 
         tim2 = time.time()
         print "obs filtered and sorted in ", tim2-tim1, len(reps)+len(passes)
+
+# KW So in here we could put some kind of parsing loop to say that if you are looping through more than one month
+# then you could save the candidate and previous month
 
 #all fails pass track check 
         reps.set_qc('POS', 'trk', 0)
@@ -398,6 +432,9 @@ def main(argv):
         print "obs track checked in ", tim3-tim2, len(reps)
 
 #SST buddy check
+# KW NOtes that this uses the month before and after to apply track check - and so actually spends time applying
+# track check to the month before and month after too, which will then be ignored and redone later, with its following month
+# Is there scope to save effort here by only checking the candidate month while still passing the surrounding months for info
         filt = ex.QC_filter()
         filt.add_qc_filter('POS', 'date',   0)
         filt.add_qc_filter('POS', 'pos',    0)
@@ -408,11 +445,15 @@ def main(argv):
         filt.add_qc_filter('SST', 'clim',   0)
         filt.add_qc_filter('SST', 'nonorm', 0)
 
+# KW Notes splitting marine obs into passes and fails
         passes, reps = filt.split_reports(reps)
 
+# KW Thinks this only buddy checks those obs that pass the filter of QC above
         passes.bayesian_buddy_check('SST', sst_stdev_1, sst_stdev_2, sst_stdev_3)
         passes.mds_buddy_check('SST', sst_pentad_stdev)
 
+# KW Thinks all fails obs that do not pass teh QC filter above are not buddy checked - they are set to 0
+# which means pass but should not be used later because they fail one of the other basic checks
         reps.set_qc('SST', 'bbud', 0)
         reps.set_qc('SST', 'bud',  0)
 
@@ -428,6 +469,9 @@ def main(argv):
         print "obs SST buddy checked in ", tim4-tim3, len(reps)
 
 #NMAT buddy check
+# KW NOtes that this uses the month before and after to apply track check - and so actually spends time applying
+# track check to the month before and month after too, which will then be ignored and redone later, with its following month
+# Is there scope to save effort here by only checking the candidate month while still passing the surrounding months for info
         filt = ex.QC_filter()
         filt.add_qc_filter('POS', 'date',   0)
         filt.add_qc_filter('POS', 'pos',    0)
@@ -437,11 +481,17 @@ def main(argv):
         filt.add_qc_filter('AT',  'noval',  0)
         filt.add_qc_filter('AT',  'clim',   0)
         filt.add_qc_filter('AT',  'nonorm', 0)
+# KW Notes that 'reps' are those obs that have failed one of the tests in the filter above
         passes, reps = filt.split_reports(reps)
 
+# KW Notes that passes is an object containing a months worth of marine obs that pass (flag=0) for all above filters
+# Both the bayesian buddy check and the mds buddy check test for distance to neighbours in space and time and flag
+# with a 1 where it is too great/fails.
         passes.bayesian_buddy_check('AT', sst_stdev_1, sst_stdev_2, sst_stdev_3)
         passes.mds_buddy_check('AT', sst_pentad_stdev)
 
+# KW - all fails (reps) are set to have a flag of 0 which means to pass the buddy checks.because there is no point in spending
+# further time buddy checking them, same as for track checks
         reps.set_qc('AT', 'bbud', 0)
         reps.set_qc('AT', 'bud', 0)
 
@@ -458,7 +508,9 @@ def main(argv):
 
         syr = str(year)
         smn = "%02d" % (month)
-        outfile = open(icoads_dir+'/new_suite_'+syr+smn+'.txt', 'w')
+# KW changed outfile from icoards_dir to data_base_dir so that it writes to a different place to where the original 
+# data are stored - don't want to mess with John's working version.
+        outfile = open(data_base_dir+'/new_suite_'+syr+smn+'.txt', 'w')
         for rep in reps.reps:
             if rep.data['YR'] == year and rep.data['MO'] == month:
                 outfile.write(rep.print_report())

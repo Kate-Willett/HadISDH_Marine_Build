@@ -1,8 +1,12 @@
-# directory to host database (may not be needed)
-data_base_dir,/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/
+# directory to host database which is now just a set of ascii files but 
+# could later be the SQL database
+data_base_dir,/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/beta/
 # owner/user of directory for data base - this will be different when Robert is running?
+# However, its not actually required in this run where we're not using an SQL
+# database
 data_base_host,eld256
 # name for the new database = was ICOADS_test.db
+# Not actually used in this version where we're not using an SQL database
 data_base_name,had_mdb
 # This is the location of the raw IMMA2 data
 ICOADS_dir,/project/earthobs/ICOADS/ICOADS.2.5.1/
