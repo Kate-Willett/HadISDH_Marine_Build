@@ -201,6 +201,7 @@ class MarineReport:
 #            elif specific_flag == '':
 #                pass
 
+# KW I don't understand how qcvalue is obtained if specific_flag is not 'buddy_fail'
         return qcvalue
     
     @staticmethod

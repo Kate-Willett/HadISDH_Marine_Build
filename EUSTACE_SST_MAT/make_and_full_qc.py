@@ -24,6 +24,8 @@ from IMMA2 import IMMA
 import Extended_IMMA as ex
 import sys, getopt
 import time
+# KW Added for debugging
+import pdb # pdb.set_trace() or c
 
 def base_qc_report(rep):
     '''
@@ -58,7 +60,8 @@ def base_qc_report(rep):
                              rep.getvar('LON')))
 
 #SST base QC
-    rep.set_qc('SST', 'noval', qc.value_check(rep.getvar('SST')))
+# KW Could noval = 0 be a value that is present in IMMA but actually a missing data indicator e.g. -99.9 or 99.9?
+    rep.set_qc('SST', 'noval', qc.value_check(rep.getvar('SST'))) 
     rep.set_qc('SST', 'freez', 
                qc.sst_freeze_check(rep.getvar('SST'), 0.0))
     rep.set_qc('SST', 'clim', 
@@ -66,6 +69,7 @@ def base_qc_report(rep):
     rep.set_qc('SST', 'nonorm', qc.no_normal_check(rep.getnorm('SST')))
 
 #MAT base QC
+# KW Could noval = 0 be a value that is present in IMMA but actually a missing data indicator e.g. -99.9 or 99.9?
     rep.set_qc('AT', 'noval', qc.value_check(rep.getvar('AT')))
     rep.set_qc('AT', 'clim', 
                qc.climatology_check(rep.getvar('AT'), rep.getnorm('AT'), 10.0))
@@ -245,8 +249,20 @@ def main(argv):
 
     config = qc.get_config(inputfile)
 
+# KW Added a 'switch' to tell the code whether to run in HadISDH only (HadISDHSwitch == True) mode or 
+# full mode (HadISDHSwitch == False)
+    HadISDHSwitch = config['HadISDHSwitch']
+
     sst_climatology_file  = config['SST_climatology'] 
     nmat_climatology_file = config['MAT_climatology'] 
+# KW Added climatology files for the humidity variables 
+#    shu_climatology_file  = config['SHU_climatology']
+#    vap_climatology_file  = config['VAP_climatology']
+#    crh_climatology_file  = config['CRH_climatology']
+#    cwb_climatology_file  = config['CWB_climatology']
+#    dpd_climatology_file  = config['DPD_climatology']
+# KW Added climatology file for the SLP which is needed if no SLP ob exists, the it has failed qc
+#    slp_climatology_file  = config['SLP_climatology']
     icoads_dir            = config['ICOADS_dir'] 
     bad_id_file           = config['IDs_to_exclude']
 # KW added an item for the database dir to write out the QC'd ascii data to - hijacking SQL data_base_dir for now
@@ -261,6 +277,13 @@ def main(argv):
 
     print 'SST climatology =', sst_climatology_file
     print 'NMAT climatology =', nmat_climatology_file
+# KW Added climatology files for the humidity variables 
+#    print 'SHU climatology =', shu_climatology_file
+#    print 'VAP climatology =', vap_climatology_file
+#    print 'CRH climatology =', crh_climatology_file
+#    print 'CWB climatology =', cwb_climatology_file
+# KW Added climatology files for SLP for calculation of humidity variables if no good quality SLP ob exists
+#    print 'SLP climatology =', slp_climatology_file
     print 'ICOADS directory =', icoads_dir
     print 'List of bad IDs =', bad_id_file 
 # KW added an item for the database dir to write out the QC'd ascii data to - hijacking SQL data_base_dir for now
@@ -272,6 +295,14 @@ def main(argv):
 #read in climatology files
     climsst = read_climatology(sst_climatology_file, 'sst')
     climnmat = read_climatology(nmat_climatology_file, 'nmat')
+# KW Added climatology read in files for the humidity variables
+#    climshu = read_climatology(shu_climatology_file, 'hussclim')
+#    climvap = read_climatology(vap_climatology_file, 'vapclim')
+#    climcrh = read_climatology(hurs_climatology_file, 'hursclim')
+#    climcwb = read_climatology(twet_climatology_file, 'twetclim')
+#    climdpd = read_climatology(dpd_climatology_file, 'dpdclim')
+# KW Added climatology read in files for SLP for calculating humidity variabls if no SLP value exists
+#    climslp = read_climatology(slp_climatology_file, 'slpclim')
 
     sst_pentad_stdev = read_climatology(sst_stdev_climatology_file, 'sst')
     
@@ -349,38 +380,91 @@ def main(argv):
 
                 if not(rec.data['ID'] in ids_to_exclude):
 
-#strip everything out of the IMMA record except what we need
+#strip everything out of the IMMA record except what we # KW (Kate Robert and John)# need
                     keys = []
                     for key in rec.data:
                         keys.append(key)
                     for key in keys:
-# KW Need to add quite a few things in here - assume these don't have to be all from attachment 0
+# KW Added quite a few things in here - assume these don't have to be all from attachment 0 because UID isn't
+# Assume they don't have to be in a particular order either
+# I've put them in the order they appear in the attachments
+# See: RequiredIMMAColumnsforHadISDH.xlsx
+# Only a few of these will be written out but they are useful in the QC and bias adjustment process
+# May remove some of these later if they are not useful - to save time/memory
+#                        if not(key in ['YR','MO','DY','HR','LAT','LON',
+#                                       'SST','AT','DCK','ID','PT','SI',
+#                                       'SIM','DS','VS','SLP','UID','SID']):
                         if not(key in ['YR','MO','DY','HR','LAT','LON',
-                                       'SST','AT','DCK','ID','PT','SI',
-                                       'SIM','DS','VS','SLP','UID','SID']):
+				       'DS','VS','II','ID','C1',
+				       'DI','D','WI','W','VI','VV','SLP','RH','RHI',
+				       'IT','AT','WBTI','WBT','DPTI','DPT','SI','SST',
+				       'DCK','SID','PT','DUPS','RH','RHI',
+				       'COR','TOB','TOT','EOT','LOT','TOH','EOH',
+				       'SIM','LOV','HOP','HOT','HOB','HOA','SMF',
+				       'UID']):
                             if key in rec.data: del rec.data[key]
-
+							
                     rep = ex.MarineReport(rec)
                     del rec
 
-                    rep_sst_clim = get_clim(rep, climsst)
-                    rep.add_climate_variable('SST', rep_sst_clim)
+#************HadISDH ONLY*******************************
+# KW Added a catch here to check the platform type and whether there is both a T (AT) and DPT  present.
+# Only keep the ob if it is from a ship (0,1,2,3,4,5) or moored platform/buoy (6,8,9,10,14,15) and has 
+# AT and DPT present.
+# This may not be desirable for a full run but should save time/memory for HadISDH
+# If HadISDHSwitch == True then the ob needs to pass the test else all obs are processed
+# No QC performed yet so cannot call get_qc - qc.value_check returns 0 if present and 1 if noval
+		    if (not (HadISDHSwitch)) | ((rep.data['PT']  in [0,1,2,3,4,5,6,8,9,10,14,15]) & 
+		                                (qc.value_check(rep.getvar('AT')) == 0) & 
+						(qc.value_check(rep.getvar('DPT')) == 0)):
 
-                    rep_mat_clim = get_clim(rep, climnmat)
-                    rep.add_climate_variable('AT', rep_mat_clim)
+# KW TESTED: WORKS IF VALUES ARE BLANK AT LEAST
+# KW CHECK THAT THIS KICKS OUT OBS WITH REPORTED MISSING VALUES (e.g. -99.9 or 99.9) FOR AT or DPT		    
+#*******************************************************
 
+# KW Call my rep.setvar routine that I built into the MarineReport in Extended_IMMA.py
+# Use this to add blank var containers for the humidity variables that are calculated 
+# later
+                        rep.setvar(['SHU','VAP','CRH','CWB','DPD'])
+					
+                        rep_sst_clim = get_clim(rep, climsst)
+                        rep.add_climate_variable('SST', rep_sst_clim)
+
+                        rep_mat_clim = get_clim(rep, climnmat)
+                        rep.add_climate_variable('AT', rep_mat_clim)
+
+# KW Get climatologies for the humidity variables so that you can create anomalies later
+#                        rep_shu_clim = get_clim(rep, climshu)
+#                        rep.add_climate_variable('SHU', rep_shu_clim)
+
+#			 rep_vap_clim = get_clim(rep, climvap)
+#                        rep.add_climate_variable('VAP', rep_vap_clim)
+
+#		         rep_crh_clim = get_clim(rep, climcrh)
+#                        rep.add_climate_variable('CRH', rep_crh_clim)
+
+#			 rep_cwb_clim = get_clim(rep, climcwb)
+#                        rep.add_climate_variable('CWB', rep_cwb_clim)
+
+#			 rep_dpd_clim = get_clim(rep, climdpd)
+#                        rep.add_climate_variable('DPD', rep_dpd_clim)
+
+# KW Get climatologies for slp to calculate humidity values later if no good quality qc ob exists
+#                        rep_slp_clim = get_clim(rep, climslp)
+#                        rep.add_climate_variable('SLP', rep_slp_clim)
+					
 #Deck 701 has a whole bunch of otherwise good obs with missing Hours.
 #Set to 0000UTC and recalculate the ob time
-                    if (rep.getvar('DCK') == 701 and 
-                        rep.getvar('YR') < 1860 and 
-                        rep.getvar('HR') == None):
-                        rep.data['HR'] = 0
-                        rep.calculate_dt()
+                        if (rep.getvar('DCK') == 701 and 
+                            rep.getvar('YR') < 1860 and 
+                            rep.getvar('HR') == None):
+                            rep.data['HR'] = 0
+                            rep.calculate_dt()
 
-                    rep = base_qc_report(rep)
+                        rep = base_qc_report(rep)
 
-                    reps.append(rep)
-                    count += 1
+                        reps.append(rep)
+                        count += 1
 
                 rec = IMMA()
 

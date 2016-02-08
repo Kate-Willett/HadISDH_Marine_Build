@@ -1,3 +1,4 @@
+HadISDHSwitch,True
 data_base_dir,/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/beta/
 data_base_host,eld256
 data_base_name,had_mdb

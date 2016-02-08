@@ -1,3 +1,7 @@
+# Switch to tell the code whether to run in HadISDH only mode (only read in
+# ship/moored platforms and where AT and D are present - HadISDHSwitch=True) 
+# or full mode (HadISDHSwitch=False)
+HadISDHSwitch,True
 # directory to host database which is now just a set of ascii files but 
 # could later be the SQL database
 data_base_dir,/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/beta/

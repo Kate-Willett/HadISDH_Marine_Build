@@ -8,6 +8,7 @@ import numpy as np
 from datetime import datetime
 import spherical_geometry as sph
 import qc_new_track_check as tc
+import CalcHums # KW a new package with all of the calculations for humidity in
 
 def get_threshold_multiplier(total_nobs, nob_limits, multiplier_values):
 
@@ -187,20 +188,34 @@ class MarineReport:
     which are taken from an IMMA record used to initialise the class. The report also has an extendible 
     set of QC flags, climate variables and a dictionary for adding new variables that might be needed.
     '''
-
+# KW Modified to contain the extra squillions of variables for humidity and humidity related QC
+# May remove some later if they are not useful
     def __init__(self, imma_rec):
 
         self.data = {}
         for k in imma_rec.data:
             self.data[k] = imma_rec.data[k]
-        self.qc = QC_Status()
+# KW Does the following line mean that it overwrites for each loop of k?
+# Does this have to be initialised for each self.data[]???
+	    self.qc = QC_Status()
         self.climate_variables = {}
+# KW Notes that this may mean that nothing is actually in the reps.ext - all vars in reps.data?
         self.ext = {}
         
         self.calculate_dt()
         self.calculate_dsi_vsi()
        
-
+# KW Added a routine to add .data[varname] spaces for the derived humidity variables q, rh, e, tw and dpd
+    def setvar(self, spare_vars):
+	   ''' 
+	   A routine that reads in a list of parameter names and 
+	   sets up blank .data[key] placeholders for them.
+	   This was designed for the later calculation of humidity
+	   variables from T(AT) and Td(DPT)
+	   '''
+	   for k in spare_vars:
+	       self.data[k] = None
+		   
     def calculate_dsi_vsi(self):
 
         ds_convert = [0, 45, 90, 135, 180, 225, 270, 315, 360, None]
@@ -428,6 +443,8 @@ class MarineReport:
         asked to return QC flags for a qc_type that is not one of the standard ones 
         (POS, SST, AT, AST, HUM, PRE) or which has not been previously defined using new_qc_type.
         '''
+# KW The self.qc is of class QC_Status so the self.qc.get_qc is the routine specified in QC_Status
+# (above).
         return self.qc.get_qc(qc_type, specific_flag)
    
     def printvar(self, var):
@@ -451,17 +468,65 @@ class MarineReport:
         '''
         A simple (ha ha) routine to print out the marine report in old-fashioned fixed-width ascii style.
         '''
-        
+# KW Modify this to output humidity variables and humidity related QC flags 
+# KW Quite possibly most efficient to calculate q, RH, e, Tw, DPD here for output
+# QC and buddy only on Td (first version at least)
+# One issue is that in order to get anomalies in the same framework we need to
+# add the humidity variables to self.data. I'm not sure whether this needs setting up 
+# initially or whether they can be added now. We would read in the climatologies initially
+# in make_and_full_qc.py so may have to set them up initially.
+# I've now created a MarineReport.setvar routine to read in extra blank vars which is done
+# at make_and_full_qc.py       
         day = int(pvar(self.data['DY'],  -32768,   1))
         hur = int(pvar(self.data['HR'],  -32768, 100))
+
+# KW added code to call humidity calculation function (import CalcHums) and create a
+# derived ob for q, rh, e, tw and dpd
 
         mat     = int(pvar(self.data['AT'],     -32768,  10))
         matanom = int(pvar(self.getanom('AT'),  -32768,  100))
         sst     = int(pvar(self.data['SST'],    -32768,  10))
         sstanom = int(pvar(self.getanom('SST'), -32768,  100))
         slp     = int(pvar(self.data['SLP'],    -32768,  10))
+# Added vars for humidity variables and anomalies (anoms set to 0 for now until we sort out clims)
+# For now I'm just going to use climatological SLP from ERA-Interim
+# for all calculations - consistent with HadISDH.land (except that uses 20CR).
+# Later I could choose to use reported SLP but if it doesn't exist or has failed qc then 
+# call use climatological SLP which will have been read in at make_and_full_qc.py.
+# If one of the other required variables does not exist then value is set to None.
+# It may be quicker to build this into make_and_full_qc.py and apply simultaneously to all rep in reps 
+# rather than individually???
+# The calculations check whether to calculate relative to ice or water - so need AT as well as D
+# The order in which these are calculated is important because they build on each other
 
-# KW NOtes DS = ship course and VS = ship speed - not sure what units.
+#        slpclim = self.climate_variables['SLP'].getclim()
+        slpclim = 1013 # KW temporary rather than read in file
+        self.data['VAP'] = CalcHums.vap(self.data['DPT'],slpclim,self.data['AT'])
+        self.data['SHU'] = CalcHums.shu(self.data['VAP'],slpclim)
+        self.data['CRH'] = CalcHums.rh(self.data['VAP'],slpclim,self.data['AT'])
+        self.data['CWB'] = CalcHums.wb(self.data['VAP'],self.data['DPT'],slpclim,self.data['AT'])
+        self.data['DPD'] = CalcHums.dpd(self.data['DPT'],self.data['AT'])
+
+        dpt     = int(pvar(self.data['DPT'],    -32768,  10))
+#        dptanom = int(pvar(self.getanom('DPT'), -32768,  100))
+        dptsnom = -32768
+        shu     = int(pvar(self.data['SHU'],    -32768,  10))
+#        shuanom  = int(pvar(self.getanom('SHU'), -32768,  100))
+        shuanom = -32768
+        vap     = int(pvar(self.data['VAP'],    -32768,  10))
+#        vapanom  = int(pvar(self.getanom('VAP'), -32768,  100))
+        vapanom = -32768
+        crh     = int(pvar(self.data['CRH'],    -32768,  10))
+#        crhanom  = int(pvar(self.getanom('CRH'), -32768,  100))
+        crhanom = -32768
+        cwb     = int(pvar(self.data['CWB'],    -32768,  10))
+#        cwbanom  = int(pvar(self.getanom('CWB'), -32768,  100))
+        cwbanom = -32768
+        dpd     = int(pvar(self.data['DPD'],    -32768,  10))
+#        dpdanom  = int(pvar(self.getanom('DPD'), -32768,  100))
+        dpdanom = -32768
+
+# KW Notes DS = ship course and VS = ship speed - not sure what units.
         dsvs = 9999
         if self.data['DS'] != None and self.data['VS'] != None:
             dsvs = (self.data['DS']*100+self.data['VS'])
@@ -492,6 +557,19 @@ class MarineReport:
         repout = repout + "{:8d}".format(sst)
         repout = repout + "{:8d}".format(sstanom)
         repout = repout + "{:8d}".format(slp)
+# KW The humidity variables
+        repout = repout + "{:8d}".format(dpt)
+        repout = repout + "{:8d}".format(dptanom)
+        repout = repout + "{:8d}".format(shu)
+        repout = repout + "{:8d}".format(shuanom)
+        repout = repout + "{:8d}".format(vap)
+        repout = repout + "{:8d}".format(vapanom)
+        repout = repout + "{:8d}".format(crh)
+        repout = repout + "{:8d}".format(crhanom)
+        repout = repout + "{:8d}".format(cwb)
+        repout = repout + "{:8d}".format(cwbanom)
+        repout = repout + "{:8d}".format(dpd)
+        repout = repout + "{:8d}".format(dpdanom)
         
         repout = repout + "{:8d}".format(dsvs)
         
@@ -717,6 +795,8 @@ class Voyage:
         
         This method goes through a voyage and finds any cases where more than a threshold fraction of 
         the observations have the same SST or NMAT value.
+# KW Ok to just do this on SST and or NMAT and then apply results to humidity - if screwy for those, it will be 
+# for humidity too
         """
 
         assert threshold >= 0.0 and threshold <= 1.0
