@@ -55,6 +55,33 @@ covariance matrix.
 ******************************************************************
 Work Done:
 
+Feb 5th 2016
+I've edited with a choice to only pull through ship and moored buoy data and
+only data that have a AT and DPT ob present. This 
+may not be what we want to do in the long run for the database but it should speed things up for now,
+especially in the float dense later years.
+
+I've edited to pull in extra variables, convert to other humidity variables 
+(added CalcHums.py) and output the new variables
+
+This is now tested and works - reduces Dec 1973 ob count by ~40%. 
+
+I could switch off SST buddy check, QC and output but in some ways this is a
+good check on AT if I want to look at solar bias later so I will keep it.
+
+Next:
+Output all extra meta data variables.
+
+Build QC for dewpoint temperature and sort out print_report.
+
+Build climatology files for dewpoint temp, wet bulb temp, vapour pressure,
+specific humidity, relative humidity and dew point depression. Run with these
+being used to create anomalies (we will have to re run everything again once we
+have HadISDH related anomalies.
+
+Build buddy checking files for dew point temperature and implement.
+
+
 Feb 4th 2016
 Made '# KW' comments in make_and_full_qc.py, Extended_IMMA.py, IMMA2.py and
 qc.py as I understand the code flow.
@@ -89,7 +116,7 @@ Found a bug:
  Note also that from Jan 2008 the file size grows massively - I think this is
  why the code fell over for a run on Jan 2008.
  
- Tidied up:
+Tidied up:
  Its apparent that quite a few of the scripts aren't needed to run from
  make_and_full_qc.py. Some would be needed if the SQL database is invoked. Some
  would be needed should you wish to run any parts seperately. It looks like a
@@ -99,7 +126,7 @@ Found a bug:
  to see what happens.
  Ran for Dec 1973 and it has worked fine.
  
- Next:
+Next:
  I would like to try running with some additional things:
  - only pulling through ship and moored buoy. This may not be what we want to do
  in the long run for the database but it should speed things up for now,
@@ -124,6 +151,7 @@ Found a bug:
  - select only day obs
  - select both day and night obs?
  - explore gridding of different decks?
+
 Feb 4th 2016
 First off I want to see if it runs as is with just a change to the output file
 directories. I have modified:
