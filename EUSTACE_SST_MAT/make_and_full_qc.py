@@ -75,6 +75,20 @@ def base_qc_report(rep):
                qc.climatology_check(rep.getvar('AT'), rep.getnorm('AT'), 10.0))
     rep.set_qc('AT', 'nonorm', qc.no_normal_check(rep.getnorm('AT')))
 
+# KW Added QC for DPT
+# DPT base QC
+    rep.set_qc('DPT', 'noval', qc.value_check(rep.getvar('DPT')))
+#    rep.set_qc('DPT', 'clim', 
+#               qc.climatology_check(rep.getvar('DPT'), rep.getnorm('DPT'), 10.0))
+#    rep.set_qc('DPT', 'nonorm', qc.no_normal_check(rep.getnorm('DPT')))
+## KW New QC tests specifically for humidity
+#    rep.set_qc('DPT', 'ssat', qc.supersat_check(rep.getnorm('DPT')))
+# KW set fake values for now to test
+    rep.set_qc('DPT', 'clim', 8)
+    rep.set_qc('DPT', 'nonorm', 8)
+# KW New QC tests specifically for humidity
+    rep.set_qc('DPT', 'ssat', 8)
+
     return rep
 
 def process_bad_id_file(bad_id_file):
@@ -381,7 +395,7 @@ def main(argv):
                 if not(rec.data['ID'] in ids_to_exclude):
 
 #strip everything out of the IMMA record except what we # KW (Kate Robert and John)# need
-                    keys = []
+		    keys = []
                     for key in rec.data:
                         keys.append(key)
                     for key in keys:
@@ -396,14 +410,22 @@ def main(argv):
 #                                       'SIM','DS','VS','SLP','UID','SID']):
                         if not(key in ['YR','MO','DY','HR','LAT','LON',
 				       'DS','VS','II','ID','C1',
-				       'DI','D','WI','W','VI','VV','SLP','RH','RHI',
+				       'DI','D','WI','W','VI','VV','SLP',
 				       'IT','AT','WBTI','WBT','DPTI','DPT','SI','SST',
-				       'DCK','SID','PT','DUPS','RH','RHI',
-				       'COR','TOB','TOT','EOT','LOT','TOH','EOH',
+				       'DCK','SID','PT','DUPS',
+				       'COR','TOB','TOT','EOT','TOH','EOH',
 				       'SIM','LOV','HOP','HOT','HOB','HOA','SMF',
 				       'UID']):
                             if key in rec.data: del rec.data[key]
-							
+# KW So I've noticed that if one of the listed keys above isn't in the ob then a data['key'] isn't
+# set up (makes sense!) so when I come to print them later it all goes to pot
+# So, I loop through the non-core0 keys here to add blank keys where they are missing
+		    for inkey in ['DUPS','COR','TOB','TOT','EOT',
+		                  'TOH','EOH','SIM','LOV','HOP','HOT','HOB','HOA','SMF']:
+		        if not(inkey in keys):
+			    #print("Missing key: ",inkey)
+			    rec.data[inkey] = None
+			    					
                     rep = ex.MarineReport(rec)
                     del rec
 
@@ -496,13 +518,17 @@ def main(argv):
         reps.set_qc('POS', 'few', 0)
         reps.set_qc('SST', 'rep', 0)
         reps.set_qc('AT',  'rep', 0)
-
+# KW Added for DPT
+        reps.set_qc('DPT',  'rep', 0)
+	reps.set_qc('DPT', 'repsat', 0)
 
 #track check the passes one ship at a time
         for one_ship in passes.get_one_ship_at_a_time():
             one_ship.track_check()
             one_ship.find_repeated_values(threshold=0.7, intype='SST')
             one_ship.find_repeated_values(threshold=0.7, intype='AT')
+# KW Added for DPT
+            one_ship.find_repeated_values(threshold=0.7, intype='DPT')
 
             for rep in one_ship.rep_feed():
                 rep.reset_ext()
@@ -515,80 +541,129 @@ def main(argv):
         tim3 = time.time()
         print "obs track checked in ", tim3-tim2, len(reps)
 
-#SST buddy check
-# KW NOtes that this uses the month before and after to apply track check - and so actually spends time applying
-# track check to the month before and month after too, which will then be ignored and redone later, with its following month
-# Is there scope to save effort here by only checking the candidate month while still passing the surrounding months for info
-        filt = ex.QC_filter()
-        filt.add_qc_filter('POS', 'date',   0)
-        filt.add_qc_filter('POS', 'pos',    0)
-        filt.add_qc_filter('POS', 'blklst', 0)
-        filt.add_qc_filter('POS', 'trk',    0)
-        filt.add_qc_filter('SST', 'noval',  0)
-        filt.add_qc_filter('SST', 'freez',  0)
-        filt.add_qc_filter('SST', 'clim',   0)
-        filt.add_qc_filter('SST', 'nonorm', 0)
-
-# KW Notes splitting marine obs into passes and fails
-        passes, reps = filt.split_reports(reps)
-
-# KW Thinks this only buddy checks those obs that pass the filter of QC above
-        passes.bayesian_buddy_check('SST', sst_stdev_1, sst_stdev_2, sst_stdev_3)
-        passes.mds_buddy_check('SST', sst_pentad_stdev)
-
+#*******************************
+# KW Commented out for now to save time on debug
+##SST buddy check
+## KW NOtes that this uses the month before and after to apply track check - and so actually spends time applying
+## track check to the month before and month after too, which will then be ignored and redone later, with its following month
+## Is there scope to save effort here by only checking the candidate month while still passing the surrounding months for info
+#        filt = ex.QC_filter()
+#        filt.add_qc_filter('POS', 'date',   0)
+#        filt.add_qc_filter('POS', 'pos',    0)
+#        filt.add_qc_filter('POS', 'blklst', 0)
+#        filt.add_qc_filter('POS', 'trk',    0)
+#        filt.add_qc_filter('SST', 'noval',  0)
+#        filt.add_qc_filter('SST', 'freez',  0)
+#        filt.add_qc_filter('SST', 'clim',   0)
+#        filt.add_qc_filter('SST', 'nonorm', 0)
+#
+## KW Notes splitting marine obs into passes and fails
+#        passes, reps = filt.split_reports(reps)
+#
+## KW Thinks this only buddy checks those obs that pass the filter of QC above
+#        passes.bayesian_buddy_check('SST', sst_stdev_1, sst_stdev_2, sst_stdev_3)
+#        passes.mds_buddy_check('SST', sst_pentad_stdev)
+#
+#******************************************
 # KW Thinks all fails obs that do not pass teh QC filter above are not buddy checked - they are set to 0
 # which means pass but should not be used later because they fail one of the other basic checks
         reps.set_qc('SST', 'bbud', 0)
         reps.set_qc('SST', 'bud',  0)
 
-        for i in range(0, len(passes)):
-            rep = passes.pop(0)
-            reps.append(rep)
-
-        del passes
-
-        reps.sort()
-
+#****************************************
+# KW Commented out to save time
+#        for i in range(0, len(passes)):
+#            rep = passes.pop(0)
+#            reps.append(rep)
+#
+#        del passes
+#
+#        reps.sort()
+#****************************************
         tim4 = time.time()
         print "obs SST buddy checked in ", tim4-tim3, len(reps)
 
-#NMAT buddy check
-# KW NOtes that this uses the month before and after to apply track check - and so actually spends time applying
-# track check to the month before and month after too, which will then be ignored and redone later, with its following month
-# Is there scope to save effort here by only checking the candidate month while still passing the surrounding months for info
-        filt = ex.QC_filter()
-        filt.add_qc_filter('POS', 'date',   0)
-        filt.add_qc_filter('POS', 'pos',    0)
-        filt.add_qc_filter('POS', 'blklst', 0)
-        filt.add_qc_filter('POS', 'trk',    0)
-        filt.add_qc_filter('POS', 'day',    0)
-        filt.add_qc_filter('AT',  'noval',  0)
-        filt.add_qc_filter('AT',  'clim',   0)
-        filt.add_qc_filter('AT',  'nonorm', 0)
-# KW Notes that 'reps' are those obs that have failed one of the tests in the filter above
-        passes, reps = filt.split_reports(reps)
-
-# KW Notes that passes is an object containing a months worth of marine obs that pass (flag=0) for all above filters
-# Both the bayesian buddy check and the mds buddy check test for distance to neighbours in space and time and flag
-# with a 1 where it is too great/fails.
-        passes.bayesian_buddy_check('AT', sst_stdev_1, sst_stdev_2, sst_stdev_3)
-        passes.mds_buddy_check('AT', sst_pentad_stdev)
+#******************************************
+# KW Commented out for now to save time on debug
+##NMAT buddy check
+## KW NOtes that this uses the month before and after to apply track check - and so actually spends time applying
+## track check to the month before and month after too, which will then be ignored and redone later, with its following month
+## Is there scope to save effort here by only checking the candidate month while still passing the surrounding months for info
+#        filt = ex.QC_filter()
+#        filt.add_qc_filter('POS', 'date',   0)
+#        filt.add_qc_filter('POS', 'pos',    0)
+#        filt.add_qc_filter('POS', 'blklst', 0)
+#        filt.add_qc_filter('POS', 'trk',    0)
+#        filt.add_qc_filter('POS', 'day',    0)
+#        filt.add_qc_filter('AT',  'noval',  0)
+#        filt.add_qc_filter('AT',  'clim',   0)
+#        filt.add_qc_filter('AT',  'nonorm', 0)
+## KW Notes that 'reps' are those obs that have failed one of the tests in the filter above
+#        passes, reps = filt.split_reports(reps)
+#
+## KW Notes that passes is an object containing a months worth of marine obs that pass (flag=0) for all above filters
+## Both the bayesian buddy check and the mds buddy check test for distance to neighbours in space and time and flag
+## with a 1 where it is too great/fails.
+#        passes.bayesian_buddy_check('AT', sst_stdev_1, sst_stdev_2, sst_stdev_3)
+#        passes.mds_buddy_check('AT', sst_pentad_stdev)
+#**********************************************
 
 # KW - all fails (reps) are set to have a flag of 0 which means to pass the buddy checks.because there is no point in spending
 # further time buddy checking them, same as for track checks
         reps.set_qc('AT', 'bbud', 0)
         reps.set_qc('AT', 'bud', 0)
 
-        for i in range(0, len(passes)):
-            rep = passes.pop(0)
-            reps.append(rep)
-
-        del passes
-
-        reps.sort()
-
+#*****************************
+# KW Commented out to save time on debug
+#        for i in range(0, len(passes)):
+#            rep = passes.pop(0)
+#            reps.append(rep)
+#
+#        del passes
+#
+#        reps.sort()
+#*******************************
         tim5 = time.time()
         print "obs MAT buddy checked in ", tim5-tim4, len(reps)
+
+## KW Added buddy check for DPT
+##DPT buddy check
+## KW NOtes that this uses the month before and after to apply track check - and so actually spends time applying
+## track check to the month before and month after too, which will then be ignored and redone later, with its following month
+## Is there scope to save effort here by only checking the candidate month while still passing the surrounding months for info
+#        filt = ex.QC_filter()
+#        filt.add_qc_filter('POS', 'date',   0)
+#        filt.add_qc_filter('POS', 'pos',    0)
+#        filt.add_qc_filter('POS', 'blklst', 0)
+#        filt.add_qc_filter('POS', 'trk',    0)
+#        filt.add_qc_filter('POS', 'day',    0)
+#        filt.add_qc_filter('DPT',  'noval',  0)
+#        filt.add_qc_filter('DPT',  'clim',   0)
+#        filt.add_qc_filter('DPT',  'nonorm', 0)
+## KW Notes that 'reps' are those obs that have failed one of the tests in the filter above
+#        passes, reps = filt.split_reports(reps)
+#
+## KW Notes that passes is an object containing a months worth of marine obs that pass (flag=0) for all above filters
+## Both the bayesian buddy check and the mds buddy check test for distance to neighbours in space and time and flag
+## with a 1 where it is too great/fails.
+#        passes.bayesian_buddy_check('DPT', sst_stdev_1, sst_stdev_2, sst_stdev_3)
+#        passes.mds_buddy_check('DPT', sst_pentad_stdev)
+
+# KW - all fails (reps) are set to have a flag of 0 which means to pass the buddy checks.because there is no point in spending
+# further time buddy checking them, same as for track checks
+        reps.set_qc('DPT', 'bbud', 0)
+        reps.set_qc('DPT', 'bud', 0)
+
+#        for i in range(0, len(passes)):
+#            rep = passes.pop(0)
+#            reps.append(rep)
+#
+#        del passes
+#
+#        reps.sort()
+
+        tim6 = time.time()
+        print "obs DPT buddy checked in ", tim6-tim5, len(reps)
 
         syr = str(year)
         smn = "%02d" % (month)

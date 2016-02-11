@@ -20,14 +20,18 @@ https://github.com/Kate-Willett/HadISDH_Marine_Build
 The Plan:
 
 Modify code to only use ship and moored buoy platform types - should speed up a little in later years with ARGOs?
+DONE
 
 Modify read in routines to pull out dew point temperature (and possibly other
 humidity variables when they exist, wet bulb temperaure, relative humidity) and
 also humidity related metadata (instrument type, ship height???). 
+DONE
 
 Add code to convert T and dew point T to q, e, RH, DPD, Tw.
+DONE
 
 Add qc routines to work on Td, q, e, RH, Tw and DPD.
+DONE (just T and Td though!)
 
 Add initial pentad climatology fields for Td, q, e, RH, Tw and DPD - most likely from
 ERA-Interim so using 1981-2010 climatology period.
@@ -52,8 +56,98 @@ Add code to assess the sampling uncertainty at the gridbox scale
 Add code to combine the gridbox level uncertainties and also somehow establish a
 covariance matrix.
 
+DAVID: Exploring 1982 shift
+i) Using just Deck 926 (International Maritime Meteorological (IMM) Data) create difference maps of mean anomaly q 1983-1986 minus 1978-1981 like Figure 4.17 of your PhD thesis. 
+ii) Repeat using just Deck 732, just Deck 889, just Deck 892, just Deck 896. 
+iii) Repeat using all the remaining decks combined: essentially decks 254 and 927.
+
+If iii) displays no bias, then re-create the marine humidity dataset up to 1983 using it and any other decks which also show no bias. Possibly do collocated comparisons between bias-free and biased decks to understand the problem better, but I expect that adjustment of a biased deck would be fraught with too many difficulties? 
+If iii) displays the bias, Dave Berry may be correct in ascribing it to real climatic fluctuations.
+
+
 ******************************************************************
 Work Done:
+
+Feb 9th
+
+Temporarily commented out buddy_check for SST and AT (and DPT) to save time on debugging.
+
+Now pulling through all extra metadata to ascii which took a little faffing to explicitly set when its missing from the ob. Tested read in
+and output for Dec 1973 - OK!
+
+Now working out whether there are some meta that are so rarly used that there is very little point pulling them through:
+Dec 1973:
+self.data['II']  # ID Indicator
+self.data['IT']  # AT Indicator - quite a few
+self.data['DPTI']# DPT Indicator - a few
+*self.data['RHI'] # RH Indicator - NONE
+*self.data['RH']  # RH - NONE
+self.data['WBTI']# WBT Indicator - a few 
+self.data['WBT'] # WBT - many
+self.data['DI']  # Wind Direction Indicator - many
+self.data['D']   # Wind Direction - many
+self.data['WI']  # Wind Speed Indicator - many 
+self.data['W']   # Wind Speed -many
+self.data['VI']  # Visibility Indicator - many
+self.data['VV']  # Visibility - many
+self.data['DUPS']# Duplicate? - all
+self.data['COR'] # Country of residence - some
+self.data['TOB'] # Type of barometer - quite a few
+self.data['TOT'] # Type of thermometer - quite a few
+self.data['EOT'] # Exposure of thermometer - quite a few
+*self.data['LOT'] # Screen location - NONE
+self.data['TOH'] # Type of hygrometer - quite a few
+self.data['EOH'] # Exposure of hygrometer - quite a few
+self.data['LOV'] # Length of vessel - NONE, some 2001 - is this really necessary? A check on height or if height doesn't exist?	   
+self.data['HOP'] # Height of vis obs platform - some
+*self.data['HOT'] # Height of AT sensor - NONE but optimistic?
+self.data['HOB'] # Height of barometer - NONE, some 2001
+self.data['HOA'] # Height of anemometer - some 
+self.data['SMF'] # Source Metadata file - some
+
+Test for a few more year/months before ditching.
+Tested 2001 - decided to ditch RHI, RH and LOT 
+
+Next:
+Create climatology files and pull through anoms, clim and nonorm.
+
+Create files for buddy check and pull through bud and bbud.
+
+Run!
+
+
+
+Feb 8th 2016
+
+Qs:
+What happens if an ob is reported with a missing data identifier e.g. -99.9? Will that be read as None? Does this ever happen or would it
+just be blank?
+
+How is the QC flag for nbud set and what is it? I can only find mention of it in 'print_report' in Extended_IMMA.py. Does self.qc.get_qc just
+return 0 if there is no flag set?
+
+Starting to work on QC for DPT. Most of these can be done as for SST and AT:
+- 'bud' and 'bbud' is the buddy check and bayesian buddy check. It is set to 1 if an ob is too desimilar to its neighbours in space and time.
+- 'clim' fails if value is greater than given value (8 for SST, 10 for AT and DPT) away from climatology
+- 'nonorm' (MEANS NO clim CAN HAVE BEEN PERFORMED - CASE IN ICY ZONES?)
+- 'freez' SST ONLY - value below freezing point at that salinity (or there abouts)
+- 'ssat' DPT ONLY - DPT value greater than AT implying >100 %rh
+- 'noval' no value present for this value in this ob (unnecessary?)
+- 'nbud' not sure how this is set - fails if buddy check cannot be performed?
+- 'bbud' see above
+- 'rep' is done at time of track_check. It is set to 1 (fail) if >= 70%(given threshold 0.7) of obs (where there are more than 20) in a single
+track are identical
+- 'repsat' DPT ONLY - DPT == AT for a persistent string of track - greater than 2 days? (TRICKY!) HadISD is >24 hours but 100%Rh more likely
+over ocean? 
+
+
+Added blank QC values for DPT (ready to build in real QC functions) and print_report block for DPT. Commented out anything that requires a
+climatology or buddy checking files at present. Testing for 1973...OK!
+
+Added a repsat QC test for DPT within the track_check in Extended_IMMA.py. Its actually within the 'find_repeated_values()' function. It
+looks for consecutive strings of AT==DPT. If a string is more than 4 obs and >=48 hours in length then all DPT values within have their
+repsat flag set to 1. Testing for 1973...the repsat test appears to work at least..OUTPUT OK!
+
 
 Feb 5th 2016
 I've edited with a choice to only pull through ship and moored buoy data and

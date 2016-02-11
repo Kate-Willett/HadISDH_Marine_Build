@@ -9,6 +9,8 @@ from datetime import datetime
 import spherical_geometry as sph
 import qc_new_track_check as tc
 import CalcHums # KW a new package with all of the calculations for humidity in
+# KW Added for debugging
+import pdb # pdb.set_trace() or c
 
 def get_threshold_multiplier(total_nobs, nob_limits, multiplier_values):
 
@@ -509,7 +511,7 @@ class MarineReport:
 
         dpt     = int(pvar(self.data['DPT'],    -32768,  10))
 #        dptanom = int(pvar(self.getanom('DPT'), -32768,  100))
-        dptsnom = -32768
+        dptanom = -32768
         shu     = int(pvar(self.data['SHU'],    -32768,  10))
 #        shuanom  = int(pvar(self.getanom('SHU'), -32768,  100))
         shuanom = -32768
@@ -539,7 +541,8 @@ class MarineReport:
         if shipid == None:
             shipid = '         '
 
-        qc_block = "{:d}{:d}{:d}{:d}{:d}{:d}{:d}{:d} "
+# KW Added an extra {:d} on to qc_block because the DPT QC requires an extra two tests over AT
+        qc_block = "{:d}{:d}{:d}{:d}{:d}{:d}{:d}{:d}{:d} "
         qc_end = "{:d}{:d}{:d}{:d}{:d}{:d}{:d}{:d}\n"
         #qc_end = "{:d}{:d}{:d}{:d}{:d}{:d}{:d}{:d}"
         
@@ -579,6 +582,36 @@ class MarineReport:
         repout = repout + "{:8d}".format(self.printvar('SI'))
         repout = repout + " {:8.8}".format(self.printsim())
 
+# KW More output from the metadata - really for later humidity bias adjustment and uncertainty
+        repout = repout +  "{:4d}".format(int(pvar(self.data['II'],    -99,  1)))  #  ID Indicator
+        repout = repout +  "{:3d}".format(int(pvar(self.data['IT'],    -9,  1)))  # AT Indicator 
+        repout = repout +  "{:3d}".format(int(pvar(self.data['DPTI'],    -9,  1)))  # DPT Indicator
+        repout = repout +  "{:3d}".format(int(pvar(self.data['RHI'],    -9,  1)))  # RH Indicator 
+        repout = repout +  "{:8d}".format(int(pvar(self.data['RH'],    -32768,  10)))  # RH 
+        repout = repout +  "{:3d}".format(int(pvar(self.data['WBTI'],    -9,  1)))  # WBT Indicator 
+        repout = repout +  "{:8d}".format(int(pvar(self.data['WBT'],    -32768,  10)))  # WBT 
+        repout = repout +  "{:3d}".format(int(pvar(self.data['DI'],    -9,  1)))  # Wind Direction Indicator 
+        repout = repout +  "{:8d}".format(int(pvar(self.data['D'],    -32768,  1)))  # Wind Direction 
+        repout = repout +  "{:3d}".format(int(pvar(self.data['WI'],    -9,  1)))  # Wind Speed Indicator 
+        repout = repout +  "{:8d}".format(int(pvar(self.data['W'],    -32768,  10)))  # Wind Speed
+        repout = repout +  "{:3d}".format(int(pvar(self.data['VI'],    -9,  1)))  # Visibility Indicator 
+        repout = repout +  "{:8d}".format(int(pvar(self.data['VV'],    -32768,  1)))  # Visibility
+	 
+        repout = repout +  "{:4d}".format(int(pvar(self.data['DUPS'],    -99,  1)))  # Duplicate status (fine if <=2)
+        repout = repout +  "{:3.3}".format(self.data['COR'])  # Country of residence
+        repout = repout +  "{:4.4}".format(self.data['TOB'])  # Type of barometer
+        repout = repout +  "{:4.4}".format(self.data['TOT'])  # Type of thermometer
+        repout = repout +  "{:3.3}".format(self.data['EOT'])  # Exposure of thermometer
+        repout = repout +  "{:3.3}".format(self.data['LOT'])  # Screen location
+        repout = repout +  "{:2.2}".format(self.data['TOH'])  # Type of hygrometer
+        repout = repout +  "{:3.3}".format(self.data['EOH'])  # Exposure of hygrometer
+        repout = repout +  "{:5d}".format(int(pvar(self.data['LOV'],    -999,  1)))  # Length of vessel        
+	repout = repout +  "{:5d}".format(int(pvar(self.data['HOP'],    -999,  1)))  # Height of vis obs platform
+        repout = repout +  "{:5d}".format(int(pvar(self.data['HOT'],    -999,  1)))  # Height of AT sensor
+        repout = repout +  "{:5d}".format(int(pvar(self.data['HOB'],    -999,  1)))  # Height of barometer
+        repout = repout +  "{:5d}".format(int(pvar(self.data['HOA'],    -999,  1)))  # Height of anemometer
+        repout = repout +  "{:7d}".format(int(pvar(self.data['SMF'],    -9999,  1)))  # Source Metadata file
+
         repout = repout + " "
 
         repout = repout + qc_block.format(self.qc.get_qc('POS','day'), 
@@ -588,32 +621,53 @@ class MarineReport:
                                           self.qc.get_qc('POS','date'), 
                                           self.qc.get_qc('POS','pos'), 
                                           self.qc.get_qc('POS','blklst'), 
-                                          self.qc.get_qc('POS','dup')
+                                          self.qc.get_qc('POS','dup'),
+# KW Added a '9' to fill the now extra element of qc_block
+					  9
                                           )
         repout = repout + qc_block.format(self.qc.get_qc('SST','bud'), 
                                           self.qc.get_qc('SST','clim'), 
                                           self.qc.get_qc('SST','nonorm'), 
                                           self.qc.get_qc('SST','freez'), 
                                           self.qc.get_qc('SST','noval'), 
+# KW I can't see where nbud is set - is it just 0 if not set?
                                           self.qc.get_qc('SST', 'nbud'), 
                                           self.qc.get_qc('SST', 'bbud'), 
-                                          self.qc.get_qc('SST', 'rep') 
+                                          self.qc.get_qc('SST', 'rep'), 
+# KW Added a '9' to fill the now extra element of qc_block
+					  9
                                           )
         repout = repout + qc_block.format(self.qc.get_qc('AT','bud'), 
                                           self.qc.get_qc('AT','clim'), 
                                           self.qc.get_qc('AT','nonorm'), 
                                           9,
                                           self.qc.get_qc('AT','noval'),
+# KW I can't see where nbud is set - is it just 0 if not set?
                                           self.qc.get_qc('AT',  'nbud'), 
                                           self.qc.get_qc('AT',  'bbud'), 
-                                          self.qc.get_qc('AT',  'rep') 
+                                          self.qc.get_qc('AT',  'rep'), 
+# KW Added a '9' to fill the now extra element of qc_block
+					  9
                                           )
-        repout = repout + qc_block.format(9, 9, 9, 9, 9, 9, 9, 9)
+# KW Added a new block for DPT
+        repout = repout + qc_block.format(self.qc.get_qc('DPT','bud'), # KW This is a qc flag for the buddy_check
+                                          self.qc.get_qc('DPT','clim'), # KW This is a qc flag for outliers from climatology
+                                          self.qc.get_qc('DPT','nonorm'), # KW This is a qc flag for whether a climatological value exists or not (can clim be tested?)
+                                          self.qc.get_qc('DPT','ssat'), # KW This is a NEW qc flag for supersaturation
+                                          self.qc.get_qc('DPT','noval'), # KW This is a qc flag for whether the variable is present in the ob
+# KW I can't see where nbud is set - is it just 0 if not set?
+                                          self.qc.get_qc('DPT',  'nbud'), # KW This is a qc flag for ??? if a buddy check can be performed?
+                                          self.qc.get_qc('DPT',  'bbud'), # KW This is a qc flag for the bayesian buddy check
+                                          self.qc.get_qc('DPT',  'rep'), # KW This is a qc flag for if this value is part of a repeated value group (more than 70% of 21+obs are identical)
+					  self.qc.get_qc('DPT',  'repsat')  # KW This is a NEWqc flag for persistent saturation
+                                          )
+# KW Cut this out for now to save space - its a spare QC block (which I've used above???)
+#        repout = repout + qc_block.format(9, 9, 9, 9, 9, 9, 9, 9, 9)
         repout = repout + qc_end.format(self.qc.get_qc('POS', 'few'), 
                                         self.qc.get_qc('POS', 'ntrk'), 
                                         9, 9, 9, 9, 9, 9 
                                         )
-        
+
         #repout = repout +" "+ str(self.dt)
         
         return repout
@@ -797,10 +851,17 @@ class Voyage:
         the observations have the same SST or NMAT value.
 # KW Ok to just do this on SST and or NMAT and then apply results to humidity - if screwy for those, it will be 
 # for humidity too
+
+# KW Added a component to also perform checks on persistence of 100% rh while going through the voyage.
+        While going through the voyage repeated strings of 100 %rh (AT == DPT) are noted. If a string
+	extends beyond two days/48 hrs in time then all values are set to fail the repsat qc flag.
         """
 
+# KW Modified to include DPT
+
         assert threshold >= 0.0 and threshold <= 1.0
-        assert intype in ['SST', 'AT']
+# KW Added DPT
+        assert intype in ['SST', 'AT', 'DPT']
 
 #initialise
         for rep in self.reps:
@@ -808,6 +869,8 @@ class Voyage:
 
         valcount = {}
         allcount = 0
+# KW Added a satcount list for keeping locs of persisting strings of 100%Rh
+        satcount = []	
 
         for i, rep in enumerate(self.reps):
             if rep.getvar(intype) != None:
@@ -816,7 +879,47 @@ class Voyage:
                     valcount[str(rep.getvar(intype))].append(i)
                 else:
                     valcount[str(rep.getvar(intype))]  = [i]
-                    
+#**********************************************************************************************
+# KW Added the repsat flag check for persistent strings of 100%rh beyond two days - for DPT only
+                if (intype == 'DPT'):
+		    self.reps[i].set_qc(intype, 'repsat', 0)
+		    if ((qc.value_check(rep.getvar('AT')) == 0) & (rep.data['DPT'] == rep.data['AT'])):
+                        # If there is a saturation ob (AT == DPT) then begin or append to a group of DPT values
+		        #print('Found a sat ',i,rep.getvar('DPT'),rep.getvar('AT'))
+			satcount.append(i) # a locator for the reps with 100% RH
+                    elif ((qc.value_check(rep.getvar('AT')) == 0) & (rep.data['DPT'] != rep.data['AT']) & (len(satcount) > 4)):
+		        print('Found the end of a long stretch of sats ',i,len(satcount))
+		        # KW If there is no saturation event but a significant satcount object has been created then we need to either delete it (too shor) or set repsat qc vals (>=48hrs)
+			# KW Test the duration of the satcount event
+                        shpspd, shpdis, shpdir, tdiff = self.reps[satcount[len(satcount)-1]] - self.reps[satcount[0]]
+			#print('Time Difference: ',tdiff)
+			if (tdiff >= 48): # Making the assumption that time difference is in hours! IT IS!
+			    print("A long one! ",tdiff)
+			    # KW flag all these values as repsat = 1 and then reset satcount
+			    for loc in satcount:
+                                self.reps[loc].set_qc(intype, 'repsat', 1)			        
+			    satcount = []
+			# If its too short then just reset and carry on
+			else:
+			    satcount = []    
+		    else:
+		        # KW set repsat to 0 (pass) and double check that the satcount object is empty ready for the next string
+			#print('End of sats')
+			satcount = []	
+
+# Add a catch if at end of Voyage there is a 100%rh string longer than 4 obs
+        if (len(satcount) > 4):
+            #print('Found the end of a long stretch of sats at end of voyage',i,len(satcount))
+	    # KW If there is no saturation event but a significant satcount object has been created then we need to either delete it (too shor) or set repsat qc vals (>=48hrs)
+	    # KW Test the duration of the satcount event
+            shpspd, shpdis, shpdir, tdiff = self.reps[satcount[len(satcount)-1]] - self.reps[satcount[0]]
+	    #print('Time Difference: ',tdiff)
+	    if (tdiff >= 48): # Making the assumption that time difference is in hours! 
+	        # KW flag all these values as repsat = 1 and then reset satcount
+	        for loc in satcount:
+                    self.reps[loc].set_qc(intype, 'repsat', 1)			        
+#************************************************************************************************
+		
         if allcount > 20:
             for key in valcount:
                 if float(len(valcount[key]))/float(allcount) > threshold:
@@ -1457,7 +1560,8 @@ class Deck:
 
     def mds_buddy_check(self, intype, pentad_stdev):
 
-        assert (intype == 'SST' or intype == 'AT'),intype
+# KW Added capability to cope with DPT
+        assert (intype == 'SST' or intype == 'AT' or intype == 'DPT'),intype
 
 #calculate superob averages and numbers of observations
         grid = Super_Ob()
@@ -1492,7 +1596,8 @@ class Deck:
 
     def bayesian_buddy_check(self, intype, stdev1, stdev2, stdev3, sigma_m=1.0):
 
-        assert (intype == 'SST' or intype == 'AT'), "Unknown intype: "+intype
+# KW Added capability to cope with DPT
+        assert (intype == 'SST' or intype == 'AT' or intype == 'DPT'), "Unknown intype: "+intype
     
         p0 = 0.05      #prior probability of gross error
         Q = 0.1        #rounding leve of data
