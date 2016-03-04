@@ -1132,6 +1132,29 @@ def no_normal_check(inclimav):
     if inclimav == None:
         result = 1
     return result
+    
+# KW Added a qc check for DPT
+def supersat_check(invaltd, invalt):
+    '''
+    Check if a valid dewpoint temperature is 
+    greater than a valid air temperature
+    
+    :param invaltd: the input value for dewpoint temperature
+    :param invalt: the input value for air temperature
+    :type invaltd: float
+    :type invalt: float
+    :return: 1 if the input values are invalide/None
+    :return: 1 if the dewpoint temperature is greater than the air temperarture 
+    :return: 0 otherwise
+    :return type: integer
+    '''
+    result = 0
+    if ((invaltd == None) | (invalt == None)):
+        result = 1
+    elif (invaltd > invalt):
+        result = 1
+	
+    return result
 
 def sst_freeze_check(insst, sst_uncertainty=0.0, freezing_point=-1.80):
     '''

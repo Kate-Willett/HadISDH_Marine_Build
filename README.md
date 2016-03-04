@@ -47,7 +47,10 @@ held instruments following methods described in Berry and Kent, 2011.
 Add code to assess uncertainties in the hourly data: rounding, measurement,
 height bias adjustment, instrument type adjustment.
 
-Add code to grid the data.
+Add code to grid the data: THIS IS NOT SO SIMPLE!
+- first grid to closest 3 hourly (00, 03....21) 1by1s (most likely using the anomalies) - could use winsorising or median?
+- average time first in the 1by1s
+- average dailies to 5by5s
 
 Add code to assess climatological uncertainties at the gridbox scale
 
@@ -67,6 +70,31 @@ If iii) displays the bias, Dave Berry may be correct in ascribing it to real cli
 
 ******************************************************************
 Work Done:
+Mar 4th
+Tested new pentad dataset and it looks much better - clims pulled out appear to match with those I pulled out by hand.
+I've now opened up the clim read in for all variables except SLP (did this get created?) and am testing for Dec 1973.
+??
+I've also written the qc.supersat_check() in qc.py which tests whether a valid Td is greater than a valid T. Need to test. 
+
+
+Feb 16th 
+
+I have now created 1by1 degree pentad climatology files for all variables from
+ERA-Interim based on 1981-2010. I used the makeERApentads_FEB2016.pro IDL code 
+in /data/local/hadkw/HADCRUH2/UDPATE2015/PROGS/IDL/. These are stored in 
+/project/hadobs2/hadisdh/land/UPDATE2015/OTHERDATA/ and have been copied across 
+to /project/hadobs2/hadisdh/marine/otherdata/. I've adapted
+make_and_full_qc.py to read in all clims but commented them out for now. I have
+uncommented everything linked with DPT climatology to test and now listed in 
+the configuration.txt.
+
+Testing for December 1973
+
+Next:
+Read in climatologies and getanoms for all other variables.
+Build the supersat QC test for DPT and test.
+Sort out a DPT buddy check.
+
 
 Feb 9th
 

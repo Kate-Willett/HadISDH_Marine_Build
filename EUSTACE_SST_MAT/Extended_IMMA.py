@@ -501,8 +501,8 @@ class MarineReport:
 # The calculations check whether to calculate relative to ice or water - so need AT as well as D
 # The order in which these are calculated is important because they build on each other
 
-#        slpclim = self.climate_variables['SLP'].getclim()
-        slpclim = 1013 # KW temporary rather than read in file
+        slpclim = self.climate_variables['SLP'].getclim()
+#        slpclim = 1013 # KW temporary rather than read in file
         self.data['VAP'] = CalcHums.vap(self.data['DPT'],slpclim,self.data['AT'])
         self.data['SHU'] = CalcHums.shu(self.data['VAP'],slpclim)
         self.data['CRH'] = CalcHums.rh(self.data['VAP'],slpclim,self.data['AT'])
@@ -510,23 +510,17 @@ class MarineReport:
         self.data['DPD'] = CalcHums.dpd(self.data['DPT'],self.data['AT'])
 
         dpt     = int(pvar(self.data['DPT'],    -32768,  10))
-#        dptanom = int(pvar(self.getanom('DPT'), -32768,  100))
-        dptanom = -32768
+        dptanom = int(pvar(self.getanom('DPT'), -32768,  100))
         shu     = int(pvar(self.data['SHU'],    -32768,  10))
-#        shuanom  = int(pvar(self.getanom('SHU'), -32768,  100))
-        shuanom = -32768
+        shuanom  = int(pvar(self.getanom('SHU'), -32768,  100))
         vap     = int(pvar(self.data['VAP'],    -32768,  10))
-#        vapanom  = int(pvar(self.getanom('VAP'), -32768,  100))
-        vapanom = -32768
+        vapanom  = int(pvar(self.getanom('VAP'), -32768,  100))
         crh     = int(pvar(self.data['CRH'],    -32768,  10))
-#        crhanom  = int(pvar(self.getanom('CRH'), -32768,  100))
-        crhanom = -32768
+        crhanom  = int(pvar(self.getanom('CRH'), -32768,  100))
         cwb     = int(pvar(self.data['CWB'],    -32768,  10))
-#        cwbanom  = int(pvar(self.getanom('CWB'), -32768,  100))
-        cwbanom = -32768
+        cwbanom  = int(pvar(self.getanom('CWB'), -32768,  100))
         dpd     = int(pvar(self.data['DPD'],    -32768,  10))
-#        dpdanom  = int(pvar(self.getanom('DPD'), -32768,  100))
-        dpdanom = -32768
+        dpdanom  = int(pvar(self.getanom('DPD'), -32768,  100))
 
 # KW Notes DS = ship course and VS = ship speed - not sure what units.
         dsvs = 9999
@@ -586,8 +580,6 @@ class MarineReport:
         repout = repout +  "{:4d}".format(int(pvar(self.data['II'],    -99,  1)))  #  ID Indicator
         repout = repout +  "{:3d}".format(int(pvar(self.data['IT'],    -9,  1)))  # AT Indicator 
         repout = repout +  "{:3d}".format(int(pvar(self.data['DPTI'],    -9,  1)))  # DPT Indicator
-        repout = repout +  "{:3d}".format(int(pvar(self.data['RHI'],    -9,  1)))  # RH Indicator 
-        repout = repout +  "{:8d}".format(int(pvar(self.data['RH'],    -32768,  10)))  # RH 
         repout = repout +  "{:3d}".format(int(pvar(self.data['WBTI'],    -9,  1)))  # WBT Indicator 
         repout = repout +  "{:8d}".format(int(pvar(self.data['WBT'],    -32768,  10)))  # WBT 
         repout = repout +  "{:3d}".format(int(pvar(self.data['DI'],    -9,  1)))  # Wind Direction Indicator 
@@ -602,7 +594,6 @@ class MarineReport:
         repout = repout +  "{:4.4}".format(self.data['TOB'])  # Type of barometer
         repout = repout +  "{:4.4}".format(self.data['TOT'])  # Type of thermometer
         repout = repout +  "{:3.3}".format(self.data['EOT'])  # Exposure of thermometer
-        repout = repout +  "{:3.3}".format(self.data['LOT'])  # Screen location
         repout = repout +  "{:2.2}".format(self.data['TOH'])  # Type of hygrometer
         repout = repout +  "{:3.3}".format(self.data['EOH'])  # Exposure of hygrometer
         repout = repout +  "{:5d}".format(int(pvar(self.data['LOV'],    -999,  1)))  # Length of vessel        

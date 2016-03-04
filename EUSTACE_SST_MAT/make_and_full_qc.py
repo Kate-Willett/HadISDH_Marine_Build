@@ -78,17 +78,13 @@ def base_qc_report(rep):
 # KW Added QC for DPT
 # DPT base QC
     rep.set_qc('DPT', 'noval', qc.value_check(rep.getvar('DPT')))
-#    rep.set_qc('DPT', 'clim', 
-#               qc.climatology_check(rep.getvar('DPT'), rep.getnorm('DPT'), 10.0))
-#    rep.set_qc('DPT', 'nonorm', qc.no_normal_check(rep.getnorm('DPT')))
-## KW New QC tests specifically for humidity
-#    rep.set_qc('DPT', 'ssat', qc.supersat_check(rep.getnorm('DPT')))
-# KW set fake values for now to test
-    rep.set_qc('DPT', 'clim', 8)
-    rep.set_qc('DPT', 'nonorm', 8)
+    rep.set_qc('DPT', 'clim', 
+               qc.climatology_check(rep.getvar('DPT'), rep.getnorm('DPT'), 10.0))
+    #print('CLIMTEST: ',rep.getvar('DPT'), rep.getnorm('DPT'),qc.climatology_check(rep.getvar('DPT'), rep.getnorm('DPT'), 10.0))	       
+    rep.set_qc('DPT', 'nonorm', qc.no_normal_check(rep.getnorm('DPT')))
 # KW New QC tests specifically for humidity
-    rep.set_qc('DPT', 'ssat', 8)
-
+    rep.set_qc('DPT', 'ssat', qc.supersat_check(rep.getvar('DPT'),rep.getvar('AT')))
+     
     return rep
 
 def process_bad_id_file(bad_id_file):
@@ -270,13 +266,14 @@ def main(argv):
     sst_climatology_file  = config['SST_climatology'] 
     nmat_climatology_file = config['MAT_climatology'] 
 # KW Added climatology files for the humidity variables 
-#    shu_climatology_file  = config['SHU_climatology']
-#    vap_climatology_file  = config['VAP_climatology']
-#    crh_climatology_file  = config['CRH_climatology']
-#    cwb_climatology_file  = config['CWB_climatology']
-#    dpd_climatology_file  = config['DPD_climatology']
-# KW Added climatology file for the SLP which is needed if no SLP ob exists, the it has failed qc
-#    slp_climatology_file  = config['SLP_climatology']
+    dpt_climatology_file  = config['DPT_climatology']
+    shu_climatology_file  = config['SHU_climatology']
+    vap_climatology_file  = config['VAP_climatology']
+    crh_climatology_file  = config['CRH_climatology']
+    cwb_climatology_file  = config['CWB_climatology']
+    dpd_climatology_file  = config['DPD_climatology']
+# KW Added climatology file for the SLP which is needed if no SLP ob exists, or if it has failed qc - or if we choose to derive humidity using climatological P (which we have)
+    slp_climatology_file  = config['SLP_climatology']
     icoads_dir            = config['ICOADS_dir'] 
     bad_id_file           = config['IDs_to_exclude']
 # KW added an item for the database dir to write out the QC'd ascii data to - hijacking SQL data_base_dir for now
@@ -292,12 +289,14 @@ def main(argv):
     print 'SST climatology =', sst_climatology_file
     print 'NMAT climatology =', nmat_climatology_file
 # KW Added climatology files for the humidity variables 
-#    print 'SHU climatology =', shu_climatology_file
-#    print 'VAP climatology =', vap_climatology_file
-#    print 'CRH climatology =', crh_climatology_file
-#    print 'CWB climatology =', cwb_climatology_file
-# KW Added climatology files for SLP for calculation of humidity variables if no good quality SLP ob exists
-#    print 'SLP climatology =', slp_climatology_file
+    print 'DPT climatology =', dpt_climatology_file
+    print 'SHU climatology =', shu_climatology_file
+    print 'VAP climatology =', vap_climatology_file
+    print 'CRH climatology =', crh_climatology_file
+    print 'CWB climatology =', cwb_climatology_file
+    print 'DPD climatology =', dpd_climatology_file
+## KW Added climatology files for SLP for calculation of humidity variables if no good quality SLP ob exists
+    print 'SLP climatology =', slp_climatology_file
     print 'ICOADS directory =', icoads_dir
     print 'List of bad IDs =', bad_id_file 
 # KW added an item for the database dir to write out the QC'd ascii data to - hijacking SQL data_base_dir for now
@@ -310,13 +309,14 @@ def main(argv):
     climsst = read_climatology(sst_climatology_file, 'sst')
     climnmat = read_climatology(nmat_climatology_file, 'nmat')
 # KW Added climatology read in files for the humidity variables
-#    climshu = read_climatology(shu_climatology_file, 'hussclim')
-#    climvap = read_climatology(vap_climatology_file, 'vapclim')
-#    climcrh = read_climatology(hurs_climatology_file, 'hursclim')
-#    climcwb = read_climatology(twet_climatology_file, 'twetclim')
-#    climdpd = read_climatology(dpd_climatology_file, 'dpdclim')
-# KW Added climatology read in files for SLP for calculating humidity variabls if no SLP value exists
-#    climslp = read_climatology(slp_climatology_file, 'slpclim')
+    climdpt = read_climatology(dpt_climatology_file, 'td2m_clims')
+    climshu = read_climatology(shu_climatology_file, 'q2m_clims')
+    climvap = read_climatology(vap_climatology_file, 'e2m_clims')
+    climcrh = read_climatology(crh_climatology_file, 'rh2m_clims')
+    climcwb = read_climatology(cwb_climatology_file, 'tw2m_clims')
+    climdpd = read_climatology(dpd_climatology_file, 'dpd2m_clims')
+## KW Added climatology read in files for SLP for calculating humidity variabls if no SLP value exists
+    climslp = read_climatology(slp_climatology_file, 'p2m_clims')
 
     sst_pentad_stdev = read_climatology(sst_stdev_climatology_file, 'sst')
     
@@ -456,24 +456,33 @@ def main(argv):
                         rep.add_climate_variable('AT', rep_mat_clim)
 
 # KW Get climatologies for the humidity variables so that you can create anomalies later
-#                        rep_shu_clim = get_clim(rep, climshu)
-#                        rep.add_climate_variable('SHU', rep_shu_clim)
+                        rep_dpt_clim = get_clim(rep, climdpt)
+                        rep.add_climate_variable('DPT', rep_dpt_clim)
+#			# KW added to test clim value pulled out
+#			print(rep.getvar('UID'),rep.getvar('DPT'),rep_dpt_clim,rep.getnorm('DPT'))			
+#			if (count == 10):
+#			    pdb.set_trace() 
+#			# KW This seems to be pulling out the correct climatological value (so why is the clim check and anomaly value wrong???)
+			    
 
-#			 rep_vap_clim = get_clim(rep, climvap)
-#                        rep.add_climate_variable('VAP', rep_vap_clim)
+                        rep_shu_clim = get_clim(rep, climshu)
+                        rep.add_climate_variable('SHU', rep_shu_clim)
 
-#		         rep_crh_clim = get_clim(rep, climcrh)
-#                        rep.add_climate_variable('CRH', rep_crh_clim)
+			rep_vap_clim = get_clim(rep, climvap)
+                        rep.add_climate_variable('VAP', rep_vap_clim)
 
-#			 rep_cwb_clim = get_clim(rep, climcwb)
-#                        rep.add_climate_variable('CWB', rep_cwb_clim)
+		        rep_crh_clim = get_clim(rep, climcrh)
+                        rep.add_climate_variable('CRH', rep_crh_clim)
 
-#			 rep_dpd_clim = get_clim(rep, climdpd)
-#                        rep.add_climate_variable('DPD', rep_dpd_clim)
+			rep_cwb_clim = get_clim(rep, climcwb)
+                        rep.add_climate_variable('CWB', rep_cwb_clim)
+
+			rep_dpd_clim = get_clim(rep, climdpd)
+                        rep.add_climate_variable('DPD', rep_dpd_clim)
 
 # KW Get climatologies for slp to calculate humidity values later if no good quality qc ob exists
-#                        rep_slp_clim = get_clim(rep, climslp)
-#                        rep.add_climate_variable('SLP', rep_slp_clim)
+                        rep_slp_clim = get_clim(rep, climslp)
+                        rep.add_climate_variable('SLP', rep_slp_clim)
 					
 #Deck 701 has a whole bunch of otherwise good obs with missing Hours.
 #Set to 0000UTC and recalculate the ob time
