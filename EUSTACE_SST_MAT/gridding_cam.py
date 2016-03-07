@@ -25,9 +25,9 @@ DATA_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/beta/"
 START_YEAR = 1973
 END_YEAR = dt.datetime.now().year - 1
 
-OBS_ORDER = ["MAT","MAT_AN","SST","SST_AN","SLP","DPT","DPT_AN","SHU","SHU_AN","VAP","VAP_AN","CRH","CRH_AN","CWB","CWB_AN","DPD","DPD_AN", "DSVS"]
-
 mdi = -9999
+OBS_ORDER = utils.make_MetVars(mdi)
+
 
 # what size grid (lat/lon/hour)
 DELTA_LAT = 1
@@ -52,9 +52,8 @@ for year in [1973]: # range(START_YEAR, END_YEAR):
 
         grid_hours = np.arange(0, 24 * calendar.monthrange(year, month)[1], DELTA_HOUR)
 
-        month_grid = np.ma.zeros([len(OBS_ORDER),len(grid_hours),len(grid_lats), len(grid_lons)])
-
-        month_grid.fill(mdi)
+        # set up the array
+        month_grid = np.ma.zeros([len(OBS_ORDER),len(grid_hours),len(grid_lats), len(grid_lons)], fill_value = mdi)
         month_grid.mask = np.ones([len(OBS_ORDER),len(grid_hours),len(grid_lats), len(grid_lons)])
 
 
@@ -73,6 +72,9 @@ for year in [1973]: # range(START_YEAR, END_YEAR):
         # process the monthly file
         filename = "new_suite_{}{}_constantP.txt".format(year, month)
         raw_data, raw_obs, raw_meta, raw_qc = utils.read_qc_data(filename, DATA_LOCATION, fields)
+
+        # can do subselections here, on all 4 outputs.
+
 
 
         # extract observation details
@@ -129,10 +131,8 @@ for year in [1973]: # range(START_YEAR, END_YEAR):
 
             end = dt.datetime.now()
 
-            if gh > 12:
-                break
 
         # have one month of gridded data.
 
-        utils.netcdf_write(month_grid, grid_lats, grid_lons, hours_since, year, month)
+        utils.netcdf_write(month_grid, OBS_ORDER, grid_lats, grid_lons, grid_hours, year, month)
             

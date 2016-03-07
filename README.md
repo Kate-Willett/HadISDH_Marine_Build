@@ -70,6 +70,13 @@ If iii) displays the bias, Dave Berry may be correct in ascribing it to real cli
 
 ******************************************************************
 Work Done:
+
+Mar 7th
+[RD] Gridding code taking shape.  Working on all variables at the moment (might as well).  Using a simple
+mean of observations in the 1x1 box.  Outputting test netcdf file.  Working on 3hourlies (most obs at
+those times).  Will probably need SPICE for running in the end - 3hourlies and 1x1 for 17 variables lead
+to large arrays for each month.
+
 Mar 4th
 Tested new pentad dataset and it looks much better - clims pulled out appear to match with those I pulled out by hand.
 I've now opened up the clim read in for all variables except SLP (did this get created?) and am testing for Dec 1973.
