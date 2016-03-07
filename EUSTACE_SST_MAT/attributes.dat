@@ -1,0 +1,12 @@
+title			HadISDH_marine
+institution		Met Office Hadley Centre, Exeter, UK
+source			HadISDH data product
+references		Willett, Dunn, et al, 2016, in prep
+creator_name		Kate Willett
+creator_url		www.metoffice.gov.uk
+creator_email		kate.willett@metoffice.gov.uk
+time_coverage_start	1973-01-01T00:00Z
+time_coverage_end	2016-01-01T00:00Z
+cdm_data_type		gridded
+keywords		monthly, gridded, humidiy
+hadisdH_version		2.0.0.2015
