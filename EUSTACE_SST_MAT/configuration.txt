@@ -16,6 +16,8 @@ SST_stdev_climatology,/project/hadobs2/hadisdh/marine/otherdata/OSTIA_pentad_std
 NOC_adjustment_dir,/project/hadobs2/hadisdh/marine/otherdata/NMAT/
 IDs_to_exclude,/project/hadobs2/hadisdh/marine/otherdata/list_of_ids_that_are_not_ships.txt
 Old_SST_stdev_climatology,/project/hadobs2/hadisdh/marine/otherdata/HadSST2_pentad_stdev_climatology.nc
+AT_stdev_climatology,/project/hadobs2/hadisdh/marine/otherdata/t2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
+DPT_stdev_climatology,/project/hadobs2/hadisdh/marine/otherdata/td2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
 SST_buddy_one_box_to_buddy_avg,/project/hadobs2/hadisdh/marine/otherdata/OSTIA_compare_1x1x5box_to_buddy_average.nc
 SST_buddy_one_ob_to_box_avg,/project/hadobs2/hadisdh/marine/otherdata/OSTIA_compare_one_ob_to_1x1x5box.nc
 SST_buddy_avg_sampling,/project/hadobs2/hadisdh/marine/otherdata/OSTIA_buddy_range_sampling_error.nc

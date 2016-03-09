@@ -286,6 +286,10 @@ def main(argv):
     sst_stdev_2_file = config['SST_buddy_one_ob_to_box_avg']
     sst_stdev_3_file = config['SST_buddy_avg_sampling']
 
+# KW added standard deviation files for AT and DPT - for MDSKate_buddy_check
+    at_stdev_climatology_file  = config['AT_stdev_climatology']
+    dpt_stdev_climatology_file  = config['DPT_stdev_climatology']
+
     print 'SST climatology =', sst_climatology_file
     print 'NMAT climatology =', nmat_climatology_file
 # KW Added climatology files for the humidity variables 
@@ -318,12 +322,17 @@ def main(argv):
 ## KW Added climatology read in files for SLP for calculating humidity variabls if no SLP value exists
     climslp = read_climatology(slp_climatology_file, 'p2m_clims')
 
+# KW Note that if this points to OLD_SST_stdev_climatology then it is a 73,180,360 array whereas the SST_stdev_climatology file is just 180,360
     sst_pentad_stdev = read_climatology(sst_stdev_climatology_file, 'sst')
     
     sst_stdev_1 = read_climatology(sst_stdev_1_file, 'sst')
     sst_stdev_2 = read_climatology(sst_stdev_2_file, 'sst')
     sst_stdev_3 = read_climatology(sst_stdev_3_file, 'sst')
 
+# KW added standard deviation files for AT and DPT - for MDSKate_buddy_check
+    at_pentad_stdev = read_climatology(at_stdev_climatology_file, 't2m_stdevs')
+    dpt_pentad_stdev = read_climatology(dpt_stdev_climatology_file, 'td2m_stdevs')
+    
     print 'Read climatology files'
 
     tim00 = time.time()
@@ -350,6 +359,7 @@ def main(argv):
 # For every candidate year/month the year/month before and after are also read in
 # Can we store the candidate year/month and following year/month for the next loop?
 # Hopefully there will be enough memory on spice
+# HOWEVER - IF WE RUN MANY YEARS IN PARALELL THEN OK TO READ IN EACH TIME
 
         for readyear, readmonth in qc.year_month_gen(last_year, 
                                                      last_month, 
@@ -482,6 +492,9 @@ def main(argv):
 
 # KW Get climatologies for slp to calculate humidity values later if no good quality qc ob exists
                         rep_slp_clim = get_clim(rep, climslp)
+			#print('SLP: ')
+			#if (count == 10):
+			#    pdb.set_trace()
                         rep.add_climate_variable('SLP', rep_slp_clim)
 					
 #Deck 701 has a whole bunch of otherwise good obs with missing Hours.
@@ -522,14 +535,20 @@ def main(argv):
 # KW So in here we could put some kind of parsing loop to say that if you are looping through more than one month
 # then you could save the candidate and previous month
 
-#all fails pass track check 
-        reps.set_qc('POS', 'trk', 0)
-        reps.set_qc('POS', 'few', 0)
-        reps.set_qc('SST', 'rep', 0)
-        reps.set_qc('AT',  'rep', 0)
-# KW Added for DPT
-        reps.set_qc('DPT',  'rep', 0)
-	reps.set_qc('DPT', 'repsat', 0)
+# KW ALSO NOW ONLY CARRY ON WITH THOSE OBS THAT PASS BASE QC (date, pos, blacklist)
+# KW commented out the following:
+##all fails pass track check 
+#        reps.set_qc('POS', 'trk', 0)
+#        reps.set_qc('POS', 'few', 0)
+#        reps.set_qc('SST', 'rep', 0)
+#        reps.set_qc('AT',  'rep', 0)
+## KW Added for DPT
+#        reps.set_qc('DPT',  'rep', 0)
+#	reps.set_qc('DPT', 'repsat', 0)
+# KW End of commenting out
+# KW now clear and reset reps so that it gets overwritten and filled with only passes
+        del reps
+	reps = ex.Deck()
 
 #track check the passes one ship at a time
         for one_ship in passes.get_one_ship_at_a_time():
@@ -574,10 +593,10 @@ def main(argv):
 #        passes.mds_buddy_check('SST', sst_pentad_stdev)
 #
 #******************************************
-# KW Thinks all fails obs that do not pass teh QC filter above are not buddy checked - they are set to 0
-# which means pass but should not be used later because they fail one of the other basic checks
-        reps.set_qc('SST', 'bbud', 0)
-        reps.set_qc('SST', 'bud',  0)
+## KW Thinks all fails obs that do not pass teh QC filter above are not buddy checked - they are set to 0
+## which means pass but should not be used later because they fail one of the other basic checks
+#        reps.set_qc('SST', 'bbud', 0)
+#        reps.set_qc('SST', 'bud',  0)
 
 #****************************************
 # KW Commented out to save time
@@ -592,84 +611,97 @@ def main(argv):
         tim4 = time.time()
         print "obs SST buddy checked in ", tim4-tim3, len(reps)
 
-#******************************************
-# KW Commented out for now to save time on debug
-##NMAT buddy check
-## KW NOtes that this uses the month before and after to apply track check - and so actually spends time applying
-## track check to the month before and month after too, which will then be ignored and redone later, with its following month
-## Is there scope to save effort here by only checking the candidate month while still passing the surrounding months for info
-#        filt = ex.QC_filter()
+#NMAT buddy check
+# KW NOtes that this uses the month before and after to apply track check - and so actually spends time applying
+# track check to the month before and month after too, which will then be ignored and redone later, with its following month
+# Is there scope to save effort here by only checking the candidate month while still passing the surrounding months for info?
+# For now I've made mdsKATE_buddy_check which only applies actual check to candidate month and year. It also uses actual pentad
+# for that time of year rather than the average pentad stdev.
+        filt = ex.QC_filter()
+## KW Commented out date/pos/blklst as these have already been filtered out
 #        filt.add_qc_filter('POS', 'date',   0)
 #        filt.add_qc_filter('POS', 'pos',    0)
 #        filt.add_qc_filter('POS', 'blklst', 0)
-#        filt.add_qc_filter('POS', 'trk',    0)
+        filt.add_qc_filter('POS', 'trk',    0)
+# KW commented out because we want to try to use all obs for AT and SPT
 #        filt.add_qc_filter('POS', 'day',    0)
+# KW Commented out because we've already filtered so that only present obs are retained
 #        filt.add_qc_filter('AT',  'noval',  0)
-#        filt.add_qc_filter('AT',  'clim',   0)
-#        filt.add_qc_filter('AT',  'nonorm', 0)
-## KW Notes that 'reps' are those obs that have failed one of the tests in the filter above
-#        passes, reps = filt.split_reports(reps)
-#
-## KW Notes that passes is an object containing a months worth of marine obs that pass (flag=0) for all above filters
-## Both the bayesian buddy check and the mds buddy check test for distance to neighbours in space and time and flag
-## with a 1 where it is too great/fails.
-#        passes.bayesian_buddy_check('AT', sst_stdev_1, sst_stdev_2, sst_stdev_3)
+        filt.add_qc_filter('AT',  'clim',   0)
+        filt.add_qc_filter('AT',  'nonorm', 0)
+# KW Notes that 'reps' are those obs that have failed one of the tests in the filter above
+        passes, reps = filt.split_reports(reps)
+
+# KW Notes that passes is an object containing a months worth of marine obs that pass (flag=0) for all above filters
+# Both the bayesian buddy check and the mds buddy check test for distance to neighbours in space and time and flag
+# with a 1 where it is too great/fails.
+        passes.bayesian_buddy_check('AT', sst_stdev_1, sst_stdev_2, sst_stdev_3)
+# KW Commented out original mds_buddy_check to use mdsKATE_buddy_check instead (like DPT) which uses the seasonal stdev
+# rather than the average and only applies buddy check to candidate month
+# ALSO = we now use clim T stdevs from ERA (will eventually be obs+ERA combo?)
 #        passes.mds_buddy_check('AT', sst_pentad_stdev)
-#**********************************************
+        passes.mdsKATE_buddy_check('AT',  at_pentad_stdev, year, month)
 
 # KW - all fails (reps) are set to have a flag of 0 which means to pass the buddy checks.because there is no point in spending
 # further time buddy checking them, same as for track checks
-        reps.set_qc('AT', 'bbud', 0)
-        reps.set_qc('AT', 'bud', 0)
+        reps.set_qc('AT', 'bbud', 8)
+        reps.set_qc('AT', 'bud', 8)
 
-#*****************************
-# KW Commented out to save time on debug
-#        for i in range(0, len(passes)):
-#            rep = passes.pop(0)
-#            reps.append(rep)
-#
-#        del passes
-#
-#        reps.sort()
-#*******************************
+        for i in range(0, len(passes)):
+            rep = passes.pop(0)
+            reps.append(rep)
+
+        del passes
+
+        reps.sort()
+
         tim5 = time.time()
         print "obs MAT buddy checked in ", tim5-tim4, len(reps)
 
-## KW Added buddy check for DPT
-##DPT buddy check
-## KW NOtes that this uses the month before and after to apply track check - and so actually spends time applying
-## track check to the month before and month after too, which will then be ignored and redone later, with its following month
-## Is there scope to save effort here by only checking the candidate month while still passing the surrounding months for info
-#        filt = ex.QC_filter()
+# Don't think we need to set - if its not set it will be 9!
+## KW Added buddy check for DPT - NOT RUNNING BAYESIAN BECAUSE WE DON'T HAVE APPROPRIATE DATA - SET FLAG TO 8!
+#        reps.set_qc('DPT', 'bbud', 8)
+
+#DPT buddy check
+# KW NOtes that this uses the month before and after to apply track check - and so actually spends time applying
+# track check to the month before and month after too, which will then be ignored and redone later, with its following month
+# Is there scope to save effort here by only checking the candidate month while still passing the surrounding months for info
+        filt = ex.QC_filter()
+# KW commented out date, pos, blklst because we've already got rid of those that fail these
 #        filt.add_qc_filter('POS', 'date',   0)
 #        filt.add_qc_filter('POS', 'pos',    0)
 #        filt.add_qc_filter('POS', 'blklst', 0)
-#        filt.add_qc_filter('POS', 'trk',    0)
-#        filt.add_qc_filter('POS', 'day',    0)
+        filt.add_qc_filter('POS', 'trk',    0)
+# KW Commented out day because we want to try to use all obs for DPT and AT
+#        filt.add_qc_filter('POS', 'day',    0) # Hmmm so only checking the nightime obs
+# KW Commented out because we've already filtered so that only present obs are retained
 #        filt.add_qc_filter('DPT',  'noval',  0)
-#        filt.add_qc_filter('DPT',  'clim',   0)
-#        filt.add_qc_filter('DPT',  'nonorm', 0)
-## KW Notes that 'reps' are those obs that have failed one of the tests in the filter above
-#        passes, reps = filt.split_reports(reps)
-#
-## KW Notes that passes is an object containing a months worth of marine obs that pass (flag=0) for all above filters
-## Both the bayesian buddy check and the mds buddy check test for distance to neighbours in space and time and flag
-## with a 1 where it is too great/fails.
+        filt.add_qc_filter('DPT',  'clim',   0)
+# KW commented out nonorm because there will always be a norm (if using ERA or combo ERA+obs)
+#        filt.add_qc_filter('DPT',  'nonorm', 0) # KW could change this to ERANorm when we have actual climatologies from data - more useful because there always will be a norm from ERA
+# KW Notes that 'reps' are those obs that have failed one of the tests in the filter above
+        passes, reps = filt.split_reports(reps)
+
+# KW Notes that passes is an object containing a months worth of marine obs that pass (flag=0) for all above filters
+# Both the bayesian buddy check and the mds buddy check test for distance to neighbours in space and time and flag
+# with a 1 where it is too great/fails.
 #        passes.bayesian_buddy_check('DPT', sst_stdev_1, sst_stdev_2, sst_stdev_3)
-#        passes.mds_buddy_check('DPT', sst_pentad_stdev)
+#        passes.mds_buddy_check('DPT', dpt_pentad_stdev)
+# KW Using Kate's version of MDS buddy check now which has a stdev for each pentad and only checks candidate month
+        passes.mdsKATE_buddy_check('DPT', dpt_pentad_stdev, year, month)
 
 # KW - all fails (reps) are set to have a flag of 0 which means to pass the buddy checks.because there is no point in spending
 # further time buddy checking them, same as for track checks
-        reps.set_qc('DPT', 'bbud', 0)
-        reps.set_qc('DPT', 'bud', 0)
+#        reps.set_qc('DPT', 'bbud', 8)
+        reps.set_qc('DPT', 'bud', 8) # KW set as 8 for now
 
-#        for i in range(0, len(passes)):
-#            rep = passes.pop(0)
-#            reps.append(rep)
-#
-#        del passes
-#
-#        reps.sort()
+        for i in range(0, len(passes)):
+            rep = passes.pop(0)
+            reps.append(rep)
+
+        del passes
+
+        reps.sort()
 
         tim6 = time.time()
         print "obs DPT buddy checked in ", tim6-tim5, len(reps)

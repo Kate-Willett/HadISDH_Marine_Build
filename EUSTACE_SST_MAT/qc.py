@@ -984,6 +984,10 @@ def get_sst_single_field(lat, lon, sst):
     yindex = lat_to_yindex(lat)
     xindex = lon_to_xindex(lon)
 
+# KW Why has this been set only to read in the first pentad? BUG??? It appears to be fed a 73 pentad file when called from mds_buddy_check
+# BASICALLY SO IT CAN COPE WITH BAYESIAN BUDDY CHECK
+# Don't really want to mess with this
+# SO - back to my original plan of pulling out the slice beforehand - just need to make sure its a 3d array with 0 as first dim
     result = sst[0, yindex, xindex]
 
 #sometimes this will be a numpy array and sometimes it will 

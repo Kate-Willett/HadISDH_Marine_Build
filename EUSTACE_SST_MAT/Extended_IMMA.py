@@ -342,6 +342,7 @@ class MarineReport:
         :type clim: float
         '''
         self.climate_variables[name] = ClimVariable(clim)
+	#print(self.climate_variables[name].getclim())
 
     def getnorm(self, varname):
         '''
@@ -502,6 +503,7 @@ class MarineReport:
 # The order in which these are calculated is important because they build on each other
 
         slpclim = self.climate_variables['SLP'].getclim()
+#	print(slpclim)
 #        slpclim = 1013 # KW temporary rather than read in file
         self.data['VAP'] = CalcHums.vap(self.data['DPT'],slpclim,self.data['AT'])
         self.data['SHU'] = CalcHums.shu(self.data['VAP'],slpclim)
@@ -605,7 +607,7 @@ class MarineReport:
 
         repout = repout + " "
 
-        repout = repout + qc_block.format(self.qc.get_qc('POS','day'), 
+        repout = repout + qc_block.format(self.qc.get_qc('POS','day'), #0=night, 1=day
                                           self.qc.get_qc('POS','land'), 
                                           self.qc.get_qc('POS','trk'), 
                                           self.qc.get_qc('POS','date'), 
@@ -616,7 +618,7 @@ class MarineReport:
 # KW Added a '9' to fill the now extra element of qc_block
 					  9
                                           )
-        repout = repout + qc_block.format(self.qc.get_qc('SST','bud'), 
+        repout = repout + qc_block.format(self.qc.get_qc('SST','bud'),    # 0 = pass, 1 = fail, 9 = not set?
                                           self.qc.get_qc('SST','clim'), 
                                           self.qc.get_qc('SST','nonorm'), 
                                           self.qc.get_qc('SST','freez'), 
@@ -641,16 +643,16 @@ class MarineReport:
 					  9
                                           )
 # KW Added a new block for DPT
-        repout = repout + qc_block.format(self.qc.get_qc('DPT','bud'), # KW This is a qc flag for the buddy_check
-                                          self.qc.get_qc('DPT','clim'), # KW This is a qc flag for outliers from climatology
-                                          self.qc.get_qc('DPT','nonorm'), # KW This is a qc flag for whether a climatological value exists or not (can clim be tested?)
-                                          self.qc.get_qc('DPT','ssat'), # KW This is a NEW qc flag for supersaturation
-                                          self.qc.get_qc('DPT','noval'), # KW This is a qc flag for whether the variable is present in the ob
+        repout = repout + qc_block.format(self.qc.get_qc('DPT','bud'), # KW qc flag for buddy_check 0=pass, 1=fail, 7=fails filter, 8= 9=not set
+                                          self.qc.get_qc('DPT','clim'), # KW qc flag for outliers from climatology 0=pass, 1=fail, 9=not set
+                                          self.qc.get_qc('DPT','nonorm'), # KW qc flag for whether clim exists - may change to eranorm (0=obs, 1=era)
+                                          self.qc.get_qc('DPT','ssat'), # KW NEW qc flag for supersaturation 0=pass, 1=td>t, 9=not set
+                                          self.qc.get_qc('DPT','noval'), # KW qc flag for whether the variable is present in the ob - all present due to pre-filter
 # KW I can't see where nbud is set - is it just 0 if not set?
-                                          self.qc.get_qc('DPT',  'nbud'), # KW This is a qc flag for ??? if a buddy check can be performed?
-                                          self.qc.get_qc('DPT',  'bbud'), # KW This is a qc flag for the bayesian buddy check
-                                          self.qc.get_qc('DPT',  'rep'), # KW This is a qc flag for if this value is part of a repeated value group (more than 70% of 21+obs are identical)
-					  self.qc.get_qc('DPT',  'repsat')  # KW This is a NEWqc flag for persistent saturation
+                                          self.qc.get_qc('DPT',  'nbud'), # KW qc flag for ??? if a buddy check can be performed?
+                                          self.qc.get_qc('DPT',  'bbud'), # KW qc flag for the bayesian buddy check - NOT USED (8 or 9)
+                                          self.qc.get_qc('DPT',  'rep'), # KW qc flag for if this value is part of a repeat string (more than 70% of 21+obs are identical)
+					  self.qc.get_qc('DPT',  'repsat')  # KW NEWqc flag for persistent saturation
                                           )
 # KW Cut this out for now to save space - its a spare QC block (which I've used above???)
 #        repout = repout + qc_block.format(9, 9, 9, 9, 9, 9, 9, 9, 9)
@@ -879,13 +881,13 @@ class Voyage:
 		        #print('Found a sat ',i,rep.getvar('DPT'),rep.getvar('AT'))
 			satcount.append(i) # a locator for the reps with 100% RH
                     elif ((qc.value_check(rep.getvar('AT')) == 0) & (rep.data['DPT'] != rep.data['AT']) & (len(satcount) > 4)):
-		        print('Found the end of a long stretch of sats ',i,len(satcount))
+#		        print('Found the end of a long stretch of sats ',i,len(satcount))
 		        # KW If there is no saturation event but a significant satcount object has been created then we need to either delete it (too shor) or set repsat qc vals (>=48hrs)
 			# KW Test the duration of the satcount event
                         shpspd, shpdis, shpdir, tdiff = self.reps[satcount[len(satcount)-1]] - self.reps[satcount[0]]
 			#print('Time Difference: ',tdiff)
 			if (tdiff >= 48): # Making the assumption that time difference is in hours! IT IS!
-			    print("A long one! ",tdiff)
+#			    print("A long one! ",tdiff)
 			    # KW flag all these values as repsat = 1 and then reset satcount
 			    for loc in satcount:
                                 self.reps[loc].set_qc(intype, 'repsat', 1)			        
@@ -1374,11 +1376,18 @@ class Super_Ob:
 
         return temp_anom, temp_nobs
 
-    def get_buddy_limits(self, pentad_stdev):
+# KW Kate changed pentad_stdev to all_pentad_stdev which is a 73 layered field
+    def get_buddy_limits(self, all_pentad_stdev):
         
     #for each populated grid box
         for key in self.grid:
 
+# KW I think we can find the right stdev here - the Gridpt class has already initialised the ptd
+# So we just need to point to the correct slice and then feed that through as before - but make sure its still 3D with first dim of 1
+# all_pentad_stdev is a 73 by 180 by 360 element array (pentad, latitude, longitude)
+# THIS APPEARED TO BE AN ERROR BEFORE WHERE IT WAS READING IN THE 73 PENTAD FILE FOR AT AND SST BUT ONLY PULLING OUT THE FIRST PENTAD!!!
+            pentad_stdev = np.reshape(all_pentad_stdev[key.ptd-1,:,:],(1,180,360))
+	    
             stdev = qc.get_sst_single_field(key.latitude_approx, key.longitude_approx, 
                                             pentad_stdev)
             if stdev == None or stdev < 0.0:
@@ -1585,17 +1594,75 @@ class Deck:
 
         return
 
-    def bayesian_buddy_check(self, intype, stdev1, stdev2, stdev3, sigma_m=1.0):
+# Kate's version of the MDS buddy check - for AT and DPT
+# This requires that the candiate year and month are input - so that checks are only applied to that month
+# This uses a stdev field that varies with each pentad seasonally - so has a search on the right pentad
+# The stdev fields are currently from 1by1 pentad ERA-Interim - so most likely underestimates of the standard deviation!
+# WE'RE LIKELY TO REMOVE GOOD DATA!!!
+
+    def mdsKATE_buddy_check(self, intype, all_pentad_stdev, thisyear, thismonth):
+        ''' all_pentad_stdev: a lon,lat,73 pentad field of climatological standard deviations of all obs (ERA 1by1 daily grids) going into pentad clim '''
+        ''' thisyear: the candidate year '''
+        ''' thismonth: the candidate month '''
 
 # KW Added capability to cope with DPT
+        assert (intype == 'SST' or intype == 'AT' or intype == 'DPT'),intype
+
+#calculate superob averages and numbers of observations
+        grid = Super_Ob()
+        for rep in self.reps:
+            grid.add_rep(rep.getvar('LAT'), rep.getvar('LON'), 
+                         rep.getvar('YR'),  rep.getvar('MO'), 
+                         rep.getvar('DY'),  rep.getanom(intype))
+        grid.take_average()
+	
+# KW This now has the 73 pentad field and has to find the correct pentad
+# the Super_Ob() object (now called grid() has some relationship to the class Gridpt which has a function call self.ptd which should return the pentad of interest (1 to 73)
+# SO - pull out the correct slice from all_pentad_stdev, call it pentad_stdev and feed it in.
+# I have added a line to do this in get_buddy_limits which utilises the Gridpt class for each element of grid()
+# This isn't perfect - perhaps you'd want the slice of pentads that covers the range of 'buddy' obs - too complex for now
+# At least this has some seasonal variability
+#        pdb.set_trace()
+# So i've changed pentad_stdev to all_pentad_stdev
+        grid.get_buddy_limits(all_pentad_stdev)
+
+    #finally loop over all reports and update buddy QC
+        for this_report in self.reps:
+
+# KW Added a filter to only work on reps with YR and MO matching candidate YR and MO
+            if ((this_report.getvar('YR') == thisyear) & (this_report.getvar('MO') == thismonth)):
+                key = Gridpt(this_report.getvar('LAT'), this_report.getvar('LON'), 
+                             this_report.getvar('YR'),  this_report.getvar('MO'), 
+                             this_report.getvar('DY'))
+
+        #if the SST anomaly differs from the neighbour average 
+        #by more than the calculated range then reject
+                x = this_report.getanom(intype)
+
+                if (abs(x - grid.get_buddy_mean(key)) >= grid.get_buddy_stdev(key)):
+                    this_report.set_qc(intype, 'bud', 1)
+                else:
+                    this_report.set_qc(intype, 'bud', 0)
+# KW a catch to double check we are checking the right month
+            else:
+	        this_report.set_qc(intype, 'bud', 8)
+
+        del grid
+
+        return
+
+    def bayesian_buddy_check(self, intype, stdev1, stdev2, stdev3, sigma_m=1.0):
+
+# KW Added capability to cope with DPT *** BUT - NOT ACTUALLY GOING TO APPLY BAYESIAN TO AT OR TO DPT BECAUSE WE DO NOT HAVE APPROPRIATE AT OR DPT FIELDS ***
         assert (intype == 'SST' or intype == 'AT' or intype == 'DPT'), "Unknown intype: "+intype
     
         p0 = 0.05      #prior probability of gross error
         Q = 0.1        #rounding leve of data
         R_hi = 8.0     #previous upper QC limits set
         R_lo = -8.0    #previous lower QC limit set
-    
-        if intype == 'AT':
+        
+# KW Added DPT to the R_hi/lo = 10/-10 deg - could be better to narrow later on?
+        if (intype == 'AT' | intype == 'DPT'):
             R_hi = 10.0     #previous upper QC limits set
             R_lo = -10.0    #previous lower QC limit set
 

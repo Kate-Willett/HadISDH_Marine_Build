@@ -19,12 +19,23 @@ ICOADS_dir,/project/earthobs/ICOADS/ICOADS.2.5.1/
 # Do we need a clim and st dev file for all vars or just T and Td?
 SST_climatology,/project/hadobs2/hadisdh/marine/otherdata/HadSST2_pentad_climatology.nc
 MAT_climatology,/project/hadobs2/hadisdh/marine/otherdata/HadNMAT2_pentad_climatology.nc
+# Initial Climatology files for new variables - all in same format as for SST_climatology
+# Ideally these (except SLP) will be rebuilt from actual data after a first iteration
+DPT_climatology,/project/hadobs2/hadisdh/marine/otherdata/td2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
+SHU_climatology,/project/hadobs2/hadisdh/marine/otherdata/q2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
+VAP_climatology,/project/hadobs2/hadisdh/marine/otherdata/e2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
+CRH_climatology,/project/hadobs2/hadisdh/marine/otherdata/rh2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
+CWB_climatology,/project/hadobs2/hadisdh/marine/otherdata/tw2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
+DPD_climatology,/project/hadobs2/hadisdh/marine/otherdata/dpd2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
+SLP_climatology,/project/hadobs2/hadisdh/marine/otherdata/p2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
 SST_stdev_climatology,/project/hadobs2/hadisdh/marine/otherdata/OSTIA_pentad_stdev_climatology.nc
 # This is currently empty, awaiting input from NOCS
 NOC_adjustment_dir,/project/hadobs2/hadisdh/marine/otherdata/NMAT/
 IDs_to_exclude,/project/hadobs2/hadisdh/marine/otherdata/list_of_ids_that_are_not_ships.txt
 # Not yet sure why we need an old and new stdev_climatology - maybe for pre-1970s data?
 Old_SST_stdev_climatology,/project/hadobs2/hadisdh/marine/otherdata/HadSST2_pentad_stdev_climatology.nc
+AT_stdev_climatology,/project/hadobs2/hadisdh/marine/otherdata/t2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
+DPT_stdev_climatology,/project/hadobs2/hadisdh/marine/otherdata/td2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
 # Will need to think about equivalent files for MAT and DWP
 SST_buddy_one_box_to_buddy_avg,/project/hadobs2/hadisdh/marine/otherdata/OSTIA_compare_1x1x5box_to_buddy_average.nc
 SST_buddy_one_ob_to_box_avg,/project/hadobs2/hadisdh/marine/otherdata/OSTIA_compare_one_ob_to_1x1x5box.nc
