@@ -72,8 +72,9 @@ If iii) displays the bias, Dave Berry may be correct in ascribing it to real cli
 
 ******************************************************************
 Work Done:
+
 Mar 9th
-So it ran (from Mar 8th) which is good. I noticed a few things:
+[KW] So it ran (from Mar 8th) which is good. I noticed a few things:
 	- the order of the obs is different in different runs. The previous run was not sorted after buddy
 	so is different again from the initial ones. It should be sorted on time but there are many
 	'simultaneous' obs so maybe there is some randomness in the way they are sorted? This may also be
@@ -98,7 +99,7 @@ Work on clim test that uses 4.5 stdevs
 CHECK repsat thresholds
 
 Mar 8th
-
+[KW] 
 If DPT mdsKATE_buddy_check works then try for AT too - do not actually need to run SST for humidity.
 
 Can we think about applying bias corrections for height and screen vs hadnheld now? Produce full set without and full set with - grid both to see the difference.
@@ -119,7 +120,7 @@ already removed those obs from further processing. I've also removed nonorm from
 shoudl change nonorm to be eranorm so that we know when we've had to use ERA instead of the obs. Just tried a second run now I've changed squre brackets for curly brackets. Fingers crossed...
 
 Mar 7th
-Assuming everything from last time works:
+[KW] Assuming everything from last time works:
 Apply a filter after basic QC has been applied. Can do this when OBS are filtered in make_and_full_qc.py.
 I onlt want to keep those that pass date/pos/blklist (ALREADY filtered for those with AT and DPT present and
 those that are ships/moored buoys or platforms using the HadISDHSwitch in the configuration.txt file
@@ -160,15 +161,21 @@ It said something about CalcHums not liking float or NoneType - ho hum
 
 ClimSLP works!
 
+Mar 7th
+[RD] Gridding code taking shape.  Working on all variables at the moment (might as well).  Using a simple
+mean of observations in the 1x1 box.  Outputting test netcdf file.  Working on 3hourlies (most obs at
+those times).  Will probably need SPICE for running in the end - 3hourlies and 1x1 for 17 variables lead
+to large arrays for each month.
+
 Mar 4th
-Tested new pentad dataset and it looks much better - clims pulled out appear to match with those I pulled out by hand.
+[KW] Tested new pentad dataset and it looks much better - clims pulled out appear to match with those I pulled out by hand.
 I've now opened up the clim read in for all variables except SLP (did this get created?) and am testing for Dec 1973.
 It works!
 I've also written the qc.supersat_check() in qc.py which tests whether a valid Td is greater than a valid T and am testing on Dec 1973. 
 
 
 Feb 16th 
-
+[KW] 
 I have now created 1by1 degree pentad climatology files for all variables from
 ERA-Interim based on 1981-2010. I used the makeERApentads_FEB2016.pro IDL code 
 in /data/local/hadkw/HADCRUH2/UDPATE2015/PROGS/IDL/. These are stored in 
@@ -187,7 +194,7 @@ Sort out a DPT buddy check.
 
 
 Feb 9th
-
+[KW] 
 Temporarily commented out buddy_check for SST and AT (and DPT) to save time on debugging.
 
 Now pulling through all extra metadata to ascii which took a little faffing to explicitly set when its missing from the ob. Tested read in
@@ -233,10 +240,8 @@ Create files for buddy check and pull through bud and bbud.
 
 Run!
 
-
-
 Feb 8th 2016
-
+[KW] 
 Qs:
 What happens if an ob is reported with a missing data identifier e.g. -99.9? Will that be read as None? Does this ever happen or would it
 just be blank?
@@ -268,7 +273,7 @@ repsat flag set to 1. Testing for 1973...the repsat test appears to work at leas
 
 
 Feb 5th 2016
-I've edited with a choice to only pull through ship and moored buoy data and
+[KW] I've edited with a choice to only pull through ship and moored buoy data and
 only data that have a AT and DPT ob present. This 
 may not be what we want to do in the long run for the database but it should speed things up for now,
 especially in the float dense later years.
@@ -295,7 +300,7 @@ Build buddy checking files for dew point temperature and implement.
 
 
 Feb 4th 2016
-Made '# KW' comments in make_and_full_qc.py, Extended_IMMA.py, IMMA2.py and
+[KW] Made '# KW' comments in make_and_full_qc.py, Extended_IMMA.py, IMMA2.py and
 qc.py as I understand the code flow.
 
 Made '# KW' comments on possible ways to speed up the code that may or may not
@@ -365,7 +370,7 @@ Next:
  - explore gridding of different decks?
 
 Feb 4th 2016
-First off I want to see if it runs as is with just a change to the output file
+[KW] First off I want to see if it runs as is with just a change to the output file
 directories. I have modified:
 
 configuration.txt
@@ -380,7 +385,7 @@ can be kept without interfering with the code.
 
 
 Feb 3rd 2016
-I have made an OLD_CODE_FEB2016 directory and copied all files as they are into here to
+[KW] I have made an OLD_CODE_FEB2016 directory and copied all files as they are into here to
 keep a static version of this code for us to look back at if need be. These
 files SHOULD NOT be modified.
 
