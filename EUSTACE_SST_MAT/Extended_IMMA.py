@@ -183,6 +183,20 @@ class ClimVariable:
         '''
         return self.clim
 
+# KW added a class for containing and dealing with climatological standard deviations
+class StdevVariable:
+    '''
+    A simple class for defining a stdev variable which is a variable with a stdev 
+    '''
+    def __init__(self, stdev):
+        self.stdev = stdev
+
+    def getstdev(self):
+        '''
+        Get the climatological stdev from the climate variable
+        '''
+        return self.stdev
+
 class MarineReport:
 
     '''
@@ -201,6 +215,8 @@ class MarineReport:
 # Does this have to be initialised for each self.data[]???
 	    self.qc = QC_Status()
         self.climate_variables = {}
+# KW Added a new thing called stdev_variables to store the climatological stdev for that ob in the rep (not very efficient!)
+        self.stdev_variables = {}	
 # KW Notes that this may mean that nothing is actually in the reps.ext - all vars in reps.data?
         self.ext = {}
         
@@ -344,6 +360,19 @@ class MarineReport:
         self.climate_variables[name] = ClimVariable(clim)
 	#print(self.climate_variables[name].getclim())
 
+# KW added function to read in stdev to stdev_variables (like climate_variables)
+    def add_stdev_variable(self, name, stdev):
+        '''
+        Add a standard deviation stdev variable to a marine report
+        
+        :param name: the name of the stdev variable
+        :param clim: the climatological stdev of the climate variable
+        :type name: string
+        :type clim: float
+        '''
+        self.stdev_variables[name] = StdevVariable(stdev)
+	#print(self.climate_variables[name].getclim())
+
     def getnorm(self, varname):
         '''
         Retrieve the climatological average for a particular climate variable
@@ -354,6 +383,20 @@ class MarineReport:
         '''
         if varname in self.climate_variables:
             return self.climate_variables[varname].getclim()
+        else:
+            return None
+
+# KW Added getstdev to pull out the stdev from the rep (like getnorm)
+    def getstdev(self, varname):
+        '''
+        Retrieve the climatological stdev for a particular climate variable
+        
+        :param varname: the name of the climate variable for which you want the climatological stdev
+        :return: the climatological stdev (if the climate variable exists), None otherwise.
+        :rtpye: float
+        '''
+        if varname in self.stdev_variables:
+            return self.stdev_variables[varname].getstdev()
         else:
             return None
 
@@ -574,11 +617,13 @@ class MarineReport:
         
         repout = repout + "{:8d}".format(self.data['DCK'])
         repout = repout + "{:8d}".format(self.data['SID'])
-        repout = repout + "{:8d}".format(self.printvar('PT'))
+        repout = repout + "{:8d}".format(self.printvar('PT')) # seems to be present more than II
+#PT: 0=US Navy/unknown - usually ship, 1=merchant ship/foreign military, 2=ocean station vessel off station (or unknown loc), 3=ocean station vessel on station, 4=lightship, 5=ship, 6=moored buiy, 7=drifting buoy, 8=ice buoy, 9=ice station, 10=oceanographic station, 11=MBT (bathythermograph), 12=XBT (bathythermograph), 13=Coastal-Marine Automated Network (C-MAN), 14=other coastal/island station, 15=fixed ocean platoform, 16=tide guage, 17=hi res CTD, 18=profiling float, 19=undulating oceanographic recorder, 10=auonomous pinneped bathythermograph (seal?),  21=glider
         repout = repout + "{:8d}".format(self.printvar('SI'))
         repout = repout + " {:8.8}".format(self.printsim())
 
 # KW More output from the metadata - really for later humidity bias adjustment and uncertainty
+# II: 0=unknown, 1=ship/ocean station vessel/ice station, 2=generic (SHIP/BUOY/RIGG/PLAT), 3=buoy (WMO 5 digit number), 4=buoy (other e.g. Argos or national), 5=Coastal-marine Automated Network (C-MAN), 6=station, 7=oceanographic platform/cruise number, 8=fishing vessel, 9=national ship, 10=early ship 
         repout = repout +  "{:4d}".format(int(pvar(self.data['II'],    -99,  1)))  #  ID Indicator
         repout = repout +  "{:3d}".format(int(pvar(self.data['IT'],    -9,  1)))  # AT Indicator 
         repout = repout +  "{:3d}".format(int(pvar(self.data['DPTI'],    -9,  1)))  # DPT Indicator
@@ -618,27 +663,27 @@ class MarineReport:
 # KW Added a '9' to fill the now extra element of qc_block
 					  9
                                           )
-        repout = repout + qc_block.format(self.qc.get_qc('SST','bud'),    # 0 = pass, 1 = fail, 9 = not set?
-                                          self.qc.get_qc('SST','clim'), 
+        repout = repout + qc_block.format(self.qc.get_qc('SST','bud'),    # 0 = pass, 1 = fail, 8 = not run due to filering, 9 = not set?
+                                          self.qc.get_qc('SST','clim'),   # 0 = pass, 1 = fail, 8 = not run dur to filtering, 9 = not set?
                                           self.qc.get_qc('SST','nonorm'), 
                                           self.qc.get_qc('SST','freez'), 
                                           self.qc.get_qc('SST','noval'), 
 # KW I can't see where nbud is set - is it just 0 if not set?
                                           self.qc.get_qc('SST', 'nbud'), 
-                                          self.qc.get_qc('SST', 'bbud'), 
+                                          self.qc.get_qc('SST', 'bbud'), # 0 = pass, 1-9 = fail, 9 = not set?
                                           self.qc.get_qc('SST', 'rep'), 
 # KW Added a '9' to fill the now extra element of qc_block
 					  9
                                           )
-        repout = repout + qc_block.format(self.qc.get_qc('AT','bud'), 
-                                          self.qc.get_qc('AT','clim'), 
+        repout = repout + qc_block.format(self.qc.get_qc('AT','bud'),   # 0 = pass, 1 = fail, 8 = not run due to filering, 9 = not set?
+                                          self.qc.get_qc('AT','clim'),  # 0 = pass, 1 = fail, 8 = not run due to filering, 9 = not set?
                                           self.qc.get_qc('AT','nonorm'), 
                                           9,
                                           self.qc.get_qc('AT','noval'),
 # KW I can't see where nbud is set - is it just 0 if not set?
                                           self.qc.get_qc('AT',  'nbud'), 
-                                          self.qc.get_qc('AT',  'bbud'), 
-                                          self.qc.get_qc('AT',  'rep'), 
+                                          self.qc.get_qc('AT',  'bbud'), # 0 = pass, 1-9 = fail, 9 = not set?
+                                          self.qc.get_qc('AT',  'rep'), # 0 = pass, 1 = fail, 9 = not set?
 # KW Added a '9' to fill the now extra element of qc_block
 					  9
                                           )
@@ -650,7 +695,7 @@ class MarineReport:
                                           self.qc.get_qc('DPT','noval'), # KW qc flag for whether the variable is present in the ob - all present due to pre-filter
 # KW I can't see where nbud is set - is it just 0 if not set?
                                           self.qc.get_qc('DPT',  'nbud'), # KW qc flag for ??? if a buddy check can be performed?
-                                          self.qc.get_qc('DPT',  'bbud'), # KW qc flag for the bayesian buddy check - NOT USED (8 or 9)
+                                          self.qc.get_qc('DPT',  'bbud'), # KW qc flag for the bayesian buddy check - NOT USED 0 = pass, 1-9 = fail, 9 = not set?
                                           self.qc.get_qc('DPT',  'rep'), # KW qc flag for if this value is part of a repeat string (more than 70% of 21+obs are identical)
 					  self.qc.get_qc('DPT',  'repsat')  # KW NEWqc flag for persistent saturation
                                           )
@@ -1662,7 +1707,7 @@ class Deck:
         R_lo = -8.0    #previous lower QC limit set
         
 # KW Added DPT to the R_hi/lo = 10/-10 deg - could be better to narrow later on?
-        if (intype == 'AT' | intype == 'DPT'):
+        if ((intype == 'AT') | (intype == 'DPT')):
             R_hi = 10.0     #previous upper QC limits set
             R_lo = -10.0    #previous lower QC limit set
 

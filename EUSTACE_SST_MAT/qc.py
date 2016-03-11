@@ -1100,12 +1100,13 @@ def climatology_check(inval, inclimav, limit=8.0):
     result = 0
 
     if inval == None or inclimav == None or limit == None:
-        result = 1
+# KW changed this from 1 to 8 to distinguish between failed and unable to test
+        result = 8
     else:
         if abs(inval-inclimav) > limit:
             result = 1
-    
-    assert result == 0 or result == 1
+# KW Added a result == 8 in here too  - hopefully there isn't any code that depends on it being 0 or 1 only  
+    assert result == 0 or result == 1 or result == 8
     
     return result
 

@@ -59,6 +59,22 @@ def base_qc_report(rep):
                              rep.getvar('LAT'), 
                              rep.getvar('LON')))
 
+# KW NEW climatology check that uses the simultaneous climatological stdev (of all obs in pentad climatology) to
+# provide a threshold for outlier detection. According to ERA-Interim (?) AT over ocean stdev doesn't vary that much
+# but it is higher in the mid- to high lats, especially around the n. hemi coastlines. It is a little higher around the El Nino
+# tropical pacific warm pool region. stdev for DPT is higher than for AT - esp in the mid-lats.
+# Howmany stdevs to use? Looks like average stdev is 1-2. So 4.5*stdev = 4.5 to 9 deg.
+# 1 stdev ~68.2%, 2 stdev ~95.4%, 3 stdev 99.7%, 4 stdev ~99.9%, 4.5 stdev >99.9%
+# So for the 138196 workable obs from Dec 1973 4.5 stdev < 138 obs-ish
+# Lets start with 4.5
+# I have added in the climatological stdevs to each rep so this should be easy
+# I'm only applying to AT and DPT
+# This really needs a minimum and maximum threshold on it to prevent too much removal of very small anomalies and not
+# enough removal of ridiculously large ones (>50deg for Dec 1973 which does seem crazy - needs checking with old use of SST clim
+# Min: stdev<0.5 are forced to be 0.5 so minimum threshold is 2.25 deg
+# Max: (was previously 10 deg - needs to be large enough to account for diurnal cycle vs pentad mean) stdev>3 forced 
+# to be 3 so max threshold is 13.25
+
 #SST base QC
 # KW Could noval = 0 be a value that is present in IMMA but actually a missing data indicator e.g. -99.9 or 99.9?
     rep.set_qc('SST', 'noval', qc.value_check(rep.getvar('SST'))) 
@@ -71,15 +87,41 @@ def base_qc_report(rep):
 #MAT base QC
 # KW Could noval = 0 be a value that is present in IMMA but actually a missing data indicator e.g. -99.9 or 99.9?
     rep.set_qc('AT', 'noval', qc.value_check(rep.getvar('AT')))
+# KW commented out old clim test and trying new one that uses 4.5*stdev as the threshold with minimum allowed limit and test for 
+# no stdev found
+#    rep.set_qc('AT', 'clim', 
+#               qc.climatology_check(rep.getvar('AT'), rep.getnorm('AT'), 10.0))
+    if (qc.value_check(rep.getstdev('AT')) == 0): 
+        if (rep.getstdev('AT') > 3.):
+	    atlimit = 4.5*3	    
+	elif ((rep.getstdev('AT') > 0.5) & (rep.getstdev('AT') < 3)):
+	    atlimit = 4.5*rep.getstdev('AT')
+	else: 
+	    atlimit = 4.5*0.5
+    else:
+        atlimit = 10.
     rep.set_qc('AT', 'clim', 
-               qc.climatology_check(rep.getvar('AT'), rep.getnorm('AT'), 10.0))
+               qc.climatology_check(rep.getvar('AT'), rep.getnorm('AT'), atlimit))
     rep.set_qc('AT', 'nonorm', qc.no_normal_check(rep.getnorm('AT')))
 
 # KW Added QC for DPT
 # DPT base QC
     rep.set_qc('DPT', 'noval', qc.value_check(rep.getvar('DPT')))
+# KW commented out old clim test and trying new one that uses 4.5*stdev as the threshold with minimum allowed limit and test for 
+# no stdev found
+#    rep.set_qc('DPT', 'clim', 
+#               qc.climatology_check(rep.getvar('DPT'), rep.getnorm('DPT'), 10.0))
+    if (qc.value_check(rep.getstdev('DPT')) == 0): 
+        if (rep.getstdev('DPT') > 3.):
+	    dptlimit = 4.5*3	    
+	elif ((rep.getstdev('DPT') > 0.5) & (rep.getstdev('DPT') < 3)):
+	    dptlimit = 4.5*rep.getstdev('DPT')
+	else: 
+	    dptlimit = 4.5*0.5
+    else:
+        dptlimit = 10.
     rep.set_qc('DPT', 'clim', 
-               qc.climatology_check(rep.getvar('DPT'), rep.getnorm('DPT'), 10.0))
+               qc.climatology_check(rep.getvar('DPT'), rep.getnorm('DPT'), dptlimit))
     #print('CLIMTEST: ',rep.getvar('DPT'), rep.getnorm('DPT'),qc.climatology_check(rep.getvar('DPT'), rep.getnorm('DPT'), 10.0))	       
     rep.set_qc('DPT', 'nonorm', qc.no_normal_check(rep.getnorm('DPT')))
 # KW New QC tests specifically for humidity
@@ -175,6 +217,7 @@ def split_generic_callsign(invoyage):
 def get_clim(rep, clim):
     '''
     Get the climatological value for this particular observation
+    KW Also now used to pull out the climatological stdev for the ob
     
     :param rep: a MarineReport
     :param clim: a masked array containing the climatological averages
@@ -196,6 +239,8 @@ def get_clim(rep, clim):
 def read_climatology(infile, var):
     '''
     Read in the climatology for variable var from infile
+    KW Also used to read in the climatological stdevs
+    KW WHAT HAPPENS IF THERE IS MISSING DATA? THIS NEEDS TO BE IDENTIFIED !!!
     
     :param infile: filename of a netcdf file
     :param var: the variable name to be extracted from the netcdf file
@@ -266,6 +311,7 @@ def main(argv):
     sst_climatology_file  = config['SST_climatology'] 
     nmat_climatology_file = config['MAT_climatology'] 
 # KW Added climatology files for the humidity variables 
+    at_climatology_file  = config['AT_climatology']
     dpt_climatology_file  = config['DPT_climatology']
     shu_climatology_file  = config['SHU_climatology']
     vap_climatology_file  = config['VAP_climatology']
@@ -313,6 +359,7 @@ def main(argv):
     climsst = read_climatology(sst_climatology_file, 'sst')
     climnmat = read_climatology(nmat_climatology_file, 'nmat')
 # KW Added climatology read in files for the humidity variables
+    climat = read_climatology(at_climatology_file, 't2m_clims')
     climdpt = read_climatology(dpt_climatology_file, 'td2m_clims')
     climshu = read_climatology(shu_climatology_file, 'q2m_clims')
     climvap = read_climatology(vap_climatology_file, 'e2m_clims')
@@ -462,17 +509,26 @@ def main(argv):
                         rep_sst_clim = get_clim(rep, climsst)
                         rep.add_climate_variable('SST', rep_sst_clim)
 
-                        rep_mat_clim = get_clim(rep, climnmat)
+# KW Set to read in ERA (or OBS+ERA) clim file for AT (not NMAT)
+#                        rep_mat_clim = get_clim(rep, climnmat)
+                        rep_mat_clim = get_clim(rep, climat)
                         rep.add_climate_variable('AT', rep_mat_clim)
+# KW Added bit to find and store climatological stdev for each rep
+                        rep_mat_stdev = get_clim(rep, at_pentad_stdev)
+                        rep.add_stdev_variable('AT', rep_mat_stdev)
 
 # KW Get climatologies for the humidity variables so that you can create anomalies later
                         rep_dpt_clim = get_clim(rep, climdpt)
                         rep.add_climate_variable('DPT', rep_dpt_clim)
-#			# KW added to test clim value pulled out
-#			print(rep.getvar('UID'),rep.getvar('DPT'),rep_dpt_clim,rep.getnorm('DPT'))			
+# KW Added bit to find and store climatological stdev for each rep
+                        rep_dpt_stdev = get_clim(rep, dpt_pentad_stdev)
+                        rep.add_stdev_variable('DPT', rep_dpt_stdev)
+## KW added to test clim value pulled out
+#			print(rep.getvar('UID'),rep.getvar('AT'),rep_mat_clim,rep.getnorm('AT'))			
+#			print(rep.getvar('UID'),rep.getvar('AT'),rep_mat_stdev,rep.getstdev('AT'))			
 #			if (count == 10):
 #			    pdb.set_trace() 
-#			# KW This seems to be pulling out the correct climatological value (so why is the clim check and anomaly value wrong???)
+## KW This seems to be pulling out the correct climatological value (so why is the clim check and anomaly value wrong???)
 			    
 
                         rep_shu_clim = get_clim(rep, climshu)
@@ -635,7 +691,9 @@ def main(argv):
 # KW Notes that passes is an object containing a months worth of marine obs that pass (flag=0) for all above filters
 # Both the bayesian buddy check and the mds buddy check test for distance to neighbours in space and time and flag
 # with a 1 where it is too great/fails.
-        passes.bayesian_buddy_check('AT', sst_stdev_1, sst_stdev_2, sst_stdev_3)
+# KW NOT GOING TO APPLY BAYESIAN BUDDY CHECK BECAUSE WE CAN'T USE IT FOR DPT AND 
+# ITS EXPERIMENTAL???
+#        passes.bayesian_buddy_check('AT', sst_stdev_1, sst_stdev_2, sst_stdev_3)
 # KW Commented out original mds_buddy_check to use mdsKATE_buddy_check instead (like DPT) which uses the seasonal stdev
 # rather than the average and only applies buddy check to candidate month
 # ALSO = we now use clim T stdevs from ERA (will eventually be obs+ERA combo?)
@@ -644,7 +702,9 @@ def main(argv):
 
 # KW - all fails (reps) are set to have a flag of 0 which means to pass the buddy checks.because there is no point in spending
 # further time buddy checking them, same as for track checks
-        reps.set_qc('AT', 'bbud', 8)
+# KW NOT GOING TO APPLY BAYESIAN BUDDY CHECK BECAUSE WE CAN'T USE IT FOR DPT AND 
+# ITS EXPERIMENTAL???
+#        reps.set_qc('AT', 'bbud', 8)
         reps.set_qc('AT', 'bud', 8)
 
         for i in range(0, len(passes)):

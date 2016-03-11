@@ -72,6 +72,137 @@ If iii) displays the bias, Dave Berry may be correct in ascribing it to real cli
 
 ******************************************************************
 Work Done:
+Mar 11th
+[KW]
+I've written python code to read in the output files into a dictionary so its
+easy to analyse: MDS_basic_KATE.py ReadMDSkate
+Dec 1973 tiny clim (latest run with clim threshold min and max
+138196 obs (passing pos, date, blklst and with DPT and AT present!)
+98.4 % (135998) DPT anomalies within +/- 10.deg
+99.3 % (137248) AT anomalies within +/- 10 deg
+DPT clims 0=133753 (96.8%), 1=4443 (3.2%), 8=0 (no stdev - bad pos/date?), 9=0
+AT clims 0=132123 (95.6%), 1=6073 (4.4%), 8=0 (no stdev - bad pos/date?), 9=0
+SST clims 0=130239 (94.2%), 1=1259 (0.9%), 8=6698 (4.8%) (no stdev - bad pos/date?), 9=0
+
+DPT bud 0=119618 (86.6%), 1=10930 (7.9%), 8=7648 (5.6%), 9=0
+AT bud 0=119238 (86.3%), 1=9753 (7.1%), 8=9205 (6.7%), 9=0
+
+DPT and AT clim and buddy pass: 109102 (78.9%)
+AT clim and buddy pass: 119238 (86.3%)
+DPT clim and buddy pass: 119618 (86.6%)
+
+DPT rep 0=138193 (>99.999%), 1=3 (<0.001%), 8=0, 9=0
+AT rep 0=138191 (>99.999%), 1=5 (<0.001%), 8=0, 9=0
+
+DPT ssat 0=138094 (99.9%), 1=102 (0.1%), 8=0, 9=0
+DPT repsat 0=138084 (99.9%), 1=112 (0.1%), 8=0, 9=0
+
+trk 0=134655 (97.4%), 1=2303 (1.7%), 9=1238 (0.9%) (not passed through to buddy)
+land - not set!
+
+DPT and AT clim buddy rep ssat repsat (and trk by default) pass: 108986 (78.9%)
+DPT clim buddy rep ssat repsat (and trk by default) pass: 119485 (86.5%)
+AT clim buddy rep ssat repsat (and trk by default) pass: 119233 (86.3%)
+
+See figures in ~hadkw/Desktop/HadISDH/MARINEIMAGES/197312_*MAR2016.png
+So - this all looks like its doing ok in the large scale sense.
+
+COMPARE WITH Jan 2010:
+200971 obs (passing pos, date, blklst and with DPT and AT present!)
+
+DPT and AT clim buddy rep ssat repsat (and trk by default) pass: 170109 (84.6%)
+DPT clim buddy rep ssat repsat (and trk by default) pass: 179689 (89.4%)
+AT clim buddy rep ssat repsat (and trk by default) pass: 185431 (92.3%)
+
+
+
+Mar 10th
+[KW]
+Can now run using SLURM and the run_MDS_MAR2016.sh
+This has to be run from /project/hadobs2/hadisdh/marine/PROGS/Build/
+Logged in as hadobs ssh -Y hadobs@eld256
+>sbatch --mem=8000 --time=180 --ntasks=1 --output=mds10MAR2016.log ./run_MDS_MAR2016.sh 1973 1973 12 12
+
+For the stdev limit on clim check I have now added a minimum test so if stdev is <0.5 then it is set at 4.5*0.5 to make sure we're not kicking out stuff in the very stable tropics.
+I have also changed the flag in qc.climatological_check to 8 if it cannot run the test so we have 9 = not used, 8 = unable to test, 1 = fail and 0 = pass.
+
+In theory - this should be a good run. We will have several runs eventually:
+ERAclimsNBC: (ERA clim and stdev), no bias corrections
+ERAclimsBC: (ERA clim and stdev), with bias corrections for height and screen?
+Grid up ERAclimsNBC
+Grid up ERAclimsBC
+Make NBC OBS-ERA combo clim and stdev (will then need the noval flag to be eraval and somehow read in an extra file where the ERA vals are masked? so 0 = obs and 1 = era)
+Make BC OBS-ERA combo clim and stdev (will then need the noval flag to be eraval and somehow read in an extra file where the ERA vals are masked? so 0 = obs and 1 = era)
+OBS+ERAclims: OBS+ERA clim and stdev (and mask) file, no bias corrections
+OBS+ERAclims: OBS+ERA clim and stdev (and mask) file, no bias corrections
+Grid up OBS+ERAclimsNBC
+Grid up OBS+ERAclimsBC
+
+So - how often are we going to be able to apply correction for height/screen?
+Dec 1973
+Height in metres!
+No info on height of thermometer HOT or barometer HOB
+Some info on height of visual observation HOP and anemometer HOA - not so useful unless assume anemometer is 8m>
+thermometer?
+Observing height (of thermometer) has increased from ~16m in 1973 to ~24m by 2006 (Kent et al., 2007 in: Berry and
+Kent, 2011).
+Correct to ~10m above sea level using Smith 1980, Smith 1988 - see Josey et al. 1999.
+APPLY CORRECTION TO VARIABLES AFTER CONVERSION!!! IT COULD AFFECT ANOMALIES BECAUSE THE CLIMATOLOGY IS THE SAME BUT THE
+SHIPS HAVE GOT HIGHER SO THE ANOMALIES SHOULD GET LOWER WITH RESPECT TO THE CLIMATOLOGY.
+
+ASSUME 16m scaling linearly to 24m between 1973-2006 - so 0.24m increase per year - so in theory we should scale all
+observations to ~10m making an assumption of their thermometer height if none is provided.
+
+Quite a lot (>50%?) info on type of thermometer TOT and exposure EOT, and type of hygrometer TOH and exposure EOH.
+TOT:
+ALC=alcohol thermometer, 
+ELE=electronic (resistance ) thermometer, 
+MER=dry bulb mercury thermometer
+EOT:
+A=aspirated, 
+S=screen (not ventilated), 
+SG=ship's sling, 
+SL=sling, 
+SN=ship's screen, 
+US=unscreened, 
+VS=screen (ventilated), 
+W=whirling
+TOH:
+1=hygristor, 
+2=chilled mirror, 
+3=other, 
+C=capacitance, 
+E=electric, 
+H=hair hygrometer, 
+P=psychrometer, 
+T=torsion
+EOH:
+A=aspirated, 
+S=screen (not ventilated), 
+SG=ship's sling, 
+SL=sling, 
+SN=ship's screen, 
+US=unscreened, 
+VS=screen (ventilated), 
+W=whirling
+
+Need an assumption when missing - ideally to apply no correction either
+
+Berry and Kent 2011 say screen derived humidities (EOH: S, SN, possibly VS?) should be reduced by 3.4% specific humidity (residual unc =
+0.2g/kg).
+The effect is worse in low latitudes but this correction does very well. May wish to scale with windspeed? Worse in low winds?
+Plot no-EOH obs vs A/SG/SL/US/W possibly VS? by latitude and non-EOH obs vs S/SN/VS to see if there are any patterns in the populations.
+This will help us to make an assumption over whether the no-EOH obs are more likely to be screen (greater than A/SG/SL/US/W/VS?) or sling
+(greater than S/SN/VS?).
+
+
+What about solar bias?
+This shouldn't affect Td (or therefore q, e, Td) although it could affect the decision over whether it is an icebulb
+but in these cases the humidity is very low.
+This will affect RH, DPD, Td and Tw and so we either need to bias correct or use night humidities.
+Bias correction seems involved and ideally we would perform some analysis to assess how bad this is. Could use the mode
+from Berry et al. 2004 and Berry and Kent (2005).
+I think for version 1 - use night humidities. Good to show the difference from this baseline anyway.
 
 Mar 9th
 [KW] So it ran (from Mar 8th) which is good. I noticed a few things:
@@ -97,6 +228,20 @@ SO IN NEXT RUN I WILL COMMENT OUT THE POS,day=0 filter for both AT and DPT!!!
 RUN with AT buddy_check on (including daytime) - see if those that fail DPT also fail AT?
 Work on clim test that uses 4.5 stdevs
 CHECK repsat thresholds
+
+Dec 1973 run with no day=0 filter for AT or DPT and both AT and DPT buddy checks running:
+This runs! It takes a LONG time (hours!). Quite a few obs kicked out for buddy so need to look at if
+its more than for AT with old buddy. SOme match up with bayesian buddy. Bayesian buddy seems more
+conservative.
+
+Now also written in code to pull through the climatological stdev to each rep (stdev_variables{},add_stdev_variable,StdevVariable,StdevVariable.getstdev(),rep.getstdev().
+I've put in a test to look at this (it will slow things down and use more memory unfortunately).
+I've changed the climatolgical test within base_qc_report() to apply 4.5*stdev as the limit instead of 10.0 for AT and DPT.
+Previous run was 1203 seconds for obs read and base QC.
+Running for Dec 1973:
+Had to add a catch for when the stdev=None. This happens when there is an issue with the date (i.e. Nov 31st) or pos (lat > 90.0) so it can't find a clim or stdev. In
+these cases the limit is set to 10deg (as before) although as there isn't a clim then it will be given a value of 1 (fail) anyway. Going to change this to 8 - not able to set!
+This runs! Quite a lot kicked out for climatology so going to add a minimum threshold so that if stdev < 0.5 then it is forced to be 0.5. It can be very low in the tropics.
 
 Mar 8th
 [KW] 
