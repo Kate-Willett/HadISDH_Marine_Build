@@ -69,8 +69,8 @@ def read_qc_data(filename, location, fieldwidths):
                 
                 platform_data += [fields[: 8]]
                 platform_obs += [fields[8: 8+17]]
-                platform_meta += [fields[8+17: 8+17+33]]
-                platform_qc += [fields[8+17+33:]]
+                platform_meta += [fields[8+17: 8+17+30]]
+                platform_qc += [fields[8+17+30:]]
                 
 
         except OSError:
@@ -188,9 +188,11 @@ def netcdf_write(data, variables, lats, lons, hours, year, month, do_zip = True)
     outfile = ncdf.Dataset(filename,'w', format='NETCDF4')
 
     time_dim = outfile.createDimension('time',data.shape[1])
-    lat_dim = outfile.createDimension('lat',data.shape[2])
-    lon_dim = outfile.createDimension('lon',data.shape[3])
-
+    lat_dim = outfile.createDimension('latitude',data.shape[2])
+    lon_dim = outfile.createDimension('longitude',data.shape[3])
+    
+    #***********
+    # set up basic variables linked to dimensions
     # make time variable
     nc_var = outfile.createVariable('time', np.dtype('int'), ('time'), zlib = do_zip)
     nc_var.long_name = "time since 1/{}/{} in hours".format(month, year)
@@ -198,9 +200,24 @@ def netcdf_write(data, variables, lats, lons, hours, year, month, do_zip = True)
     nc_var.standard_name = "time"
     nc_var[:] = hours
     
+    # make latitude variable
+    nc_var = outfile.createVariable('latitude', np.dtype('int'), ('latitude'), zlib = do_zip)
+    nc_var.long_name = "latitude"
+    nc_var.units = "degrees"
+    nc_var.standard_name = "latitude"
+    nc_var[:] = lats
+
+    # make longitude variable
+    nc_var = outfile.createVariable('longitude', np.dtype('int'), ('longitude'), zlib = do_zip)
+    nc_var.long_name = "longitude"
+    nc_var.units = "degrees"
+    nc_var.standard_name = "longitude"
+    nc_var[:] = lons
+
+    #***********
     # create variables:
     for var in variables:
-        nc_var = outfile.createVariable(var.name, var.dtype, ('time','lat','lon',), zlib = do_zip, fill_value = var.mdi)
+        nc_var = outfile.createVariable(var.name, var.dtype, ('time','latitude','longitude',), zlib = do_zip, fill_value = var.mdi)
 
         nc_var.long_name = var.long_name
         nc_var.units = var.units
@@ -266,29 +283,56 @@ def make_MetVars(mdi):
 
  
     mat = set_MetVar_attributes("marine_air_temperature", "Marine Air Temperature", "marine air temperature", "C", mdi, np.dtype('float64'), 0)
-    mat_an = set_MetVar_attributes("marine_air_temperature_anomalies", "Marine Air Temperature", "marine air temperature anomalies", "C", mdi, np.dtype('float64'), 1)
+    mat_an = set_MetVar_attributes("marine_air_temperature_anomalies", "Marine Air Temperature Anomalies", "marine air temperature anomalies", "C", mdi, np.dtype('float64'), 1)
 
     sst = set_MetVar_attributes("sea_surface_temperature", "Sea Surface Temperature", "sea surface temperature", "C", mdi, np.dtype('float64'), 2)
-    sst_an = set_MetVar_attributes("sea_surface_temperature_anomalies", "Sea Surface Temperature", "sea surface temperature anomalies", "C", mdi, np.dtype('float64'), 3)
+    sst_an = set_MetVar_attributes("sea_surface_temperature_anomalies", "Sea Surface Temperature Anomalies", "sea surface temperature anomalies", "C", mdi, np.dtype('float64'), 3)
 
     slp = set_MetVar_attributes("sea_level_pressure", "Sea Level Pressure", "sea level pressure", "hPa", mdi, np.dtype('float64'), 4)
 
     dpt = set_MetVar_attributes("dew_point_temperature", "Dew Point Temperature", "dew point temperature", "C", mdi, np.dtype('float64'), 5)
-    dpt_an = set_MetVar_attributes("dew_point_temperature_anomalies", "Dew Point Temperature", "dew point temperature anomalies", "C", mdi, np.dtype('float64'), 6)
+    dpt_an = set_MetVar_attributes("dew_point_temperature_anomalies", "Dew Point Temperature Anomalies", "dew point temperature anomalies", "C", mdi, np.dtype('float64'), 6)
 
     shu = set_MetVar_attributes("specific_humidity", "Specific humidity", "specific_humidity", "g/kg", mdi, np.dtype('float64'), 7)
-    shu_an = set_MetVar_attributes("specific_humidity_anomalies", "Specific humidity", "specific_humidity_anomalies", "g/kg", mdi, np.dtype('float64'), 8)
+    shu_an = set_MetVar_attributes("specific_humidity_anomalies", "Specific humidity Anomalies", "specific_humidity_anomalies", "g/kg", mdi, np.dtype('float64'), 8)
  
     vap = set_MetVar_attributes("vapor_pressure", "Vapor pressure calculated w.r.t water", "water vapor pressure", "hPa", mdi, np.dtype('float64'), 9)
-    vap_an = set_MetVar_attributes("vapor_pressure_anomalies", "Vapor pressure calculated w.r.t water", "water vapor pressure anomalies", "hPa", mdi, np.dtype('float64'), 10)
+    vap_an = set_MetVar_attributes("vapor_pressure_anomalies", "Vapor pressure Anomalies calculated w.r.t water", "water vapor pressure anomalies", "hPa", mdi, np.dtype('float64'), 10)
 
     crh = set_MetVar_attributes("relative_humidity", "Relative humidity", "relative humidity", "%rh", mdi, np.dtype('float64'), 11)
-    crh_an = set_MetVar_attributes("relative_humidity_anomalies", "Relative humidity", "relative humidity anomalies", "%rh", mdi, np.dtype('float64'), 12)
+    crh_an = set_MetVar_attributes("relative_humidity_anomalies", "Relative humidit Anomaliesy", "relative humidity anomalies", "%rh", mdi, np.dtype('float64'), 12)
 
     cwb = set_MetVar_attributes("wet_bulb_temperature", "Wet bulb temperatures", "wet bulb temperature", "C", mdi, np.dtype('float64'), 13)
-    cwb_an = set_MetVar_attributes("wet_bulb_temperature_anomalies", "Wet bulb temperatures", "wet bulb temperature anomalies", "C", mdi, np.dtype('float64'), 14)
+    cwb_an = set_MetVar_attributes("wet_bulb_temperature_anomalies", "Wet bulb temperatures Anomalies", "wet bulb temperature anomalies", "C", mdi, np.dtype('float64'), 14)
 
     dpd = set_MetVar_attributes("dew_point_depression", "Dew Point Depression", "dew point depression", "C", mdi, np.dtype('float64'), 15)
-    dpd_an = set_MetVar_attributes("dew_point_depression_anomalies", "Dew Point Depression", "dew point depression anomalies", "C", mdi, np.dtype('float64'), 16)
+    dpd_an = set_MetVar_attributes("dew_point_depression_anomalies", "Dew Point Depression Anomalies", "dew point depression anomalies", "C", mdi, np.dtype('float64'), 16)
 
     return [mat, mat_an, sst, sst_an, slp, dpt, dpt_an, shu, shu_an, vap, vap_an, crh, crh_an, cwb, cwb_an, dpd, dpd_an]
+
+#*********************************************************
+def PlotFirstField(filename, variable = "Marine Air Temperature", vmin = None,vmax = None, field = 0):
+    '''
+    Plot the first field of the data in the netcdf file
+    - i.e. a map of the humidities in the first month
+    uses iris
+
+    :param cube cube: the input cube
+    :returns: None
+    '''
+    
+    import matplotlib.pyplot as plt
+    import iris.quickplot as qplt
+    import cartopy.crs as ccrs
+    import iris
+    
+    cube = iris.load_cube(filename, variable)
+
+    plt.clf()
+    ax = plt.axes(projection=ccrs.Robinson())
+    ax.gridlines() #draw_labels=True)
+    ax.coastlines()
+    qplt.pcolor(cube[field], cmap=plt.cm.PiYG,vmin=vmin,vmax=vmax)
+    plt.show()
+    
+    return # PlotFirstField

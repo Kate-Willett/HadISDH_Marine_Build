@@ -15,8 +15,8 @@ import matplotlib
 import calendar
 import matplotlib.pyplot as plt
 
-import grid_utils as utils
-
+import utils
+import plot_qc_diagnostics
 
 plots = True
 # Constants in CAPS
@@ -27,7 +27,6 @@ END_YEAR = dt.datetime.now().year - 1
 
 mdi = -9999
 OBS_ORDER = utils.make_MetVars(mdi)
-
 
 # what size grid (lat/lon/hour)
 DELTA_LAT = 1
@@ -70,7 +69,7 @@ for year in [1973]: # range(START_YEAR, END_YEAR):
                       10,10,10,10,9)
 
         # process the monthly file
-        filename = "new_suite_{}{}_constantP.txt".format(year, month)
+        filename = "new_suite_{}{}_newclimSDlimit.txt".format(year, month)
         raw_data, raw_obs, raw_meta, raw_qc = utils.read_qc_data(filename, DATA_LOCATION, fields)
 
         # can do subselections here, on all 4 outputs.
@@ -95,6 +94,19 @@ for year in [1973]: # range(START_YEAR, END_YEAR):
             plt.xlabel("Hours")
             plt.xticks(np.arange(-300, 2700, 300))
             plt.savefig("obs_distribution_{}_{}.png".format(year, month))
+
+            
+            # only for a few of the variables
+            for variable in OBS_ORDER:
+                if variable.name in ["dew_point_temperature", "specific_humidity", "relative_humidity"]:
+                    raw_input("To do")
+
+                    plot_qc_diagnostics.actuals_vs_lat(variable, lats, raw_obs[:, obs.column], raw_qc)
+
+                if variable.name in ["dew_point_temperature_anomalies", "specific_humidity_anomalies", "relative_humidity_anomalies"]:
+                    raw_input("To do")
+
+                    plot_qc_diagnostics.anomalies_vs_lat(variable, lats, raw_obs[:, obs.column], raw_qc)
             
 
         # discretise hours
@@ -111,17 +123,20 @@ for year in [1973]: # range(START_YEAR, END_YEAR):
         lat_index = utils.make_index(lats, DELTA_LAT, multiplier = 100)
         lon_index = utils.make_index(lons, DELTA_LON, multiplier = 100)
 
-        
-                      
+        lat_index += ((len(grid_lats)-1)/2) # and as -ve indices are unhelpful, roll by offsetting by most westward
+        lon_index += ((len(grid_lons)-1)/2) #    or most southerly so that (0,0) is (-90,-180)
+
+        # NOTE - ALWAYS GIVING TOP-RIGHT OF BOX TO GIVE < HARD LIMIT (as opposed to <=)
+          
         # this is the gridding bit!
-        for gh in grid_hours:
-            print gh
-            for lt in grid_lats:
-                for ln in grid_lons:
+        for gh, timestamp in enumerate(grid_hours):
+            print "Hours since 1/{}/{} 00:00 = {}".format(month, year, timestamp)
+            for lt, glat in enumerate(grid_lats):
+                for ln, glon in enumerate(grid_lons):
 
                     # find where the matches are
                     locs1, = np.where(np.logical_and(lat_index == lt, lon_index == ln))
-                    locs2, = np.where(hours_since[locs1] == gh)
+                    locs2, = np.where(hours_since[locs1] == timestamp)
 
                     locs = locs1[locs2]
                     
@@ -129,8 +144,7 @@ for year in [1973]: # range(START_YEAR, END_YEAR):
                         month_grid[:, gh, lt, ln] = np.mean(raw_obs[locs, :], axis = 0)
                         month_grid.mask [:, gh, lt, ln] = False # unset the mask
 
-            end = dt.datetime.now()
-
+            # if timestamp > 12: break
 
         # have one month of gridded data.
 
