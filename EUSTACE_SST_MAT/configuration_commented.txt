@@ -5,6 +5,8 @@ HadISDHSwitch,True
 # directory to host database which is now just a set of ascii files but 
 # could later be the SQL database
 data_base_dir,/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/beta/
+# suffix to add to output file name to show which iteration we're on ERAclimNBC, ERAclimBC, OBSclimNBC, OBSclimBC
+output_suffix,ERAclimNBC
 # owner/user of directory for data base - this will be different when Robert is running?
 # However, its not actually required in this run where we're not using an SQL
 # database

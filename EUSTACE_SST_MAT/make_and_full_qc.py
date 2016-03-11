@@ -324,6 +324,8 @@ def main(argv):
     bad_id_file           = config['IDs_to_exclude']
 # KW added an item for the database dir to write out the QC'd ascii data to - hijacking SQL data_base_dir for now
     data_base_dir	  = config['data_base_dir']
+# KW added an item as a suffix for the output file name to note which iteration we're on
+    output_suffix         = config['output_suffix']    
 
 # KW Noting this is set to read the OLD SST stdevs - nothing reads in the newer OSTIA one yet.       
     sst_stdev_climatology_file  = config['Old_SST_stdev_climatology']
@@ -351,6 +353,7 @@ def main(argv):
     print 'List of bad IDs =', bad_id_file 
 # KW added an item for the database dir to write out the QC'd ascii data to - hijacking SQL data_base_dir for now
     print 'QCd Database directory =', data_base_dir 
+    print 'QCd File Suffix =', output_suffix 
     print ''
 
     ids_to_exclude = process_bad_id_file(bad_id_file)
@@ -770,7 +773,7 @@ def main(argv):
         smn = "%02d" % (month)
 # KW changed outfile from icoards_dir to data_base_dir so that it writes to a different place to where the original 
 # data are stored - don't want to mess with John's working version.
-        outfile = open(data_base_dir+'/new_suite_'+syr+smn+'.txt', 'w')
+        outfile = open(data_base_dir+'/new_suite_'+syr+smn+'_'+output_suffix+'.txt', 'w')
         for rep in reps.reps:
             if rep.data['YR'] == year and rep.data['MO'] == month:
                 outfile.write(rep.print_report())
