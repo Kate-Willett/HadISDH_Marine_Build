@@ -89,6 +89,31 @@ import pdb # pdb.set_trace() or c
 
 from LinearTrends import MedianPairwise 
 
+
+TheTypes=("|S9","|S8","int","int","int","int","int","int",
+          "int","int","int","int","int",
+          "int","int","int","int","int","int","int","int","int","int","int","int",
+          "int","int","int","int","int","|S8",
+          "int","int","int","int","int","int","int","int","int","int","int",
+          "int","|S3","|S4","|S4","|S3","|S2","|S3","int","int","int","int","int","int",
+          "int","int","int","int","int","int","int","int","int",
+          "int","int","int","int","int","int","int","int","int",
+          "int","int","int","int","int","int","int","int","int",
+          "int","int","int","int","int","int","int","int","int",
+          "int","int","int","int","int","int","int","int")
+
+TheDelimiters=(10,8,8,8,8,8,8,8,
+               8,8,8,8,8,
+               8,8,8,8,8,8,8,8,8,8,8,8,
+               8,8,8,8,8,9,
+               4,3,3,3,8,3,8,3,8,3,8,
+               4,3,4,4,3,2,3,5,5,5,5,5,7,
+               2,1,1,1,1,1,1,1,1,
+               2,1,1,1,1,1,1,1,1,
+               2,1,1,1,1,1,1,1,1,
+               2,1,1,1,1,1,1,1,1,
+               2,1,1,1,1,1,1,1)
+
 #************************************************************************
 # ReadMDSkate
 #************************************************************************
@@ -101,29 +126,8 @@ def ReadMDSkate(TheYear,TheMonth,TheType):
     
     print(TheFilee)
     
-    TheTypes=("|S9","|S8","int","int","int","int","int","int",
-              "int","int","int","int","int",
-	      "int","int","int","int","int","int","int","int","int","int","int","int",
-	      "int","int","int","int","int","|S8",
-	      "int","int","int","int","int","int","int","int","int","int","int",
-	      "int","|S3","|S4","|S4","|S3","|S2","|S3","int","int","int","int","int","int",
-	      "int","int","int","int","int","int","int","int","int",
-	      "int","int","int","int","int","int","int","int","int",
-	      "int","int","int","int","int","int","int","int","int",
-	      "int","int","int","int","int","int","int","int","int",
-	      "int","int","int","int","int","int","int","int")
-    
-    TheDelimiters=(10,8,8,8,8,8,8,8,
-                   8,8,8,8,8,
-		   8,8,8,8,8,8,8,8,8,8,8,8,
-		   8,8,8,8,8,9,
-		   4,3,3,3,8,3,8,3,8,3,8,
-		   4,3,4,4,3,2,3,5,5,5,5,5,7,
-		   2,1,1,1,1,1,1,1,1,
-		   2,1,1,1,1,1,1,1,1,
-		   2,1,1,1,1,1,1,1,1,
-		   2,1,1,1,1,1,1,1,1,
-		   2,1,1,1,1,1,1,1)
+    # RD - moved the TheTypes and TheDelimiters to outside of definition
+    #     so I can call them from another routine
 
     RawData=ReadData(TheFilee,TheTypes,TheDelimiters)
     

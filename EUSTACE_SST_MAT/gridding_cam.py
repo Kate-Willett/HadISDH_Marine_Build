@@ -14,14 +14,22 @@ import argparse
 import matplotlib
 import calendar
 import matplotlib.pyplot as plt
+import gc
 
 import utils
 import plot_qc_diagnostics
+import MDS_basic_KATE as mds
 
 plots = True
+doQC = True
+doMonthlies = True
+doPentads = False
+
 # Constants in CAPS
 
 DATA_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/beta/"
+#PLOT_LOCATION="/project/hadobs2/hadisdh/marine/PLOTS/"
+
 START_YEAR = 1973
 END_YEAR = dt.datetime.now().year - 1
 
@@ -35,12 +43,16 @@ DELTA_HOUR = 3
 
 # set up the grid
 grid_lats = np.arange(-90, 90 + DELTA_LAT, DELTA_LAT)
+grid_lat_centres = grid_lats[1:] - DELTA_LAT/2.
+
 grid_lons = np.arange(-180, 180 + DELTA_LON, DELTA_LON)
+grid_lon_centres = grid_lons[1:] - DELTA_LON/2.
+
 
 '''
 Get (3) hourly, 1 x 1 grid fields
 
-Then rescale to daily/pentad/monthly and 5 x 5 fields
+Then rescale to daily/pentad/monthly and then to 5 x 5 fields
 '''
 
 
@@ -51,33 +63,15 @@ for year in [1973]: # range(START_YEAR, END_YEAR):
 
         grid_hours = np.arange(0, 24 * calendar.monthrange(year, month)[1], DELTA_HOUR)
 
-        # set up the array
-        month_grid = np.ma.zeros([len(OBS_ORDER),len(grid_hours),len(grid_lats), len(grid_lons)], fill_value = mdi)
-        month_grid.mask = np.ones([len(OBS_ORDER),len(grid_hours),len(grid_lats), len(grid_lons)])
-
-
-        # RD - I've had to copy this from Extended_IMMA.py
-        #      And it was difficult given extra spaces in the format statements
-        #      Not flexible or reliable.  Can we do better?
-        fields = (9+1,\
-                      8,8,8,8,8,8,8,\
-                      8,8,8,8,8,\
-                      8,8,8,8,8,8,8,8,8,8,8,8,\
-                      8,8,8,8,8,8,\
-                      5,3,3,3,8,3,8,3,8,3,8,4,\
-                      3,4,4,3,2,3,5,5,5,5,5,7+1,\
-                      10,10,10,10,9)
+        # RD - adapted MDS_basic_Kate.py to allow this call
+        fields = mds.TheDelimiters
 
         # process the monthly file
-        filename = "new_suite_{}{}_newclimSDlimit.txt".format(year, month)
-        raw_data, raw_obs, raw_meta, raw_qc = utils.read_qc_data(filename, DATA_LOCATION, fields)
-
-        # can do subselections here, on all 4 outputs.
-
-
+        filename = "new_suite_{}{}_tinyclim.txt".format(year, month)
+        raw_platform_data, raw_obs, raw_meta, raw_qc = utils.read_qc_data(filename, DATA_LOCATION, fields)
 
         # extract observation details
-        lats, lons, years, months, days, hours = utils.process_platform_obs(raw_data)
+        lats, lons, years, months, days, hours = utils.process_platform_obs(raw_platform_data)
 
         # test dates
         if not utils.check_date(years, year, "years", filename):
@@ -98,26 +92,30 @@ for year in [1973]: # range(START_YEAR, END_YEAR):
             
             # only for a few of the variables
             for variable in OBS_ORDER:
-                if variable.name in ["dew_point_temperature", "specific_humidity", "relative_humidity"]:
-                    raw_input("To do")
+                if variable.name in ["dew_point_temperature", "specific_humidity", "relative_humidity", "dew_point_temperature_anomalies", "specific_humidity_anomalies", "relative_humidity_anomalies"]:
 
-                    plot_qc_diagnostics.actuals_vs_lat(variable, lats, raw_obs[:, obs.column], raw_qc)
+                    plot_qc_diagnostics.values_vs_lat(variable, lats, raw_obs[:, variable.column], raw_qc, "qc_actuals_{}_{}_{}.png".format(variable.name, year, month), multiplier = variable.multiplier)
 
-                if variable.name in ["dew_point_temperature_anomalies", "specific_humidity_anomalies", "relative_humidity_anomalies"]:
-                    raw_input("To do")
-
-                    plot_qc_diagnostics.anomalies_vs_lat(variable, lats, raw_obs[:, obs.column], raw_qc)
             
+        # QC sub-selection
+        if doQC:
+            print "Using ALL QC FLAGS"
+            mask = utils.process_qc_flags(raw_qc)
+
+            complete_mask = np.zeros(raw_obs.shape)
+            for i in range(raw_obs.shape[1]):
+                complete_mask[:,i] = mask
+            clean_data = np.ma.masked_array(raw_obs, complete_mask)
+
+        else:
+            clean_data = np.ma.masked_array(raw_obs, mask = np.zeros(raw_obs.shape))
+
 
         # discretise hours
         hours = utils.make_index(hours, DELTA_HOUR, multiplier = 100)
 
-
         # get the hours since start of month
         hours_since = ((days - 1) * 24) + (hours * DELTA_HOUR)
-
-        # convert raw_obs array
-        raw_obs = raw_obs.astype(int)
 
         # discretise lats/lons
         lat_index = utils.make_index(lats, DELTA_LAT, multiplier = 100)
@@ -128,6 +126,9 @@ for year in [1973]: # range(START_YEAR, END_YEAR):
 
         # NOTE - ALWAYS GIVING TOP-RIGHT OF BOX TO GIVE < HARD LIMIT (as opposed to <=)
           
+        # set up the array
+        this_month_grid = np.ma.zeros([len(OBS_ORDER),len(grid_hours),len(grid_lats), len(grid_lons)], fill_value = mdi)
+        this_month_grid.mask = np.ones([len(OBS_ORDER),len(grid_hours),len(grid_lats), len(grid_lons)])
         # this is the gridding bit!
         for gh, timestamp in enumerate(grid_hours):
             print "Hours since 1/{}/{} 00:00 = {}".format(month, year, timestamp)
@@ -141,12 +142,50 @@ for year in [1973]: # range(START_YEAR, END_YEAR):
                     locs = locs1[locs2]
                     
                     if locs.shape[0] > 0:
-                        month_grid[:, gh, lt, ln] = np.mean(raw_obs[locs, :], axis = 0)
-                        month_grid.mask [:, gh, lt, ln] = False # unset the mask
+                        this_month_grid[:, gh, lt, ln] = np.mean(clean_data[locs, :], axis = 0)
+                        this_month_grid.mask [:, gh, lt, ln] = False # unset the mask
 
-            # if timestamp > 12: break
+            if timestamp > 12: break
 
         # have one month of gridded data.
+        utils.netcdf_write("out_test_1x1_3hr_{}_{}.nc".format(year, month), \
+                               this_month_grid, OBS_ORDER, grid_lats, grid_lons, grid_hours, year, month)
 
-        utils.netcdf_write(month_grid, OBS_ORDER, grid_lats, grid_lons, grid_hours, year, month)
+        # now average over time
+        # Dailies
+
+        daily_hours = grid_hours.reshape(-1, 24/DELTA_HOUR)
+        this_month_grid = this_month_grid.reshape(this_month_grid.shape[0], -1, 24/DELTA_HOUR, this_month_grid.shape[2], this_month_grid.shape[3])
+        #         variables x days x timepoints x lats x lons
+
+        n_obs_per_day = np.ma.count(this_month_grid, axis = 2) # not used as yet.
+        daily_grid = np.ma.mean(this_month_grid, axis = 2)
+        
+        # clear up memory
+        del this_month_grid
+        gc.collect()
+
+        utils.netcdf_write("out_test_1x1_daily_{}_{}.nc".format(year, month), \
+                               daily_grid, OBS_ORDER, grid_lats, grid_lons, daily_hours[:,0], year, month)
+
+        # Pentads
+        if doPentads:
+            print "need to write the code"
+            print "  How to do this for individual months..."
+
+        # Monthlies
+        elif doMonthlies:
             
+            n_obs_per_month = np.ma.count(daily_grid, axis = 1) # not used as yet.
+            monthly_grid = np.ma.mean(daily_grid, axis = 1)
+
+            utils.netcdf_write("out_test_1x1_monthly_{}_{}.nc".format(year, month), \
+                               monthly_grid, OBS_ORDER, grid_lats, grid_lons, daily_hours[0,0], year, month)
+
+            # clear up memory
+            del daily_grid
+            gc.collect()
+
+        
+            
+        # now to re-grid to coarser resolution
