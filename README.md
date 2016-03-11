@@ -88,8 +88,8 @@ DPT bud 0=119618 (86.6%), 1=10930 (7.9%), 8=7648 (5.6%), 9=0
 AT bud 0=119238 (86.3%), 1=9753 (7.1%), 8=9205 (6.7%), 9=0
 
 DPT and AT clim and buddy pass: 109102 (78.9%)
-AT clim and buddy pass: 119238 (86.3%)
-DPT clim and buddy pass: 119618 (86.6%)
+AT clim and buddy pass: 119238 (86.3%) [18958, 13.7%]
+DPT clim and buddy pass: 119618 (86.6%) [18578, 13.4%]
 
 DPT rep 0=138193 (>99.999%), 1=3 (<0.001%), 8=0, 9=0
 AT rep 0=138191 (>99.999%), 1=5 (<0.001%), 8=0, 9=0
@@ -107,8 +107,35 @@ AT clim buddy rep ssat repsat (and trk by default) pass: 119233 (86.3%)
 See figures in ~hadkw/Desktop/HadISDH/MARINEIMAGES/197312_*MAR2016.png
 So - this all looks like its doing ok in the large scale sense.
 
++ve skew in anomalies of both DPT and AT:
+Unlikely to be solar bias as this shouldn't really affect DPT (check by plotting day vs night?)
+Unlikely to be climate change because this is 1973 relative to 1981-2010
+Quite likely to be a positive bias in climatology relative to ERA-Interim.
+
 COMPARE WITH Jan 2010:
 200971 obs (passing pos, date, blklst and with DPT and AT present!)
+94.4 % (189817) DPT anomalies within +/- 10.deg
+97.1 % (194895) AT anomalies within +/- 10 deg
+DPT clims 0=195919 (97.5%), 1=5052 (2.5%), 8=0 (no stdev - bad pos/date?), 9=0
+AT clims 0=196149 (97.6%), 1=4822 (2.4%), 8=0 (no stdev - bad pos/date?), 9=0
+SST clims 0=141519 (70.4%), 1=1340 (0.7%), 8=58112 (28.9%) (no stdev - bad pos/date?), 9=0
+
+DPT bud 0=180787 (90.0%), 1=14580 (6.8%), 8=5604 (2.8%), 9=0
+AT bud 0=185466 (92.3%), 1=10152 (5.1%), 8=5353 (2.7%), 9=0
+
+DPT and AT clim and buddy pass: 171178 (85.2%)
+AT clim and buddy pass: 185466 (92.3%) [15505, 7.7%]
+DPT clim and buddy pass: 180787 (90.0%) [20184, 10.0%]
+
+DPT rep 0=200947 (>99.9%), 1=24 (<0.1%), 8=0, 9=0
+AT rep 0=200925 (>99.9%), 1=46 (<0.1%), 8=0, 9=0
+
+DPT ssat 0=199920 (99.5%), 1=1051 (0.5%), 8=0, 9=0
+DPT repsat 0=200676 (99.9%), 1=295 (0.1%), 8=0, 9=0
+
+trk 0=200329 (99.7%), 1=585 (0.3%), 9=57 (<0.1%) (not passed through to buddy)
+land - not set!
+
 
 DPT and AT clim buddy rep ssat repsat (and trk by default) pass: 170109 (84.6%)
 DPT clim buddy rep ssat repsat (and trk by default) pass: 179689 (89.4%)
