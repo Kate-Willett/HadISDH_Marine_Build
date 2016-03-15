@@ -84,11 +84,19 @@ def read_qc_data(filename, location, fieldwidths):
     
     platform_qc = np.array(platform_qc)
     platform_obs = np.array(platform_obs)
+    platform_meta = np.array(platform_meta)
+    platform_data = np.array(platform_data)
 
-    return np.array(platform_data), \
-        platform_obs.astype(int), \
-        np.array(platform_meta), \
-        platform_qc.astype(int) # read_qc_data
+
+    # filter PT=14
+    PT = np.array([int(x) for x in platform_meta[:,3]])
+    goods, = np.where(PT != 14)
+
+
+    return platform_data[goods], \
+        platform_obs[goods].astype(int), \
+        platform_meta[goods], \
+        platform_qc[goods].astype(int) # read_qc_data
 
 
 #*****************************************************
@@ -169,7 +177,7 @@ def read_global_attributes(attr_file):
     return attributes # read_global_attributes
 
 #*****************************************************
-def netcdf_write(filename, data, variables, lats, lons, hours, year, month, do_zip = True):
+def netcdf_write(filename, data, variables, lats, lons, hours, year, month, do_zip = True, frequency = "H"):
     '''
     Write the relevant fields out to a netCDF file.
     
@@ -182,6 +190,7 @@ def netcdf_write(filename, data, variables, lats, lons, hours, year, month, do_z
     :param int year: year being processed
     :param int month: month being processed
     :param bool do_zip: allow compression?
+    :param str frequency: frequency of input data
     '''
 
     # remove file
@@ -190,9 +199,13 @@ def netcdf_write(filename, data, variables, lats, lons, hours, year, month, do_z
 
     outfile = ncdf.Dataset(filename,'w', format='NETCDF4')
 
-    time_dim = outfile.createDimension('time',data.shape[1])
-    lat_dim = outfile.createDimension('latitude',data.shape[-2])
-    lon_dim = outfile.createDimension('longitude',data.shape[-1])
+    if frequency == "M":
+        time_dim = outfile.createDimension('time',1)
+    else:
+        time_dim = outfile.createDimension('time',data.shape[1])
+
+    lat_dim = outfile.createDimension('latitude',data.shape[-2] - 1) # box edges given, box centres will be written
+    lon_dim = outfile.createDimension('longitude',data.shape[-1] - 1)
     
     #***********
     # set up basic variables linked to dimensions
@@ -228,10 +241,17 @@ def netcdf_write(filename, data, variables, lats, lons, hours, year, month, do_z
         nc_var.long_name = var.long_name
         nc_var.units = var.units
         nc_var.missing_value = var.mdi
-        nc_var.valid_min = np.min(data[var.column, :, :, :])
-        nc_var.valid_max = np.max(data[var.column, :, :, :])
         nc_var.standard_name = var.standard_name
-        nc_var[:] = data[var.column, :, :, :] / nc_var.multiplier
+
+        if frequency == "M":
+            nc_var.valid_min = np.min(data[var.column, 1:, 1:])
+            nc_var.valid_max = np.max(data[var.column, 1:, 1:])
+            nc_var[:] = np.array([data[var.column, 1:, 1:]]) / var.multiplier
+
+        else:
+            nc_var.valid_min = np.min(data[var.column, :, 1:, 1:])
+            nc_var.valid_max = np.max(data[var.column, :, 1:, 1:])
+            nc_var[:] = data[var.column, :, 1:, 1:] / var.multiplier
 
 
     # Global Attributes
@@ -274,9 +294,9 @@ def set_MetVar_attributes(name, long_name, standard_name, units, mdi, dtype, col
     new_var.standard_name = standard_name
     new_var.column = column
 
-    if "relative" not in name: # RH only in x10, everything else in x100
+    if "anomalies" in name: # all anomalies x100
         new_var.multiplier = 100.
-    else:
+    else: # everything else x10
         new_var.multiplier = 10.
     
     return new_var # set_MetVar_attributes
@@ -349,8 +369,11 @@ def PlotFirstField(filename, variable = "Marine Air Temperature", vmin = None,vm
     return # PlotFirstField
 
 #*********************************************************
-def process_qc_flags(qc_flags):
+def process_qc_flags(qc_flags, these_flags):
     '''
+    :param array qc_flags: names of QC flags in column order
+    :param dict these_flags: names and values of QC flags to test.
+
     Test values
     0 - pass
     1 - fail
@@ -358,19 +381,18 @@ def process_qc_flags(qc_flags):
     9 - not run (failure further up chain?)
     '''
 
-    ignore = ["day"]
+    mask = np.ones((qc_flags.shape[0], len(these_flags.keys())))
 
-    mask = np.ones(qc_flags.shape)
+    fl_loc = 0
+    for flag, value in these_flags.iteritems():
 
-    for fl, flag in enumerate(QC_FLAGS):
+        fl, = np.where(QC_FLAGS == flag)[0]
 
-        if flag in ignore:
-            mask[:,fl] = 0
+        # settings of 0 or 9 allowed - unset these.
+        good_locs, = np.where(qc_flags[:,fl] == value)          
+        mask[good_locs, fl_loc] = 0
 
-        else:
-            # settings of 0 or 9 allowed - unset these.
-            good_locs, = np.where(np.logical_or(qc_flags[:,fl] == 0, qc_flags[:,fl] == 9))          
-            mask[good_locs,fl] = 0
+        fl_loc += 1
 
     complete_mask = np.sum(mask, axis = 1) # get sum for each obs.  If zero, then fine, if not then mask
     complete_mask[complete_mask > 0] = 1
@@ -395,3 +417,28 @@ def day_or_night(qc_flags):
     night_locs = np.where(qc_flags[daycol, :] == 1)
 
     return day_locs, night_locs # day_or_night
+
+#*********************************************************
+def grid_5by5(data, grid_lats, grid_lons):
+
+
+    # assert the shapes are correct - blc at -90, -180, trc at 90, 180
+    assert len(grid_lats) == 181
+    assert len(grid_lons) == 361
+
+    DELTA = 5
+
+    new_data = np.ma.zeros((data.shape[0], 1+(data.shape[1]-1)/DELTA, 1+(data.shape[2]-1)/DELTA))
+    new_data.fill_value = data.fill_value
+    
+    for lt, lat in enumerate(np.arange(0, len(grid_lats), DELTA) + 1):
+        for ln, lon in enumerate(np.arange(0, len(grid_lons), DELTA) + 1):
+           
+            for var in range(data.shape[0]):
+                new_data[var, lt-1, ln-1] = np.ma.mean(data[var, lat-DELTA:lat, lon-DELTA:lon])
+
+    # box edges
+    new_lats = np.arange(-90, 90+DELTA, DELTA)
+    new_lons = np.arange(-180, 180+DELTA, DELTA)
+
+    return new_data, new_lats, new_lons
