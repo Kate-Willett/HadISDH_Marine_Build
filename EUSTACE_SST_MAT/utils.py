@@ -221,7 +221,6 @@ def netcdf_write(filename, data, variables, lats, lons, hours, year, month, do_z
     nc_var.long_name = "latitude"
     nc_var.units = "degrees"
     nc_var.standard_name = "latitude"
-    nc_var.bounds = np.array([lats[:-1],lats[1:]]).transpose()
     nc_var[:] = lats[1:] - (lats[1] - lats[0])/2.
     
 
@@ -230,7 +229,6 @@ def netcdf_write(filename, data, variables, lats, lons, hours, year, month, do_z
     nc_var.long_name = "longitude"
     nc_var.units = "degrees"
     nc_var.standard_name = "longitude"
-    nc_var.bounds = np.array([lons[:-1],lons[1:]]).transpose()
     nc_var[:] = lons[1:] - (lons[1] - lons[0])/2.
 
     #***********
@@ -244,13 +242,13 @@ def netcdf_write(filename, data, variables, lats, lons, hours, year, month, do_z
         nc_var.standard_name = var.standard_name
 
         if frequency == "M":
-            nc_var.valid_min = np.min(data[var.column, 1:, 1:])
-            nc_var.valid_max = np.max(data[var.column, 1:, 1:])
-            nc_var[:] = np.array([data[var.column, 1:, 1:]]) / var.multiplier
+            nc_var.valid_min = np.min(data[var.column, 1:, 1:]) / var.multiplier
+            nc_var.valid_max = np.max(data[var.column, 1:, 1:]) / var.multiplier
+            nc_var[:] = np.ma.array([data[var.column, 1:, 1:]]) / var.multiplier
 
         else:
-            nc_var.valid_min = np.min(data[var.column, :, 1:, 1:])
-            nc_var.valid_max = np.max(data[var.column, :, 1:, 1:])
+            nc_var.valid_min = np.min(data[var.column, :, 1:, 1:]) / var.multiplier
+            nc_var.valid_max = np.max(data[var.column, :, 1:, 1:]) / var.multiplier
             nc_var[:] = data[var.column, :, 1:, 1:] / var.multiplier
 
 
@@ -442,3 +440,55 @@ def grid_5by5(data, grid_lats, grid_lons):
     new_lons = np.arange(-180, 180+DELTA, DELTA)
 
     return new_data, new_lats, new_lons
+
+#*********************************************************
+def grid_1by1_cam(clean_data, hours_since, lat_index, lon_index, grid_hours, grid_lats, grid_lons, OBS_ORDER, mdi):
+    '''
+    Grid using the Climate Anomaly Method on 1x1 degree for each month
+
+    :param array clean_data: input data
+    :param array hours_since: counting in hours since start of month
+    :param array lat_index: discretised input latitudes
+    :param array lon_index: discretised input longitudes
+    :param array grid_hours: discretised hours
+    :param array grid_lats: grid box corner lats
+    :param array grid_lons: grid box corner lons
+    :param list OBS_ORDER: list of MetVar variables
+    :param float mdi: missing data indicator
+    '''
+
+
+    # set up the array
+    this_month_grid = np.ma.zeros([len(OBS_ORDER),len(grid_hours),len(grid_lats), len(grid_lons)], fill_value = mdi)
+    this_month_grid.mask = np.ones([len(OBS_ORDER),len(grid_hours),len(grid_lats), len(grid_lons)])
+
+    mesh_lats, mesh_lons = np.meshgrid(grid_lats, grid_lons)
+
+
+    for gh, timestamp in enumerate(grid_hours):
+
+        locs_h, = np.where(hours_since == timestamp)
+
+        if len(locs_h) > 0: # only continue if there are data to process
+
+            for lt, glat in enumerate(grid_lats):
+                locs_lat, = np.where(lat_index == lt)
+                
+                if len(locs_lat) > 0: # only continue if there are data to process
+
+                    for ln, glon in enumerate(grid_lons):
+                        
+                        # find where the matches are
+                        locs_lon, = np.where(lon_index == ln)
+
+                        if len(locs_lon) > 0: # only continue if there are data to process
+                        
+                            locs_ll = np.intersect1d(locs_lat, locs_lon)
+                            locs = np.intersect1d(locs_h, locs_ll)
+                        
+                            this_month_grid[:, gh, lt, ln] = np.mean(clean_data[locs, :], axis = 0)
+                            this_month_grid.mask [:, gh, lt, ln] = False # unset the mask
+
+        if timestamp >= 24: break
+
+    return this_month_grid
