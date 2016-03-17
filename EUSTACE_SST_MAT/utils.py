@@ -15,6 +15,11 @@ import matplotlib
 import struct
 import netCDF4 as ncdf
 
+QC_FLAGS = np.array(["day","land","trk","date1","date2","pos","blklst","dup","POSblank1",\
+"SSTbud","SSTclim","SSTnonorm","SSTfreez","SSTnoval","SSTnbud","SSTbbud","SSTrep","SSTblank",\
+"ATbud","ATclim","ATnonorm","ATblank1","ATnoval","ATnbud","ATbbud","ATrep","ATblank2",\
+"DPTbud","DPTclim","DPTnonorm","DPTssat","DPTnoval","DPTnbud","DPTbbud","DPTrep","DPTrepsat",\
+"few","ntrk","DUMblank1","DUMblank2","DUMblank3","DUMblank4","DUMblank5","DUMblank6"])
 
 #*********************************************
 class MetVar(object):
@@ -77,12 +82,21 @@ def read_qc_data(filename, location, fieldwidths):
             sys.exit()
 
     
+    platform_qc = np.array(platform_qc)
+    platform_obs = np.array(platform_obs)
+    platform_meta = np.array(platform_meta)
+    platform_data = np.array(platform_data)
 
 
-    return np.array(platform_data), \
-        np.array(platform_obs), \
-        np.array(platform_meta), \
-        np.array(platform_qc) # read_qc_data
+    # filter PT=14
+    PT = np.array([int(x) for x in platform_meta[:,3]])
+    goods, = np.where(PT != 14)
+
+
+    return platform_data[goods], \
+        platform_obs[goods].astype(int), \
+        platform_meta[goods], \
+        platform_qc[goods].astype(int) # read_qc_data
 
 
 #*****************************************************
@@ -163,10 +177,11 @@ def read_global_attributes(attr_file):
     return attributes # read_global_attributes
 
 #*****************************************************
-def netcdf_write(data, variables, lats, lons, hours, year, month, do_zip = True):
+def netcdf_write(filename, data, variables, lats, lons, hours, year, month, do_zip = True, frequency = "H"):
     '''
     Write the relevant fields out to a netCDF file.
     
+    :param str filename: output filename
     :param array data: the whole data array [nvars, nhours, nlats, nlons]
     :param list variables: the variables in order to output
     :param array lats: the latitudes
@@ -175,11 +190,8 @@ def netcdf_write(data, variables, lats, lons, hours, year, month, do_zip = True)
     :param int year: year being processed
     :param int month: month being processed
     :param bool do_zip: allow compression?
+    :param str frequency: frequency of input data
     '''
-
-
-    
-    filename = "out_test_1x1_3hr_{}_{}.nc".format(year, month)
 
     # remove file
     if os.path.exists(filename):
@@ -187,9 +199,13 @@ def netcdf_write(data, variables, lats, lons, hours, year, month, do_zip = True)
 
     outfile = ncdf.Dataset(filename,'w', format='NETCDF4')
 
-    time_dim = outfile.createDimension('time',data.shape[1])
-    lat_dim = outfile.createDimension('latitude',data.shape[2])
-    lon_dim = outfile.createDimension('longitude',data.shape[3])
+    if frequency == "M":
+        time_dim = outfile.createDimension('time',1)
+    else:
+        time_dim = outfile.createDimension('time',data.shape[1])
+
+    lat_dim = outfile.createDimension('latitude',data.shape[-2] - 1) # box edges given, box centres will be written
+    lon_dim = outfile.createDimension('longitude',data.shape[-1] - 1)
     
     #***********
     # set up basic variables linked to dimensions
@@ -205,14 +221,15 @@ def netcdf_write(data, variables, lats, lons, hours, year, month, do_zip = True)
     nc_var.long_name = "latitude"
     nc_var.units = "degrees"
     nc_var.standard_name = "latitude"
-    nc_var[:] = lats
+    nc_var[:] = lats[1:] - (lats[1] - lats[0])/2.
+    
 
     # make longitude variable
     nc_var = outfile.createVariable('longitude', np.dtype('int'), ('longitude'), zlib = do_zip)
     nc_var.long_name = "longitude"
     nc_var.units = "degrees"
     nc_var.standard_name = "longitude"
-    nc_var[:] = lons
+    nc_var[:] = lons[1:] - (lons[1] - lons[0])/2.
 
     #***********
     # create variables:
@@ -222,10 +239,17 @@ def netcdf_write(data, variables, lats, lons, hours, year, month, do_zip = True)
         nc_var.long_name = var.long_name
         nc_var.units = var.units
         nc_var.missing_value = var.mdi
-        nc_var.valid_min = np.min(data[var.column, :, :, :])
-        nc_var.valid_max = np.max(data[var.column, :, :, :])
         nc_var.standard_name = var.standard_name
-        nc_var[:] = data[var.column, :, :, :]
+
+        if frequency == "M":
+            nc_var.valid_min = np.min(data[var.column, 1:, 1:]) / var.multiplier
+            nc_var.valid_max = np.max(data[var.column, 1:, 1:]) / var.multiplier
+            nc_var[:] = np.ma.array([data[var.column, 1:, 1:]]) / var.multiplier
+
+        else:
+            nc_var.valid_min = np.min(data[var.column, :, 1:, 1:]) / var.multiplier
+            nc_var.valid_max = np.max(data[var.column, :, 1:, 1:]) / var.multiplier
+            nc_var[:] = data[var.column, :, 1:, 1:] / var.multiplier
 
 
     # Global Attributes
@@ -267,6 +291,11 @@ def set_MetVar_attributes(name, long_name, standard_name, units, mdi, dtype, col
     new_var.mdi = mdi
     new_var.standard_name = standard_name
     new_var.column = column
+
+    if "anomalies" in name: # all anomalies x100
+        new_var.multiplier = 100.
+    else: # everything else x10
+        new_var.multiplier = 10.
     
     return new_var # set_MetVar_attributes
  
@@ -300,7 +329,7 @@ def make_MetVars(mdi):
     vap_an = set_MetVar_attributes("vapor_pressure_anomalies", "Vapor pressure Anomalies calculated w.r.t water", "water vapor pressure anomalies", "hPa", mdi, np.dtype('float64'), 10)
 
     crh = set_MetVar_attributes("relative_humidity", "Relative humidity", "relative humidity", "%rh", mdi, np.dtype('float64'), 11)
-    crh_an = set_MetVar_attributes("relative_humidity_anomalies", "Relative humidit Anomaliesy", "relative humidity anomalies", "%rh", mdi, np.dtype('float64'), 12)
+    crh_an = set_MetVar_attributes("relative_humidity_anomalies", "Relative humidity Anomalies", "relative humidity anomalies", "%rh", mdi, np.dtype('float64'), 12)
 
     cwb = set_MetVar_attributes("wet_bulb_temperature", "Wet bulb temperatures", "wet bulb temperature", "C", mdi, np.dtype('float64'), 13)
     cwb_an = set_MetVar_attributes("wet_bulb_temperature_anomalies", "Wet bulb temperatures Anomalies", "wet bulb temperature anomalies", "C", mdi, np.dtype('float64'), 14)
@@ -308,7 +337,7 @@ def make_MetVars(mdi):
     dpd = set_MetVar_attributes("dew_point_depression", "Dew Point Depression", "dew point depression", "C", mdi, np.dtype('float64'), 15)
     dpd_an = set_MetVar_attributes("dew_point_depression_anomalies", "Dew Point Depression Anomalies", "dew point depression anomalies", "C", mdi, np.dtype('float64'), 16)
 
-    return [mat, mat_an, sst, sst_an, slp, dpt, dpt_an, shu, shu_an, vap, vap_an, crh, crh_an, cwb, cwb_an, dpd, dpd_an]
+    return [mat, mat_an, sst, sst_an, slp, dpt, dpt_an, shu, shu_an, vap, vap_an, crh, crh_an, cwb, cwb_an, dpd, dpd_an] # make_MetVars
 
 #*********************************************************
 def PlotFirstField(filename, variable = "Marine Air Temperature", vmin = None,vmax = None, field = 0):
@@ -336,3 +365,130 @@ def PlotFirstField(filename, variable = "Marine Air Temperature", vmin = None,vm
     plt.show()
     
     return # PlotFirstField
+
+#*********************************************************
+def process_qc_flags(qc_flags, these_flags):
+    '''
+    :param array qc_flags: names of QC flags in column order
+    :param dict these_flags: names and values of QC flags to test.
+
+    Test values
+    0 - pass
+    1 - fail
+    8 - unable to test
+    9 - not run (failure further up chain?)
+    '''
+
+    mask = np.ones((qc_flags.shape[0], len(these_flags.keys())))
+
+    fl_loc = 0
+    for flag, value in these_flags.iteritems():
+
+        fl, = np.where(QC_FLAGS == flag)[0]
+
+        # settings of 0 or 9 allowed - unset these.
+        good_locs, = np.where(qc_flags[:,fl] == value)          
+        mask[good_locs, fl_loc] = 0
+
+        fl_loc += 1
+
+    complete_mask = np.sum(mask, axis = 1) # get sum for each obs.  If zero, then fine, if not then mask
+    complete_mask[complete_mask > 0] = 1
+
+    return complete_mask # process_qc_flags
+
+
+#*********************************************************
+def day_or_night(qc_flags):
+    '''
+    Return locations of observations which are day or night
+    
+    :param array qc_flags: array of QC flags (0 --> 9)
+
+    :returns: day_locs, night_locs - locations of day/night obs
+    '''
+    
+   
+    daycol = np.where(QC_FLAGS == "day")
+
+    day_locs = np.where(qc_flags[daycol, :] == 0)
+    night_locs = np.where(qc_flags[daycol, :] == 1)
+
+    return day_locs, night_locs # day_or_night
+
+#*********************************************************
+def grid_5by5(data, grid_lats, grid_lons):
+
+
+    # assert the shapes are correct - blc at -90, -180, trc at 90, 180
+    assert len(grid_lats) == 181
+    assert len(grid_lons) == 361
+
+    DELTA = 5
+
+    new_data = np.ma.zeros((data.shape[0], 1+(data.shape[1]-1)/DELTA, 1+(data.shape[2]-1)/DELTA))
+    new_data.fill_value = data.fill_value
+    
+    for lt, lat in enumerate(np.arange(0, len(grid_lats), DELTA) + 1):
+        for ln, lon in enumerate(np.arange(0, len(grid_lons), DELTA) + 1):
+           
+            for var in range(data.shape[0]):
+                new_data[var, lt-1, ln-1] = np.ma.mean(data[var, lat-DELTA:lat, lon-DELTA:lon])
+
+    # box edges
+    new_lats = np.arange(-90, 90+DELTA, DELTA)
+    new_lons = np.arange(-180, 180+DELTA, DELTA)
+
+    return new_data, new_lats, new_lons
+
+#*********************************************************
+def grid_1by1_cam(clean_data, hours_since, lat_index, lon_index, grid_hours, grid_lats, grid_lons, OBS_ORDER, mdi):
+    '''
+    Grid using the Climate Anomaly Method on 1x1 degree for each month
+
+    :param array clean_data: input data
+    :param array hours_since: counting in hours since start of month
+    :param array lat_index: discretised input latitudes
+    :param array lon_index: discretised input longitudes
+    :param array grid_hours: discretised hours
+    :param array grid_lats: grid box corner lats
+    :param array grid_lons: grid box corner lons
+    :param list OBS_ORDER: list of MetVar variables
+    :param float mdi: missing data indicator
+    '''
+
+
+    # set up the array
+    this_month_grid = np.ma.zeros([len(OBS_ORDER),len(grid_hours),len(grid_lats), len(grid_lons)], fill_value = mdi)
+    this_month_grid.mask = np.ones([len(OBS_ORDER),len(grid_hours),len(grid_lats), len(grid_lons)])
+
+    mesh_lats, mesh_lons = np.meshgrid(grid_lats, grid_lons)
+
+
+    for gh, timestamp in enumerate(grid_hours):
+
+        locs_h, = np.where(hours_since == timestamp)
+
+        if len(locs_h) > 0: # only continue if there are data to process
+
+            for lt, glat in enumerate(grid_lats):
+                locs_lat, = np.where(lat_index == lt)
+                
+                if len(locs_lat) > 0: # only continue if there are data to process
+
+                    for ln, glon in enumerate(grid_lons):
+                        
+                        # find where the matches are
+                        locs_lon, = np.where(lon_index == ln)
+
+                        if len(locs_lon) > 0: # only continue if there are data to process
+                        
+                            locs_ll = np.intersect1d(locs_lat, locs_lon)
+                            locs = np.intersect1d(locs_h, locs_ll)
+                        
+                            this_month_grid[:, gh, lt, ln] = np.mean(clean_data[locs, :], axis = 0)
+                            this_month_grid.mask [:, gh, lt, ln] = False # unset the mask
+
+        if timestamp >= 24: break
+
+    return this_month_grid
