@@ -72,6 +72,107 @@ If iii) displays the bias, Dave Berry may be correct in ascribing it to real cli
 
 ******************************************************************
 Work Done:
+Mar 17th
+[KW}
+RD discovered that 197304 has a line that is longer than all of the others 414 characters as opposed to 409. A 'wc -L *' shows that this problem is pervasive:
+414 new_suite_197304_ERAclimNBC.txt
+410 new_suite_198201_ERAclimNBC.txt
+410 new_suite_198203_ERAclimNBC.txt
+410 new_suite_198204_ERAclimNBC.txt
+412 new_suite_198206_ERAclimNBC.txt
+410 new_suite_198207_ERAclimNBC.txt
+410 new_suite_198210_ERAclimNBC.txt
+412 new_suite_198506_ERAclimNBC.txt
+412 new_suite_198603_ERAclimNBC.txt
+414 new_suite_198605_ERAclimNBC.txt
+410 new_suite_198606_ERAclimNBC.txt
+410 new_suite_198607_ERAclimNBC.txt
+416 new_suite_198609_ERAclimNBC.txt
+410 new_suite_198610_ERAclimNBC.txt
+412 new_suite_198703_ERAclimNBC.txt
+410 new_suite_198709_ERAclimNBC.txt
+414 new_suite_198710_ERAclimNBC.txt
+412 new_suite_198806_ERAclimNBC.txt
+416 new_suite_199003_ERAclimNBC.txt
+412 new_suite_199007_ERAclimNBC.txt
+412 new_suite_199112_ERAclimNBC.txt
+410 new_suite_199212_ERAclimNBC.txt
+410 new_suite_199302_ERAclimNBC.txt
+412 new_suite_199308_ERAclimNBC.txt
+412 new_suite_199409_ERAclimNBC.txt
+412 new_suite_199502_ERAclimNBC.txt
+410 new_suite_199503_ERAclimNBC.txt
+410 new_suite_199802_ERAclimNBC.txt
+412 new_suite_199804_ERAclimNBC.txt
+412 new_suite_199805_ERAclimNBC.txt
+410 new_suite_199812_ERAclimNBC.txt
+410 new_suite_199901_ERAclimNBC.txt
+410 new_suite_199902_ERAclimNBC.txt
+410 new_suite_199903_ERAclimNBC.txt
+410 new_suite_199909_ERAclimNBC.txt
+410 new_suite_199910_ERAclimNBC.txt
+410 new_suite_200001_ERAclimNBC.txt
+410 new_suite_200005_ERAclimNBC.txt
+410 new_suite_200006_ERAclimNBC.txt
+410 new_suite_200007_ERAclimNBC.txt
+410 new_suite_200008_ERAclimNBC.txt
+410 new_suite_200009_ERAclimNBC.txt
+410 new_suite_200010_ERAclimNBC.txt
+410 new_suite_200011_ERAclimNBC.txt
+412 new_suite_200012_ERAclimNBC.txt
+410 new_suite_200101_ERAclimNBC.txt
+410 new_suite_200103_ERAclimNBC.txt
+410 new_suite_200106_ERAclimNBC.txt
+412 new_suite_200107_ERAclimNBC.txt
+412 new_suite_200108_ERAclimNBC.txt
+412 new_suite_200109_ERAclimNBC.txt
+410 new_suite_200110_ERAclimNBC.txt
+412 new_suite_200112_ERAclimNBC.txt
+412 new_suite_200201_ERAclimNBC.txt
+412 new_suite_200202_ERAclimNBC.txt
+410 new_suite_200204_ERAclimNBC.txt
+410 new_suite_200205_ERAclimNBC.txt
+412 new_suite_200207_ERAclimNBC.txt
+410 new_suite_200208_ERAclimNBC.txt
+412 new_suite_200210_ERAclimNBC.txt
+412 new_suite_200402_ERAclimNBC.txt
+410 new_suite_200404_ERAclimNBC.txt
+412 new_suite_200501_ERAclimNBC.txt
+410 new_suite_200503_ERAclimNBC.txt
+414 new_suite_200603_ERAclimNBC.txt
+412 new_suite_200605_ERAclimNBC.txt
+410 new_suite_200703_ERAclimNBC.txt
+410 new_suite_200810_ERAclimNBC.txt
+412 new_suite_200811_ERAclimNBC.txt
+412 new_suite_200901_ERAclimNBC.txt
+412 new_suite_200902_ERAclimNBC.txt
+410 new_suite_200903_ERAclimNBC.txt
+412 new_suite_201002_ERAclimNBC.txt
+410 new_suite_201012_ERAclimNBC.txt
+412 new_suite_201109_ERAclimNBC.txt
+410 new_suite_201112_ERAclimNBC.txt
+412 new_suite_201207_ERAclimNBC.txt
+410 new_suite_201212_ERAclimNBC.txt
+410 new_suite_201303_ERAclimNBC.txt
+412 new_suite_201308_ERAclimNBC.txt
+412 new_suite_201309_ERAclimNBC.txt
+410 new_suite_201410_ERAclimNBC.txt
+
+On further investigation, the long line in 1973 has a VERY LOW AT value (-90 at 30N, 117W is silly). This results in screwy related humidity 
+variables: CRH, CWB and DPD. The DPT is ok - ~4degC. The RH is greater than the 8 characters (when divided by 10 for actual and 100 for 
+anomalies - so > 9999999.9%rh and 999999.99%rh respectively. This makes the line longer. We can pull out the longest lines using:
+egrep -n "^.{$(wc -L < new_suite_198201_ERAclimNBC.txt)}$" new_suite_198201_ERAclimNBC.txt
+
+For 198201 this gives;
+
+line 99512: PIWB      26K4CY     -3880   14300    1982       1       9       0    -819   -9892  -32768  -32768  -32768      89    -222      78     -66     125    -10431101894311011839    -309   -4463    -908   -9670    9999     732      57       5  -32768 BU         1  0 -9 -9  -32768  0     300  0     550  0  -32768   0NL AN  MER W  P W   -999   15 -999 -999 -999  19820 190000099 980019909 810909909 000109900 09999999
+
+So - an AT of -81.9 at 38S, 143E resulting in an anomlay of -98! DPT of 8.9 looks plausible. RH is screwy!
+
+For now, we need a catch in the gridding routine. I will edit the QC suite to check for such silly values and remove them though because the change in line length screws
+up the search on QC flags.
+
+
 Mar 11th
 [KW]
 I've written python code to read in the output files into a dictionary so its
@@ -136,12 +237,34 @@ DPT repsat 0=200676 (99.9%), 1=295 (0.1%), 8=0, 9=0
 trk 0=200329 (99.7%), 1=585 (0.3%), 9=57 (<0.1%) (not passed through to buddy)
 land - not set!
 
-
 DPT and AT clim buddy rep ssat repsat (and trk by default) pass: 170109 (84.6%)
 DPT clim buddy rep ssat repsat (and trk by default) pass: 179689 (89.4%)
 AT clim buddy rep ssat repsat (and trk by default) pass: 185431 (92.3%)
 
+This is all now written up in the blog (with figures): http://hadisdh.blogspot.co.uk/2016/03/exploring-marine-data-qc.html
 
+I have started to run the QC properly - fingers crossed this will write to ICOADS.2.5.1/ERAclimNBC/new_suite_197312_ERAclimNBC.txt
+>sbatch --mem=12000 --time=360 --ntasks=1 --output=mds10MAR2016_19731977.log ./run_MDS_MAR2016.sh 1973 1977 1 12
+DOH - should have updated the length of time it can run for!!! Set going at 15:02 - will fall at 18:02. WON'T LET ME GO OVER 360mins (6 hours)
+Seems to take ~30mins to complete (for Jan 1973 at least) so we may just be ok.
+
+Jan 2010 investigation:
+There is a line of AT and DPT at ~81N that looks a bit odd - stands out from the rest, very little variation in latitude. On further
+investigation, all valid obs (not clim fails) are 81.? N and between 138W to 144W. These are mostly shipid=UFTA, with a few shipid=MASKSTID.
+All are PT=5 (ship). So these are probably ok.
+
+There is a line of AT and DPT at ~-66S and between 139E adnd(351 obs between -66 and -67S). These are mostly shipid=FHZI and PT=5 (ship). FHZI
+has 645 obs in total - all -45 to -67 S and 135-145E. Looking at the time points of the latitude steps the ship sits at ~-66 between 90 to 460
+time points. Looking at time series of the actual and anomaly values for AT, DPT and SST it doesn't look so much like something wierd is going
+on. SST looks fine although there is a lot of missing data between 90 and 250 time steps. AT looks ok. The temperautre dances around 0 deg for
+the 90 to 460 time steps, peaking between 350 and 450 to give anomalies around 10 deg. The anomalies are mostly above zero but not often
+peaking more than 6 degrees positive. The location of the ship is just at the Antarctic Circle and very close/possibly on the land mass 
+(Magnetic Pole?). Its summer (January) down there so temperatures could be above zero. The DPT is a little more interesting. The actual values
+dip down very low between 100 to 200 time steps and again between 430-450. In between those periods it rises close to (but mostly below) zero.
+The anomalies are close to zero during the 'dip down' periods and well above zero in between. So, this could be and ERA bias. It could be some
+odd data but it could be real - nothing totally crazy. This may lessen when we start using OBSclims?
+See ~hadkw/Desktop/HadISDH/MARINEIMAGES/*FHZI* for images and blog post: 
+FHZI is an Australian ship: http://www.meteo.shom.fr/cgi-bin/meteo/display_vos_ext.cgi?callchx=FHZI
 
 Mar 10th
 [KW]
