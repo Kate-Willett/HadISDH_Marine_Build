@@ -37,7 +37,25 @@ class MetVar(object):
 
     __repr__ = __str__
    
+#*********************************************
+class TimeVar(object):
+    '''
+    Bare bones class for times
+    '''
+    
+    def __init__(self, name, long_name, units, standard_name):
+        self.name = name
+        self.long_name = long_name
+        self.units = units
+        self.standard_name = standard_name
+        
+
+    def __str__(self):     
+        return "time: {}, long_name: {}, units: {}".format(self.name, self.long_name, self.units)
+
+    __repr__ = __str__
    
+     
 
 #*****************************************************
 def read_qc_data(filename, location, fieldwidths):
@@ -64,10 +82,13 @@ def read_qc_data(filename, location, fieldwidths):
     platform_qc = []
 
 
-
     with open(os.path.join(location, filename), 'r') as infile:
-        try:
-            for line in infile:
+        for line in infile:
+
+            try:
+                # some lines might not be the correct length
+                assert len(line) == 410
+                
                 fields = parse(line)
                 
                 # now unpack and process
@@ -76,12 +97,16 @@ def read_qc_data(filename, location, fieldwidths):
                 platform_obs += [fields[8: 8+17]]
                 platform_meta += [fields[8+17: 8+17+30]]
                 platform_qc += [fields[8+17+30:]]
-                
 
-        except OSError:
-            sys.exit()
+            except AssertionError:
+                print "skipping line in {} - malformed data".format(filename)
+                print line
+                               
+            except OSError:
+                print "file {} missing".format(filename)
+                sys.exit()
 
-    
+    # convert to arrays
     platform_qc = np.array(platform_qc)
     platform_obs = np.array(platform_obs)
     platform_meta = np.array(platform_meta)
@@ -158,7 +183,9 @@ def read_global_attributes(attr_file):
     '''
     Reads attributes file and returns a dictionary of key/values
     '''
-        
+
+    attr_file = os.path.join(os.getcwd(), attr_file)
+
     try:
         with open(attr_file,'r') as infile:        
             lines = infile.readlines()
@@ -176,8 +203,40 @@ def read_global_attributes(attr_file):
         
     return attributes # read_global_attributes
 
+#************************************************************************
+def write_netcdf_variable(outfile, var, v, data, frequency, do_zip = True):
+    '''
+    Create the netcdf variable
+    
+    :param obj outfile: output file object
+    :param obj var: variable object
+    :param int v: sequency number of variable
+    :param array data: data to write
+    :param str frequency: frequency of input data
+    :param bool do_zip: allow compression?
+    '''
+
+    nc_var = outfile.createVariable(var.name, var.dtype, ('time','latitude','longitude',), zlib = do_zip, fill_value = var.mdi)
+
+    nc_var.long_name = var.long_name
+    nc_var.units = var.units
+    nc_var.missing_value = var.mdi
+    nc_var.standard_name = var.standard_name
+    
+    if frequency == "M":
+        nc_var.valid_min = np.min(data[v, :, :]) / var.multiplier
+        nc_var.valid_max = np.max(data[v, :, :]) / var.multiplier
+        nc_var[:] = np.ma.array([data[v, :, :]]) / var.multiplier
+        
+    else:
+        nc_var.valid_min = np.min(data[v, :, :, :]) / var.multiplier
+        nc_var.valid_max = np.max(data[v, :, :, :]) / var.multiplier
+        nc_var[:] = data[v, :, :, :] / var.multiplier
+
+    return # write_netcdf_variable
+
 #*****************************************************
-def netcdf_write(filename, data, variables, lats, lons, hours, year, month, do_zip = True, frequency = "H"):
+def netcdf_write(filename, data, variables, lats, lons, time, do_zip = True, frequency = "H", single = ""):
     '''
     Write the relevant fields out to a netCDF file.
     
@@ -186,11 +245,10 @@ def netcdf_write(filename, data, variables, lats, lons, hours, year, month, do_z
     :param list variables: the variables in order to output
     :param array lats: the latitudes
     :param array lons: the longitudes
-    :param array hours: the hours
-    :param int year: year being processed
-    :param int month: month being processed
+    :param array time: the times as TimeVar object
     :param bool do_zip: allow compression?
     :param str frequency: frequency of input data
+    :param str single: only write a single variable if != ""
     '''
 
     # remove file
@@ -201,56 +259,52 @@ def netcdf_write(filename, data, variables, lats, lons, hours, year, month, do_z
 
     if frequency == "M":
         time_dim = outfile.createDimension('time',1)
+    elif frequency == "P":
+        time_dim = outfile.createDimension('time',data.shape[1])
+    elif frequency == "Y":
+        time_dim = outfile.createDimension('time',data.shape[1])
     else:
         time_dim = outfile.createDimension('time',data.shape[1])
 
-    lat_dim = outfile.createDimension('latitude',data.shape[-2] - 1) # box edges given, box centres will be written
-    lon_dim = outfile.createDimension('longitude',data.shape[-1] - 1)
+    lat_dim = outfile.createDimension('latitude',len(lats)) # as TRC of box edges given, size = # box centres to be written
+    lon_dim = outfile.createDimension('longitude',len(lons))
     
     #***********
     # set up basic variables linked to dimensions
     # make time variable
-    nc_var = outfile.createVariable('time', np.dtype('int'), ('time'), zlib = do_zip)
-    nc_var.long_name = "time since 1/{}/{} in hours".format(month, year)
-    nc_var.units = "hours"
-    nc_var.standard_name = "time"
-    nc_var[:] = hours
+    nc_var = outfile.createVariable(time.name, np.dtype('int'), ('time'), zlib = do_zip)
+    nc_var.long_name = time.long_name
+    nc_var.units = time.units
+    nc_var.standard_name = time.standard_name
+    nc_var[:] = time.data
     
     # make latitude variable
-    nc_var = outfile.createVariable('latitude', np.dtype('int'), ('latitude'), zlib = do_zip)
+    nc_var = outfile.createVariable('latitude', np.dtype('float32'), ('latitude'), zlib = do_zip)
     nc_var.long_name = "latitude"
-    nc_var.units = "degrees"
+    nc_var.units = "degrees north"
     nc_var.standard_name = "latitude"
-    nc_var[:] = lats[1:] - (lats[1] - lats[0])/2.
+    nc_var[:] = lats[:] - (lats[1] - lats[0])/2.
     
 
     # make longitude variable
-    nc_var = outfile.createVariable('longitude', np.dtype('int'), ('longitude'), zlib = do_zip)
+    nc_var = outfile.createVariable('longitude', np.dtype('float32'), ('longitude'), zlib = do_zip)
     nc_var.long_name = "longitude"
-    nc_var.units = "degrees"
+    nc_var.units = "degrees east"
     nc_var.standard_name = "longitude"
-    nc_var[:] = lons[1:] - (lons[1] - lons[0])/2.
+    nc_var[:] = lons[:] - (lons[1] - lons[0])/2.
 
     #***********
     # create variables:
-    for var in variables:
-        nc_var = outfile.createVariable(var.name, var.dtype, ('time','latitude','longitude',), zlib = do_zip, fill_value = var.mdi)
+    if single != "":
+        var = single
+        v = 0
 
-        nc_var.long_name = var.long_name
-        nc_var.units = var.units
-        nc_var.missing_value = var.mdi
-        nc_var.standard_name = var.standard_name
+        write_netcdf_variable(outfile, var, v, data, frequency, do_zip = do_zip)
+        
+    else: # spin through all of the variables
 
-        if frequency == "M":
-            nc_var.valid_min = np.min(data[var.column, 1:, 1:]) / var.multiplier
-            nc_var.valid_max = np.max(data[var.column, 1:, 1:]) / var.multiplier
-            nc_var[:] = np.ma.array([data[var.column, 1:, 1:]]) / var.multiplier
-
-        else:
-            nc_var.valid_min = np.min(data[var.column, :, 1:, 1:]) / var.multiplier
-            nc_var.valid_max = np.max(data[var.column, :, 1:, 1:]) / var.multiplier
-            nc_var[:] = data[var.column, :, 1:, 1:] / var.multiplier
-
+        for v, var in enumerate(variables):
+            write_netcdf_variable(outfile, var, v, data, frequency, do_zip = do_zip)
 
     # Global Attributes
     # from file
@@ -270,7 +324,7 @@ def netcdf_write(filename, data, variables, lats, lons, hours, year, month, do_z
     return # netcdf_write
 
 #*****************************************************
-def set_MetVar_attributes(name, long_name, standard_name, units, mdi, dtype, column):
+def set_MetVar_attributes(name, long_name, standard_name, units, mdi, dtype, column, multiplier = False):
     '''
     Wrapper to set up a new MetVar object and populate some of the attibute fields
 
@@ -281,6 +335,7 @@ def set_MetVar_attributes(name, long_name, standard_name, units, mdi, dtype, col
     :param float/int mdi: missing data indicator
     :param type dtype: dtype for variable
     :param int column: which column in the ascii file corresponds to this data
+    :param bool multiplier: add a non-unity multiplier
 
     :returns MetVar new_var: new MetVar variable.
     '''  
@@ -292,52 +347,63 @@ def set_MetVar_attributes(name, long_name, standard_name, units, mdi, dtype, col
     new_var.standard_name = standard_name
     new_var.column = column
 
-    if "anomalies" in name: # all anomalies x100
-        new_var.multiplier = 100.
-    else: # everything else x10
-        new_var.multiplier = 10.
+    if multiplier:
+        if "anomalies" in name: # all anomalies x100
+            new_var.multiplier = 100.
+        else: # everything else x10
+            new_var.multiplier = 10.
+    else:
+        new_var.multiplier = 1.
     
     return new_var # set_MetVar_attributes
  
 #*****************************************************
-def make_MetVars(mdi):
+def make_MetVars(mdi, doSST_SLP = False, multiplier = False):
     '''
     Set up the MetVars and return a list.  
     Had hard-coded columns for the input files.
     
     :param flt mdi: missing data indicator
+    :param bool doSST_SLP: do the extra variables
+    :param bool multiplier: add a non-unity multiplier
    
-    :returns: list [mat, mat_an, sst, sst_an, slp, dpt, dpt_an, shu, shu_an, vap, vap_an, crh, crh_an, cwb, cwb_an, dpd, dpd_an]
+    :returns: list [mat, mat_an, dpt, dpt_an, shu, shu_an, vap, vap_an, crh, crh_an, cwb, cwb_an, dpd, dpd_an]
+      if doSST_SLP:
+      [mat, mat_an, sst, sst_an, slp, dpt, dpt_an, shu, shu_an, vap, vap_an, crh, crh_an, cwb, cwb_an, dpd, dpd_an]
     '''
 
  
-    mat = set_MetVar_attributes("marine_air_temperature", "Marine Air Temperature", "marine air temperature", "C", mdi, np.dtype('float64'), 0)
-    mat_an = set_MetVar_attributes("marine_air_temperature_anomalies", "Marine Air Temperature Anomalies", "marine air temperature anomalies", "C", mdi, np.dtype('float64'), 1)
+    mat = set_MetVar_attributes("marine_air_temperature", "Marine Air Temperature", "marine air temperature", "degrees C", mdi, np.dtype('float64'), 0, multiplier = multiplier)
+    mat_an = set_MetVar_attributes("marine_air_temperature_anomalies", "Marine Air Temperature Anomalies", "marine air temperature anomalies", "degrees C", mdi, np.dtype('float64'), 1, multiplier = multiplier)
 
-    sst = set_MetVar_attributes("sea_surface_temperature", "Sea Surface Temperature", "sea surface temperature", "C", mdi, np.dtype('float64'), 2)
-    sst_an = set_MetVar_attributes("sea_surface_temperature_anomalies", "Sea Surface Temperature Anomalies", "sea surface temperature anomalies", "C", mdi, np.dtype('float64'), 3)
+    sst = set_MetVar_attributes("sea_surface_temperature", "Sea Surface Temperature", "sea surface temperature", "degrees C", mdi, np.dtype('float64'), 2, multiplier = multiplier)
+    sst_an = set_MetVar_attributes("sea_surface_temperature_anomalies", "Sea Surface Temperature Anomalies", "sea surface temperature anomalies", "degrees C", mdi, np.dtype('float64'), 3, multiplier = multiplier)
 
-    slp = set_MetVar_attributes("sea_level_pressure", "Sea Level Pressure", "sea level pressure", "hPa", mdi, np.dtype('float64'), 4)
+    slp = set_MetVar_attributes("sea_level_pressure", "Sea Level Pressure", "sea level pressure", "hPa", mdi, np.dtype('float64'), 4, multiplier = multiplier)
 
-    dpt = set_MetVar_attributes("dew_point_temperature", "Dew Point Temperature", "dew point temperature", "C", mdi, np.dtype('float64'), 5)
-    dpt_an = set_MetVar_attributes("dew_point_temperature_anomalies", "Dew Point Temperature Anomalies", "dew point temperature anomalies", "C", mdi, np.dtype('float64'), 6)
+    dpt = set_MetVar_attributes("dew_point_temperature", "Dew Point Temperature", "dew point temperature", "degrees C", mdi, np.dtype('float64'), 5, multiplier = multiplier)
+    dpt_an = set_MetVar_attributes("dew_point_temperature_anomalies", "Dew Point Temperature Anomalies", "dew point temperature anomalies", "degrees C", mdi, np.dtype('float64'), 6, multiplier = multiplier)
 
-    shu = set_MetVar_attributes("specific_humidity", "Specific humidity", "specific_humidity", "g/kg", mdi, np.dtype('float64'), 7)
-    shu_an = set_MetVar_attributes("specific_humidity_anomalies", "Specific humidity Anomalies", "specific_humidity_anomalies", "g/kg", mdi, np.dtype('float64'), 8)
+    shu = set_MetVar_attributes("specific_humidity", "Specific humidity", "specific_humidity", "g/kg", mdi, np.dtype('float64'), 7, multiplier = multiplier)
+    shu_an = set_MetVar_attributes("specific_humidity_anomalies", "Specific humidity Anomalies", "specific_humidity_anomalies", "g/kg", mdi, np.dtype('float64'), 8, multiplier = multiplier)
  
-    vap = set_MetVar_attributes("vapor_pressure", "Vapor pressure calculated w.r.t water", "water vapor pressure", "hPa", mdi, np.dtype('float64'), 9)
-    vap_an = set_MetVar_attributes("vapor_pressure_anomalies", "Vapor pressure Anomalies calculated w.r.t water", "water vapor pressure anomalies", "hPa", mdi, np.dtype('float64'), 10)
+    vap = set_MetVar_attributes("vapor_pressure", "Vapor pressure calculated w.r.t water", "water vapor pressure", "hPa", mdi, np.dtype('float64'), 9, multiplier = multiplier)
+    vap_an = set_MetVar_attributes("vapor_pressure_anomalies", "Vapor pressure Anomalies calculated w.r.t water", "water vapor pressure anomalies", "hPa", mdi, np.dtype('float64'), 10, multiplier = multiplier)
 
-    crh = set_MetVar_attributes("relative_humidity", "Relative humidity", "relative humidity", "%rh", mdi, np.dtype('float64'), 11)
-    crh_an = set_MetVar_attributes("relative_humidity_anomalies", "Relative humidity Anomalies", "relative humidity anomalies", "%rh", mdi, np.dtype('float64'), 12)
+    crh = set_MetVar_attributes("relative_humidity", "Relative humidity", "relative humidity", "%rh", mdi, np.dtype('float64'), 11, multiplier = multiplier)
+    crh_an = set_MetVar_attributes("relative_humidity_anomalies", "Relative humidity Anomalies", "relative humidity anomalies", "%rh", mdi, np.dtype('float64'), 12, multiplier = multiplier)
 
-    cwb = set_MetVar_attributes("wet_bulb_temperature", "Wet bulb temperatures", "wet bulb temperature", "C", mdi, np.dtype('float64'), 13)
-    cwb_an = set_MetVar_attributes("wet_bulb_temperature_anomalies", "Wet bulb temperatures Anomalies", "wet bulb temperature anomalies", "C", mdi, np.dtype('float64'), 14)
+    cwb = set_MetVar_attributes("wet_bulb_temperature", "Wet bulb temperatures", "wet bulb temperature", "degrees C", mdi, np.dtype('float64'), 13, multiplier = multiplier)
+    cwb_an = set_MetVar_attributes("wet_bulb_temperature_anomalies", "Wet bulb temperatures Anomalies", "wet bulb temperature anomalies", "degrees C", mdi, np.dtype('float64'), 14, multiplier = multiplier)
 
-    dpd = set_MetVar_attributes("dew_point_depression", "Dew Point Depression", "dew point depression", "C", mdi, np.dtype('float64'), 15)
-    dpd_an = set_MetVar_attributes("dew_point_depression_anomalies", "Dew Point Depression Anomalies", "dew point depression anomalies", "C", mdi, np.dtype('float64'), 16)
+    dpd = set_MetVar_attributes("dew_point_depression", "Dew Point Depression", "dew point depression", "degrees C", mdi, np.dtype('float64'), 15, multiplier = multiplier)
+    dpd_an = set_MetVar_attributes("dew_point_depression_anomalies", "Dew Point Depression Anomalies", "dew point depression anomalies", "degrees C", mdi, np.dtype('float64'), 16, multiplier = multiplier)
 
-    return [mat, mat_an, sst, sst_an, slp, dpt, dpt_an, shu, shu_an, vap, vap_an, crh, crh_an, cwb, cwb_an, dpd, dpd_an] # make_MetVars
+    if doSST_SLP:
+        return [mat, mat_an, sst, sst_an, slp, dpt, dpt_an, shu, shu_an, vap, vap_an, crh, crh_an, cwb, cwb_an, dpd, dpd_an] # make_MetVars
+    else:
+        return [mat, mat_an, dpt, dpt_an, shu, shu_an, vap, vap_an, crh, crh_an, cwb, cwb_an, dpd, dpd_an] # make_MetVars
+
 
 #*********************************************************
 def PlotFirstField(filename, variable = "Marine Air Temperature", vmin = None,vmax = None, field = 0):
@@ -407,8 +473,7 @@ def day_or_night(qc_flags):
 
     :returns: day_locs, night_locs - locations of day/night obs
     '''
-    
-   
+       
     daycol = np.where(QC_FLAGS == "day")
 
     day_locs = np.where(qc_flags[daycol, :] == 0)
@@ -417,32 +482,51 @@ def day_or_night(qc_flags):
     return day_locs, night_locs # day_or_night
 
 #*********************************************************
-def grid_5by5(data, grid_lats, grid_lons):
+def grid_5by5(data, grid_lats, grid_lons, doMedian = True):
+    '''
+    Make a coarser grid
 
+    :param array data: input 1x1 data
+    :param array grid_lats: input 1degree lats (box edges)
+    :param array grid_lons: input 1degree lons (box edges)
+    :param bool doMedian: use the median (default) instead of the mean
+    
+    :returns: new_data, new_llats, new_lons - updated to 5x5
+    '''
 
-    # assert the shapes are correct - blc at -90, -180, trc at 90, 180
-    assert len(grid_lats) == 181
-    assert len(grid_lons) == 361
+    # assert the shapes are correct - blc at -89, -179, trc at 90, 180
+    #    Using upper right corner of box as index, and have nothing at -90, -180
+    assert len(grid_lats) == 180
+    assert len(grid_lons) == 360
 
+    N_OBS = 5 # out of possible 25
     DELTA = 5
+    # box edges
+    new_lats = np.arange(-90+DELTA, 90+DELTA, DELTA)
+    new_lons = np.arange(-180+DELTA, 180+DELTA, DELTA)
 
-    new_data = np.ma.zeros((data.shape[0], 1+(data.shape[1]-1)/DELTA, 1+(data.shape[2]-1)/DELTA))
+    new_data = np.ma.zeros((data.shape[0], len(new_lats), len(new_lons)))
+    new_data.mask = np.ones((data.shape[0], len(new_lats), len(new_lons)))
     new_data.fill_value = data.fill_value
     
     for lt, lat in enumerate(np.arange(0, len(grid_lats), DELTA) + 1):
         for ln, lon in enumerate(np.arange(0, len(grid_lons), DELTA) + 1):
            
             for var in range(data.shape[0]):
-                new_data[var, lt-1, ln-1] = np.ma.mean(data[var, lat-DELTA:lat, lon-DELTA:lon])
+                if doMedian:
+                    new_data[var, lt-1, ln-1] = np.ma.median(data[var, lat-DELTA:lat, lon-DELTA:lon])
+                else:
+                    new_data[var, lt-1, ln-1] = np.ma.mean(data[var, lat-DELTA:lat, lon-DELTA:lon])
 
-    # box edges
-    new_lats = np.arange(-90, 90+DELTA, DELTA)
-    new_lons = np.arange(-180, 180+DELTA, DELTA)
+                n_obs = np.ma.count(data[var, lat-DELTA:lat, lon-DELTA:lon])
 
-    return new_data, new_lats, new_lons
+                if n_obs < N_OBS:
+                    new_data.mask[var, lt-1, ln-1] = True
+
+    return new_data, new_lats, new_lons # grid_5by5
 
 #*********************************************************
-def grid_1by1_cam(clean_data, hours_since, lat_index, lon_index, grid_hours, grid_lats, grid_lons, OBS_ORDER, mdi):
+def grid_1by1_cam(clean_data, hours_since, lat_index, lon_index, grid_hours, grid_lats, grid_lons, OBS_ORDER, mdi, doMedian = True):
     '''
     Grid using the Climate Anomaly Method on 1x1 degree for each month
 
@@ -455,6 +539,7 @@ def grid_1by1_cam(clean_data, hours_since, lat_index, lon_index, grid_hours, gri
     :param array grid_lons: grid box corner lons
     :param list OBS_ORDER: list of MetVar variables
     :param float mdi: missing data indicator
+    :param bool doMedian: use the median (default) instead of the mean
     '''
 
 
@@ -464,31 +549,73 @@ def grid_1by1_cam(clean_data, hours_since, lat_index, lon_index, grid_hours, gri
 
     mesh_lats, mesh_lons = np.meshgrid(grid_lats, grid_lons)
 
+    cols = np.array([obs.column for obs in OBS_ORDER])
 
-    for gh, timestamp in enumerate(grid_hours):
-
-        locs_h, = np.where(hours_since == timestamp)
-
-        if len(locs_h) > 0: # only continue if there are data to process
-
-            for lt, glat in enumerate(grid_lats):
-                locs_lat, = np.where(lat_index == lt)
+    for lt, glat in enumerate(grid_lats):
+        locs_lat, = np.where(lat_index == lt)
+        
+        if len(locs_lat) > 0: # only continue if there are data to process
+            
+            for ln, glon in enumerate(grid_lons):
+                locs_lon, = np.where(lon_index == ln)
+                locs_ll = np.intersect1d(locs_lat, locs_lon) # get the combination
                 
-                if len(locs_lat) > 0: # only continue if there are data to process
+                if len(locs_ll) > 0: # only continue if there are data to process
+                    
+                    for gh, timestamp in enumerate(grid_hours):                        
+                        locs_h, = np.where(hours_since == timestamp)
 
-                    for ln, glon in enumerate(grid_lons):
-                        
-                        # find where the matches are
-                        locs_lon, = np.where(lon_index == ln)
+                        locs = np.intersect1d(locs_h, locs_ll)
 
-                        if len(locs_lon) > 0: # only continue if there are data to process
-                        
-                            locs_ll = np.intersect1d(locs_lat, locs_lon)
-                            locs = np.intersect1d(locs_h, locs_ll)
-                        
-                            this_month_grid[:, gh, lt, ln] = np.mean(clean_data[locs, :], axis = 0)
-                            this_month_grid.mask [:, gh, lt, ln] = False # unset the mask
+                        if len(locs) > 0: # only continue if there are data to process
+                      
+                            if doMedian:
+                                this_month_grid[:, gh, lt, ln] = np.ma.median(clean_data[locs, :][:, cols], axis = 0)
+                            else:
+                                this_month_grid[:, gh, lt, ln] = np.ma.mean(clean_data[locs, :][:, cols], axis = 0)
 
-        if timestamp >= 24: break
+                            this_month_grid.mask[:, gh, lt, ln] = False # unset the mask
 
-    return this_month_grid
+#                        if timestamp >= 21: break
+
+#                        raw_input("stop hr {}".format(timestamp))
+#                raw_input("stop lon{}".format(glon))
+#        raw_input("stop lat {}".format(glat))
+
+    return this_month_grid # grid_1by1_cam
+
+#*********************************************************
+def days_in_year(year):
+    '''
+    Calculate the number of days in year
+
+    :param int year: year
+    :returns: days
+    '''
+
+    start = dt.datetime(year, 1, 1, 0, 0)
+    end = dt.datetime(year+1, 1, 1, 0, 0)
+   
+    diff = end-start
+
+    return diff.days # days_in_year
+
+#*********************************************************
+def day_of_year(year, month):
+    '''
+    Calculate the day of the year the 1st of a given month is.
+
+    :param int year: year
+    :param int month: month
+    :returns: days
+    '''
+
+    start = dt.datetime(year, 1, 1, 0, 0)
+    end = dt.datetime(year, month, 1, 0, 0)
+   
+    diff = end-start
+
+    return diff.days # day_of_year
+
+# END
+# ************************************************************************
