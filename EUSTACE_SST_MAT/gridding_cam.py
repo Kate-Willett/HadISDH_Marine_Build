@@ -23,6 +23,24 @@ plots = False
 doQC = True
 doSST_SLP = False
 doMedian = True
+# KW #
+# Use of median vs mean #
+# Essentially we're using the average as a way of smoothing in time and space so ideally it would have influence from all viable values
+# within that time/space period.
+# The median might be better when we're first using the raw obs to create the 1x1 3 hrlies because we know that there may be some shockers in there.
+# There is NO expectation that the values would be very similar or very different (not necessarily normally distributed)
+# After that, we're averaging already smoothed values but missing data may make our resulting average skewed.
+# There IS an expectation that the values would quite different across the diurnal cycle (quite possibly normally distributed)
+# For dailies we could set up specific averaging routines depending on the sampling pattern
+# e.g.,
+#	All 8 3hrly 1x1s present = mean(0,3,6,9,12,15,18,21)
+#	6 to 7 3hrly 1x1s present = interpolate between missing vals (if 3 to 18hrs missing), repeat 0=3 or 21=18 (if 0 or 21 hrs missing), mean(0,3,6,9,12,15,18,21)
+#	5 or fewer 3hrly 1x1s present = mean(mean(0 to 9hrs),mean(12 to 21hrs)) or just mean(0 to 9hrs) or mean(12 to 21hrs) if either one of those results in 0/missing.
+# a median of 5 values might give you 3 cool values and 2 warm, the 'average' would then be the cool value with no influence from the warmer daytime value (or vice versa)
+# For pentad or monthlies I think the median or mean would be ok - and median might be safer.
+# There is NO expectation that the values would be very similar or very different (not necessarily normally distributed) 
+# For monthly 5x5s I think we should use the mean to make sure the influence of sparse obs are included.
+# There IS an expectation that the values could quite different across a 500km2 area and 1 month (quite possibly, but not necessarily normally distributed)
 
 doMonthlies = True
 doPentads = False
@@ -91,7 +109,7 @@ def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, e
             # extract observation details
             lats, lons, years, months, days, hours = utils.process_platform_obs(raw_platform_data)
 
-            # test dates
+            # test dates *KW - SHOULDN'T NEED THIS - ONLY OBS PASSING DATE CHECK ARE INCLUDED*
             if not utils.check_date(years, year, "years", filename):
                 sys.exit(1)
             if not utils.check_date(months, month, "months", filename):
@@ -167,7 +185,7 @@ def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, e
 
             # filter on number of observations/day
             n_obs_per_day = np.ma.count(this_month_grid, axis = 2) 
-            bad_locs = np.where(n_obs_per_day < (24./DELTA_HOUR) * N_OBS_FRAC_DAY) # 50% of possible hourly values (6hrly data)
+            bad_locs = np.where(n_obs_per_day < (24./DELTA_HOUR) * N_OBS_FRAC_DAY) # 50% of possible hourly values (6hrly data *KW OR AT LEAST 4 3HRLY OBS PRESENT*)
             daily_grid.mask[bad_locs] = True
             
             if plots:
@@ -200,7 +218,8 @@ def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, e
             # filter on number of observations/month
             n_obs_per_month = np.ma.count(daily_grid, axis = 1) 
             bad_locs = np.where(n_obs_per_month < calendar.monthrange(year, month)[1] * N_OBS_FRAC_MONTH) # 50% of possible daily values
-            daily_grid.mask[bad_locs] = True
+            ***KW*** BUG *** DO YOU MEAN monthly_grid.mask[bad_locs] = True 
+	    daily_grid.mask[bad_locs] = True
             
             if plots:
                 # plot the distribution of days
@@ -220,6 +239,8 @@ def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, e
 
 
             # now to re-grid to coarser resolution
+	    # KW # Here we may want to use the mean because its a large area but could be sparsely populated with quite different climatologies so we want 
+	    # the influence of the outliers (we've done our best to ensure these are good values) 
             monthly_5by5, grid5_lats, grid5_lons = utils.grid_5by5(monthly_grid, grid_lats, grid_lons, doMedian = doMedian)
 
             utils.netcdf_write(OUT_LOCATION + OUTROOT + "_5x5_monthly_{}{:02d}.nc".format(year, month), \
