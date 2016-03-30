@@ -72,6 +72,80 @@ If iii) displays the bias, Dave Berry may be correct in ascribing it to real cli
 
 ******************************************************************
 Work Done:
+Mar 30th
+[KW]
+Some thoughts on the use of median vs mean 
+Essentially we're using the average as a way of smoothing in time and space so ideally it would have influence from all viable values
+within that time/space period.
+The median might be better when we're first using the raw obs to create the 1x1 3 hrlies because we know that there may be some shockers in there.
+There is NO expectation that the values would be very similar or very different (not necessarily normally distributed)
+After that, we're averaging already smoothed values but missing data may make our resulting average skewed.
+There IS an expectation that the values would quite different across the diurnal cycle (quite possibly normally distributed)
+For dailies we could set up specific averaging routines depending on the sampling pattern
+e.g.,
+      All 8 3hrly 1x1s present = mean(0,3,6,9,12,15,18,21)
+      6 to 7 3hrly 1x1s present = interpolate between missing vals (if 3 to 18hrs missing), repeat 0=3 or 21=18 (if 0 or 21 hrs missing), mean(0,3,6,9,12,15,18,21)
+      5 or fewer 3hrly 1x1s present = mean(mean(0 to 9hrs),mean(12 to 21hrs)) or just mean(0 to 9hrs) or mean(12 to 21hrs) if either one of those results in 0/missing.
+a median of 5 values might give you 3 cool values and 2 warm, the 'average' would then be the cool value with no influence from the warmer daytime value (or vice versa)
+For pentad or monthlies I think the median or mean would be ok - and median might be safer.
+There is NO expectation that the values would be very similar or very different (not necessarily normally distributed) 
+For monthly 5x5s I think we should use the mean to make sure the influence of sparse obs are included.
+There IS an expectation that the values could quite different across a 500km2 area and 1 month (quite possibly, but not necessarily normally distributed)
+
+RH>100 BUG!!!
+I have found a bug. There are many cases of RH>100 in the new_suit..., and therefore the grids - where DPTssat has not been set to 1.
+When calculating RH I was using the rounded (to one decimal place) e but the non-rounded es (and a slightly different check on wet bulb<=0.0.
+I have modified CalcHums.py to now use the non-rounded version of both - they should be identical if AT == DPT. This will only have affected RH
+but for consistency I have now made all conversions go through the non-rounded feed in values - values are only rounded when they are returned 
+to the main program. Each equation function now requires DPT, AT and SLP (except for DPD) - and calculates e within. This will take a little more
+time unfortunately but reduces the rounding uncertainty a small amount.
+
+RECENT ICOADS:
+I'm running this for Jan 2015 with a pointet to the new file directory and names whenever the readyear => 2015. This failed after running for 6 hours. I
+don't understand why because the 2015 files are smaller than those for 2014 and all of 2014 (bar December) ran ok. I need to dig a little deeper. The 2015 files are
+.Z instead of .gz but unzipped ok using gunzip when I tested it.
+
+I've found a big issue with the climatologies - mid-lats and tropics are far too low in many many cases. The grids in the 1x1 3hrlies have too many grids with 
+data present for Dec 1973 - so either this version was created pre-QC-filtering or we're not getting the QC flags right. 138144 obs in new_suite of which 108986 pass
+QC for AT and DPT combined. 126105 grids in the 1x1 3hrlies have data present! Also there are far too many cases where
+the gridbox value for both AT and DPT is 0.0 - there are only 112 in the new_suite file but 25512 in the gridded file. This could be something to do with the way that
+the QC mask is applied?
+
+I should really now look at applying any bias correction that I can - still not heard from David Berry about this.
+
+Mar 29th
+[KW]
+I have downloaded the 2015 ICOADS data into
+/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/RECENTICOADS/
+from: /project/mds/ICOADS_2.5_IMMA_FILES/latest/IMMA.2015.MM.Z
+These files can be gunzipped.
+They are almost identical to those at: http://www1.ncdc.noaa.gov/pub/data/icoads2.5/
+The NCDC files are IMMA_R2.5P.2015.MM_ENH the 'enhanced' IMMA format
+These two version are VERY similar - slightly more obs in the inhouse version - ???
+The format is IMMA - so a core of 108 characters (attachment 0) with most of variables and basic info.
+This is then followed by attachment number (i2) and attachment length (i2) and each attachment.
+For Jan 2015 these all have attachment 1 ( 1) which is 65 characters long (65) including the '65'. 
+This has the PT in it and some other info. They then mostly go straight to attachment 99 (99).
+THERE IS NO UID!!!
+
+So - my next job is to adapt make_and_full_qc.py to read in this different format for January 2015
+onwards.
+
+Easiest thing to try is just to try and read in the files! so - if 2015 then look for a different file
+name!
+
+Meanwhile - Robert has created a gridding routine. We explored going from 3hourly 1x1 grids (nearest
+hour) to 3hrly 1x1 pentad means (>=3 days worth) and then to full pentad means (>= 4 3hrly pentad means
+worth). However, this resulted in fewer grids than if we go from 3hrly 1x1 grids (nearest hour) to daily
+1x1 grids (>=4 3hrly grids) to pentad 1x1 grids (>= 3 days worth). This could be because ships move - so
+there are unlikely to be very many obs in a gridbox for each 3 hrly but a day could be made up from the
+passage of one ship.
+
+Monthlies were previously made up from pentads means but this leads to some leakage at the ends of
+months. We can build months from 1x1 dailies (>=50% daily 1x1 grids) and then grid a 5x5 monthly if there is at least 1 monthly 1x1
+present. Better comparison with land!
+
+
 Mar 17th
 [KW}
 RD discovered that 197304 has a line that is longer than all of the others 414 characters as opposed to 409. A 'wc -L *' shows that this problem is pervasive:
