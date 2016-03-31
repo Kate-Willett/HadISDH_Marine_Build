@@ -236,7 +236,7 @@ definitions['00'] = {
     'LAT'  : ( 5, -90.00, 90.00,   None,    None,  0.01,  1 ),
     'LON'  : ( 6, 0.00,   359.99, -179.99, 180.00, 0.01,  1 ),
     'IM'   : ( 2, 0.,     99.,     None,    None,  1.,    1 ),
-    'ATTC' : ( 1, 0.,     36.,     None,    None,  1.,    2 ),
+    'ATTC' : ( 1, 0.,     36.,     None,    None,  1.,    2 ), #KW max value is longer than 1 character length
     'TI'   : ( 1, 0.,     3.,      None,    None,  1.,    1 ),
     'LI'   : ( 1, 0.,     6.,      None,    None,  1.,    1 ),
     'DS'   : ( 1, 0.,     9.,      None,    None,  1.,    1 ),

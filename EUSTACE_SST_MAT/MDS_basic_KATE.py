@@ -42,7 +42,7 @@
 # python2.7 
 # import MDS_basic_KATE as MDStool
 #
-# MDSdict=MDStool.readMDSkate(year, month, type)
+# MDSdict=MDStool.ReadMDSkate('year', 'month', 'type')
 # year='1973' # string
 # month='01' # string
 # type='ERAclimNBC' # which iteration of output?
@@ -119,7 +119,7 @@ TheDelimiters=(10,8,8,8,8,8,8,8,
 #************************************************************************
 def ReadMDSkate(TheYear,TheMonth,TheType):
 
-    InDir = '/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/beta/'
+    InDir = '/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/ERAclimNBC/'
     InFil = 'new_suite_'+TheYear+TheMonth+'_'+TheType+'.txt'
     
     TheFilee = InDir+InFil
@@ -142,24 +142,24 @@ def ReadMDSkate(TheYear,TheMonth,TheType):
     MDSDict['DY']=np.array(RawData['f6'])
     MDSDict['HR']=np.array(RawData['f7'])
 
-    MDSDict['AT']=np.array(RawData['f8'])
-    MDSDict['ATA']=np.array(RawData['f9'])
-    MDSDict['SST']=np.array(RawData['f10'])
-    MDSDict['SSTA']=np.array(RawData['f11'])
-    MDSDict['SLP']=np.array(RawData['f12'])
+    MDSDict['AT']=np.array(RawData['f8'])/10.
+    MDSDict['ATA']=np.array(RawData['f9'])/100.
+    MDSDict['SST']=np.array(RawData['f10'])/10.
+    MDSDict['SSTA']=np.array(RawData['f11'])/100.
+    MDSDict['SLP']=np.array(RawData['f12'])/10.
 
-    MDSDict['DPT']=np.array(RawData['f13'])
-    MDSDict['DPTA']=np.array(RawData['f14'])
-    MDSDict['SHU']=np.array(RawData['f15'])
-    MDSDict['SHUA']=np.array(RawData['f16'])
-    MDSDict['VAP']=np.array(RawData['f17'])
-    MDSDict['VAPA']=np.array(RawData['f18'])
-    MDSDict['CRH']=np.array(RawData['f19'])
-    MDSDict['CRHA']=np.array(RawData['f20'])
-    MDSDict['CWB']=np.array(RawData['f21'])
-    MDSDict['CWBA']=np.array(RawData['f22'])
-    MDSDict['DPD']=np.array(RawData['f23'])
-    MDSDict['DPDA']=np.array(RawData['f24'])
+    MDSDict['DPT']=np.array(RawData['f13'])/10.
+    MDSDict['DPTA']=np.array(RawData['f14'])/100.
+    MDSDict['SHU']=np.array(RawData['f15'])/10.
+    MDSDict['SHUA']=np.array(RawData['f16'])/100.
+    MDSDict['VAP']=np.array(RawData['f17'])/10.
+    MDSDict['VAPA']=np.array(RawData['f18'])/100.
+    MDSDict['CRH']=np.array(RawData['f19'])/10.
+    MDSDict['CRHA']=np.array(RawData['f20'])/100.
+    MDSDict['CWB']=np.array(RawData['f21'])/10.
+    MDSDict['CWBA']=np.array(RawData['f22'])/100.
+    MDSDict['DPD']=np.array(RawData['f23'])/10.
+    MDSDict['DPDA']=np.array(RawData['f24'])/100.
 
 #    MDSDict['DSVS']=np.array(RawData['f25'])
     MDSDict['DCK']=np.array(RawData['f26'])
@@ -172,7 +172,7 @@ def ReadMDSkate(TheYear,TheMonth,TheType):
     MDSDict['IT']=np.array(RawData['f32'])
     MDSDict['DPTI']=np.array(RawData['f33'])
     MDSDict['WBTI']=np.array(RawData['f34'])
-    MDSDict['WBT']=np.array(RawData['f35'])
+    MDSDict['WBT']=np.array(RawData['f35'])/10.
 #    MDSDict['DI']=np.array(RawData['f36'])
 #    MDSDict['D']=np.array(RawData['f37'])
 #    MDSDict['WI']=np.array(RawData['f38'])

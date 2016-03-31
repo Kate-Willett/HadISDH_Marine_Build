@@ -16,6 +16,8 @@ data_base_host,eld256
 data_base_name,had_mdb
 # This is the location of the raw IMMA2 data
 ICOADS_dir,/project/earthobs/ICOADS/ICOADS.2.5.1/
+# This is the location of the raw IMMA data for the most recent files (2015+ at present)
+RECENT_ICOADS_dir,/project/mds/ICOADS_2.5_IMMA_FILES/latest/
 # These are preexisting climatologies I think, 1by1 deg pentad resolution
 # These could be updated as we move through iterations?
 # Do we need a clim and st dev file for all vars or just T and Td?

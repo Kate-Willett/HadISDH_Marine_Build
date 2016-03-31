@@ -109,7 +109,7 @@ def do_conversion(start_year = START_YEAR, end_year = END_YEAR):
         else:
             pentad_grid = np.ma.mean(all_dailies, axis = 2)
 
-        pentad_grid.mask[n_obs_per_pentad < N_OBS] = True # mask where fewer than 3 days have values
+        pentad_grid.mask[n_obs_per_pentad < N_OBS] = True # mask where fewer than 3 days have values # KW THIS IS ACTUALLY 2 - WHICH I THINK IS GOOD
 
         # clear up memory
         del all_dailies
@@ -125,7 +125,7 @@ def do_conversion(start_year = START_YEAR, end_year = END_YEAR):
 
 
             n_obs_per_pentad = np.ma.count(incl_feb29th, axis = 1)
-            pentad_grid.mask[:, 11, :, :][n_obs_per_pentad < N_OBS] = True
+            pentad_grid.mask[:, 11, :, :][n_obs_per_pentad < N_OBS] = True 
 
             print "processed Feb 29th"
                 

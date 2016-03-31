@@ -20,7 +20,7 @@ import qc_new_track_check as tc
 # KW I don't think this is used
 #import qc_buddy_check as bc
 import spherical_geometry as sph
-from IMMA2 import IMMA
+from IMMA2 import IMMA # KW I think this is ok for the RECENT R2.5P_ENH (or similar) files too.
 import Extended_IMMA as ex
 import sys, getopt
 import time
@@ -321,6 +321,8 @@ def main(argv):
 # KW Added climatology file for the SLP which is needed if no SLP ob exists, or if it has failed qc - or if we choose to derive humidity using climatological P (which we have)
     slp_climatology_file  = config['SLP_climatology']
     icoads_dir            = config['ICOADS_dir'] 
+#KW Added the 'recent' ICOADS dir for files 2015+
+    recent_icoads_dir            = config['RECENT_ICOADS_dir'] 
     bad_id_file           = config['IDs_to_exclude']
 # KW added an item for the database dir to write out the QC'd ascii data to - hijacking SQL data_base_dir for now
     data_base_dir	  = config['data_base_dir']
@@ -350,6 +352,8 @@ def main(argv):
 ## KW Added climatology files for SLP for calculation of humidity variables if no good quality SLP ob exists
     print 'SLP climatology =', slp_climatology_file
     print 'ICOADS directory =', icoads_dir
+# KW added 'recent' icoads dir
+    print 'RECENT ICOADS directory =', recent_icoads_dir
     print 'List of bad IDs =', bad_id_file 
 # KW added an item for the database dir to write out the QC'd ascii data to - hijacking SQL data_base_dir for now
     print 'QCd Database directory =', data_base_dir 
@@ -424,8 +428,11 @@ def main(argv):
             filename = icoads_dir+'/R2.5.1.'+syr+'.'+smn+'.gz'
 # KW FOUND A BUG - changed 'year' to 'readyear' below because it was trying to 
 # read R2.5.2.2007.12.gz because 'year'=2008, 'month'=1
-            if readyear > 2007:
+# KW Now added a catch for 'recent' years - at present this is anything from 2015 onwards - data only available in IMMA (not IMMA2) format - no UID!
+            if ((readyear > 2007) & (readyear < 2015)):
                 filename = icoads_dir+'/R2.5.2.'+syr+'.'+smn+'.gz'
+            if (readyear >= 2015):
+                filename = recent_icoads_dir+'/IMMA.'+syr+'.'+smn+'.Z'
     
             icoads_file = gzip.open(filename,"r")
 
@@ -491,12 +498,13 @@ def main(argv):
 
 #************HadISDH ONLY*******************************
 # KW Added a catch here to check the platform type and whether there is both a T (AT) and DPT  present.
-# Only keep the ob if it is from a ship (0,1,2,3,4,5) or moored platform/buoy (6,8,9,10,14,15) and has 
+# Only keep the ob if it is from a ship (0,1,2,3,4,5) or moored platform/buoy (6,8,9,10,15) and has 
 # AT and DPT present.
 # This may not be desirable for a full run but should save time/memory for HadISDH
 # If HadISDHSwitch == True then the ob needs to pass the test else all obs are processed
 # No QC performed yet so cannot call get_qc - qc.value_check returns 0 if present and 1 if noval
-		    if (not (HadISDHSwitch)) | ((rep.data['PT']  in [0,1,2,3,4,5,6,8,9,10,14,15]) & 
+# Previously I had also pulled through PT=14 but this can be a coastal or island station - so not what we want.
+		    if (not (HadISDHSwitch)) | ((rep.data['PT']  in [0,1,2,3,4,5,6,8,9,10,15]) & 
 		                                (qc.value_check(rep.getvar('AT')) == 0) & 
 						(qc.value_check(rep.getvar('DPT')) == 0)):
 
@@ -508,6 +516,32 @@ def main(argv):
 # Use this to add blank var containers for the humidity variables that are calculated 
 # later
                         rep.setvar(['SHU','VAP','CRH','CWB','DPD'])
+
+# KW Get climatologies for slp to calculate humidity values if no good quality qc ob exists
+                        rep_slp_clim = get_clim(rep, climslp)
+			#print('SLP: ',rep_slp_clim)
+			#if (count == 10):
+			#    pdb.set_trace()
+                        rep.add_climate_variable('SLP', rep_slp_clim)
+
+# KW Calculate humidity variables here - so we can then kick out anything really silly e.g. RH>150
+# Very silly values can cause longer line lengths at output which is an extra problem for post processing
+# For the longer term these could be set to missing but we just want to focus on 'good' humidity obs for now
+# Use my new routine as part of the Extended_IMMA MarineReport class rep.calcvar() 
+# This routine returns values as None if there is no climslp or if RH is < 0 or > 150.
+                        rep.calcvar(['SHU','VAP','CRH','CWB','DPD'])
+
+# Now we have the checker for very silly values - which will just break the loop
+# Inadvertantly, this kicks out any ob for which no climatology is available - the ones that would late fail pos or date checks
+# Later on - we may change this to just set the humidity values to missing rather than delete the ob. SST might be ok after all.
+                        if (rep.getvar('CRH') == None):
+#			    print('Found a SILLINESS ',rep.getvar('AT'),rep.getvar('DPT'))
+#			    pdb.set_trace()
+			    # delete the rep to keep things tidy
+			    del rep
+			    # create a new rec because we're skipping the end of the WHILE loop
+			    rec = IMMA()
+			    continue
 					
                         rep_sst_clim = get_clim(rep, climsst)
                         rep.add_climate_variable('SST', rep_sst_clim)
@@ -531,8 +565,7 @@ def main(argv):
 #			print(rep.getvar('UID'),rep.getvar('AT'),rep_mat_stdev,rep.getstdev('AT'))			
 #			if (count == 10):
 #			    pdb.set_trace() 
-## KW This seems to be pulling out the correct climatological value (so why is the clim check and anomaly value wrong???)
-			    
+## KW This seems to be pulling out the correct climatological value (so why is the clim check and anomaly value wrong???)			    
 
                         rep_shu_clim = get_clim(rep, climshu)
                         rep.add_climate_variable('SHU', rep_shu_clim)
@@ -548,13 +581,6 @@ def main(argv):
 
 			rep_dpd_clim = get_clim(rep, climdpd)
                         rep.add_climate_variable('DPD', rep_dpd_clim)
-
-# KW Get climatologies for slp to calculate humidity values later if no good quality qc ob exists
-                        rep_slp_clim = get_clim(rep, climslp)
-			#print('SLP: ')
-			#if (count == 10):
-			#    pdb.set_trace()
-                        rep.add_climate_variable('SLP', rep_slp_clim)
 					
 #Deck 701 has a whole bunch of otherwise good obs with missing Hours.
 #Set to 0000UTC and recalculate the ob time

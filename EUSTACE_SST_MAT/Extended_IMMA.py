@@ -233,6 +233,43 @@ class MarineReport:
 	   '''
 	   for k in spare_vars:
 	       self.data[k] = None
+
+# KW Added a routine to calculate the humidity values q, rh, e, tw and dpd
+    def calcvar(self, hum_vars):
+        '''
+	The listed hum_vars have to be the five calculated humidity variables: 'SHU','VAP','CRH','CWB','DPD'
+	There has to be an AT and DPT present to calculate any one of these/
+	This also depends on there being a climatological SLP present
+	This uses the CalcHums.py functions.
+	'''
+	
+	# Test that we're really trying to calculate all of the humidity variables
+	assert all([i in ['SHU','VAP','CRH','CWB','DPD'] for i in hum_vars]),'Not all hum vars are present: SHU,VAP,CRH,CWB,DPD'
+	
+	# Test that there is a climatological SLP for this ob - else return all as None
+	slpclim = self.climate_variables['SLP'].getclim()
+	if (slpclim == None):
+	    self.data['VAP'] = None
+            self.data['SHU'] = None
+            self.data['CRH'] = None
+            self.data['CWB'] = None
+            self.data['DPD'] = None
+
+	else:   		
+	# Calculate the humidity variables
+            self.data['VAP'] = CalcHums.vap(self.data['DPT'],self.data['AT'],slpclim)
+            self.data['SHU'] = CalcHums.sh(self.data['DPT'],self.data['AT'],slpclim)
+            self.data['CRH'] = CalcHums.rh(self.data['DPT'],self.data['AT'],slpclim)
+            self.data['CWB'] = CalcHums.wb(self.data['DPT'],self.data['AT'],slpclim)
+            self.data['DPD'] = CalcHums.dpd(self.data['DPT'],self.data['AT'])
+	    	
+	# Test for silliness - if silly, return all as None
+            if ((self.getvar('CRH') < 0.) | (self.getvar('CRH') > 150.)):
+	        self.data['VAP'] = None
+                self.data['SHU'] = None
+                self.data['CRH'] = None
+                self.data['CWB'] = None
+                self.data['DPD'] = None
 		   
     def calculate_dsi_vsi(self):
 
@@ -515,19 +552,13 @@ class MarineReport:
         A simple (ha ha) routine to print out the marine report in old-fashioned fixed-width ascii style.
         '''
 # KW Modify this to output humidity variables and humidity related QC flags 
-# KW Quite possibly most efficient to calculate q, RH, e, Tw, DPD here for output
+# KW Quite possibly most efficient to calculate q, RH, e, Tw, DPD here for output - but have done it much earlier
+# on in order to test for silliness - see make_and_full_qc.py and the calcvar routine in the MarineReport class (above)
 # QC and buddy only on Td (first version at least)
-# One issue is that in order to get anomalies in the same framework we need to
-# add the humidity variables to self.data. I'm not sure whether this needs setting up 
-# initially or whether they can be added now. We would read in the climatologies initially
-# in make_and_full_qc.py so may have to set them up initially.
-# I've now created a MarineReport.setvar routine to read in extra blank vars which is done
+# I've created a MarineReport.setvar routine to read in extra blank vars which is done
 # at make_and_full_qc.py       
         day = int(pvar(self.data['DY'],  -32768,   1))
         hur = int(pvar(self.data['HR'],  -32768, 100))
-
-# KW added code to call humidity calculation function (import CalcHums) and create a
-# derived ob for q, rh, e, tw and dpd
 
         mat     = int(pvar(self.data['AT'],     -32768,  10))
         matanom = int(pvar(self.getanom('AT'),  -32768,  100))
@@ -535,24 +566,6 @@ class MarineReport:
         sstanom = int(pvar(self.getanom('SST'), -32768,  100))
         slp     = int(pvar(self.data['SLP'],    -32768,  10))
 # Added vars for humidity variables and anomalies (anoms set to 0 for now until we sort out clims)
-# For now I'm just going to use climatological SLP from ERA-Interim
-# for all calculations - consistent with HadISDH.land (except that uses 20CR).
-# Later I could choose to use reported SLP but if it doesn't exist or has failed qc then 
-# call use climatological SLP which will have been read in at make_and_full_qc.py.
-# If one of the other required variables does not exist then value is set to None.
-# It may be quicker to build this into make_and_full_qc.py and apply simultaneously to all rep in reps 
-# rather than individually???
-# The calculations check whether to calculate relative to ice or water - so need AT as well as D
-# The order in which these are calculated is important because they build on each other
-
-        slpclim = self.climate_variables['SLP'].getclim()
-#	print(slpclim)
-#        slpclim = 1013 # KW temporary rather than read in file
-        self.data['VAP'] = CalcHums.vap(self.data['DPT'],slpclim,self.data['AT'])
-        self.data['SHU'] = CalcHums.shu(self.data['VAP'],slpclim)
-        self.data['CRH'] = CalcHums.rh(self.data['VAP'],slpclim,self.data['AT'])
-        self.data['CWB'] = CalcHums.wb(self.data['VAP'],self.data['DPT'],slpclim,self.data['AT'])
-        self.data['DPD'] = CalcHums.dpd(self.data['DPT'],self.data['AT'])
 
         dpt     = int(pvar(self.data['DPT'],    -32768,  10))
         dptanom = int(pvar(self.getanom('DPT'), -32768,  100))
