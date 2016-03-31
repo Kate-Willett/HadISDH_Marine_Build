@@ -68,7 +68,7 @@ def do_conversion(start_year = START_YEAR, end_year = END_YEAR):
         
             # set up empty data array
             var_3hrlys = np.ma.zeros([utils.days_in_year(year)*N_OBS_PER_DAY, len(grid_lats), len(grid_lons)])
-            var_3hrlys.mask = np.ma.ones([utils.days_in_year(year)*N_OBS_PER_DAY, len(grid_lats), len(grid_lons)])
+            var_3hrlys.mask = np.zeros([utils.days_in_year(year)*N_OBS_PER_DAY, len(grid_lats), len(grid_lons)])
             var_3hrlys.fill_value = mdi
 
             year_start = dt.datetime(year, 1, 1, 0, 0)

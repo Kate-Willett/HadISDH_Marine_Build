@@ -499,7 +499,7 @@ def grid_5by5(data, grid_lats, grid_lons, doMedian = True):
     assert len(grid_lats) == 180
     assert len(grid_lons) == 360
 
-    N_OBS = 5 # out of possible 25
+    N_OBS = 1 # out of possible 25
     DELTA = 5
     # box edges
     new_lats = np.arange(-90+DELTA, 90+DELTA, DELTA)
