@@ -22,7 +22,7 @@ import MDS_basic_KATE as mds
 plots = False
 doQC = True
 doSST_SLP = False
-doMedian = True
+doMedian = False
 # KW #
 # Use of median vs mean #
 # Essentially we're using the average as a way of smoothing in time and space so ideally it would have influence from all viable values
@@ -45,7 +45,7 @@ doMedian = True
 doMonthlies = True
 doPentads = False
 
-N_OBS_FRAC_DAY = 0.5
+N_OBS_DAY = 3
 N_OBS_FRAC_MONTH = 0.5
 
 # Constants in CAPS
@@ -59,7 +59,7 @@ START_YEAR = 1973
 END_YEAR = dt.datetime.now().year - 1
 
 mdi = -1.e30
-OBS_ORDER = utils.make_MetVars(mdi, doSST_SLP = doSST_SLP)
+OBS_ORDER = utils.make_MetVars(mdi, doSST_SLP = doSST_SLP, multiplier = True) # ensure that convert from raw format at writing stage with multiplier
 
 # what size grid (lat/lon/hour)
 DELTA_LAT = 1
@@ -70,14 +70,12 @@ DELTA_HOUR = 3
 grid_lats = np.arange(-90 + DELTA_LAT, 90 + DELTA_LAT, DELTA_LAT)
 grid_lons = np.arange(-180 + DELTA_LON, 180 + DELTA_LON, DELTA_LON)
 
-# flags to check on and values to allow through
-these_flags = {"ATbud":0, "ATclim":0,"ATrep":0,"DPTbud":0,"DPTclim":0,"DPTssat":0,"DPTrep":0,"DPTrepsat":0}
 
 # RD - adapted MDS_basic_Kate.py to allow this call
 fields = mds.TheDelimiters
 
 #************************************************************************
-def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, end_month = 12):
+def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, end_month = 12, period = "both"):
     '''
     Do the gridding, first to 3hrly 1x1, then to daily 1x1 and finally monthly 1x1 and 5x5
 
@@ -85,14 +83,23 @@ def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, e
     :param int end_year: end year to process
     :param int start_month: start month to process
     :param int end_month: end month to process
+    :param str period: which period to do day/night/both?
 
     :returns:
     '''
 
+    # flags to check on and values to allow through
+    these_flags = {"ATbud":0, "ATclim":0,"ATrep":0,"DPTbud":0,"DPTclim":0,"DPTssat":0,"DPTrep":0,"DPTrepsat":0}
+
+    # restricting to day or night then set the flag and it's allowed value (Extended_IMMA.py line 668 - #0=night, 1=day)
+    if period == "day":
+        these_flags['day'] = 1
+    elif period == "night":
+        these_flags['day'] = 0
+
 
     # spin through years and months to read files
     for year in np.arange(start_year, end_year + 1): 
-
 
         for month in np.arange(start_month, end_month + 1):
 
@@ -110,6 +117,7 @@ def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, e
             lats, lons, years, months, days, hours = utils.process_platform_obs(raw_platform_data)
 
             # test dates *KW - SHOULDN'T NEED THIS - ONLY OBS PASSING DATE CHECK ARE INCLUDED*
+            #  *RD* - hasn't run yet but will leave it in just in case of future use.
             if not utils.check_date(years, year, "years", filename):
                 sys.exit(1)
             if not utils.check_date(months, month, "months", filename):
@@ -143,7 +151,7 @@ def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, e
                 complete_mask = np.zeros(raw_obs.shape)
                 for i in range(raw_obs.shape[1]):
                     complete_mask[:,i] = mask
-                clean_data = np.ma.masked_array(raw_obs, complete_mask)
+                clean_data = np.ma.masked_array(raw_obs, mask = complete_mask)
 
             else:
                 clean_data = np.ma.masked_array(raw_obs, mask = np.zeros(raw_obs.shape))
@@ -164,11 +172,15 @@ def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, e
 
             # NOTE - ALWAYS GIVING TOP-RIGHT OF BOX TO GIVE < HARD LIMIT (as opposed to <=)
             # do the gridding
-            this_month_grid = utils.grid_1by1_cam(clean_data, hours_since, lat_index, lon_index, grid_hours, grid_lats, grid_lons, OBS_ORDER, mdi)
+            this_month_grid = utils.grid_1by1_cam(clean_data, hours_since, lat_index, lon_index, grid_hours, grid_lats, grid_lons, OBS_ORDER, mdi, doMedian = True)
 
             # have one month of gridded data.
-            utils.netcdf_write(OUT_LOCATION + OUTROOT + "_1x1_3hr_{}{:02d}.nc".format(year, month), \
-                                   this_month_grid, OBS_ORDER, grid_lats, grid_lons, times, frequency = "H")
+            if period == "both":
+                out_filename = OUT_LOCATION + OUTROOT + "_1x1_3hr_{}{:02d}.nc".format(year, month)
+            else:
+                out_filename = OUT_LOCATION + OUTROOT + "_1x1_3hr_{}{:02d}_{}.nc".format(year, month, period)
+
+            utils.netcdf_write(out_filename, this_month_grid, OBS_ORDER, grid_lats, grid_lons, times, frequency = "H")
 
             # now average over time
             # Dailies
@@ -185,9 +197,14 @@ def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, e
 
             # filter on number of observations/day
             n_obs_per_day = np.ma.count(this_month_grid, axis = 2) 
-            bad_locs = np.where(n_obs_per_day < (24./DELTA_HOUR) * N_OBS_FRAC_DAY) # 50% of possible hourly values (6hrly data *KW OR AT LEAST 4 3HRLY OBS PRESENT*)
+
+            if period == "both":
+                bad_locs = np.where(n_obs_per_day < N_OBS_DAY) # at least 3 of possible 8 3-hourly values (6hrly data *KW OR AT LEAST 4 3HRLY OBS PRESENT*)
+            else:
+                bad_locs = np.where(n_obs_per_day < np.floor(N_OBS_DAY / 2.)) # at least 1 of possible 8 3-hourly values (6hrly data *KW OR AT LEAST 4 3HRLY OBS PRESENT*)
+                
             daily_grid.mask[bad_locs] = True
-            
+          
             if plots:
                 # plot the distribution of hours
 
@@ -201,8 +218,13 @@ def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, e
 
             # write dailies file
             times.data = daily_hours[:,0]
-            utils.netcdf_write(OUT_LOCATION + OUTROOT + "_1x1_daily_{}{:02d}.nc".format(year, month), \
-                                   daily_grid, OBS_ORDER, grid_lats, grid_lons, times, frequency = "D")
+
+            if period == "both":
+                out_filename = OUT_LOCATION + OUTROOT + "_1x1_daily_{}{:02d}.nc".format(year, month)
+            else:
+                out_filename = OUT_LOCATION + OUTROOT + "_1x1_daily_{}{:02d}_{}.nc".format(year, month, period)
+
+            utils.netcdf_write(out_filename, daily_grid, OBS_ORDER, grid_lats, grid_lons, times, frequency = "D")
 
 
             # Monthlies
@@ -218,9 +240,12 @@ def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, e
             # filter on number of observations/month
             n_obs_per_month = np.ma.count(daily_grid, axis = 1) 
             bad_locs = np.where(n_obs_per_month < calendar.monthrange(year, month)[1] * N_OBS_FRAC_MONTH) # 50% of possible daily values
-            ***KW*** BUG *** DO YOU MEAN monthly_grid.mask[bad_locs] = True 
-	    daily_grid.mask[bad_locs] = True
-            
+            #  ***KW*** BUG *** DO YOU MEAN monthly_grid.mask[bad_locs] = True 
+	    # daily_grid.mask[bad_locs] = True
+	    monthly_grid.mask[bad_locs] = True
+#            good_locs = np.where(n_obs_per_month >= calendar.monthrange(year, month)[1] * N_OBS_FRAC_MONTH) # 50% of possible daily values
+#	     monthly_grid.mask[good_locs] = False
+           
             if plots:
                 # plot the distribution of days
 
@@ -229,8 +254,12 @@ def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, e
                 plt.savefig(PLOT_LOCATION + "n_obs_monthly_{}{:02d}.png".format(year, month))
 
             # write dailies file
-            utils.netcdf_write(OUT_LOCATION + OUTROOT + "_1x1_monthly_{}{:02d}.nc".format(year, month), \
-                               monthly_grid, OBS_ORDER, grid_lats, grid_lons, times, frequency = "M")
+            if period == "both":
+                out_filename = OUT_LOCATION + OUTROOT + "_1x1_monthly_{}{:02d}.nc".format(year, month)
+            else:
+                out_filename = OUT_LOCATION + OUTROOT + "_1x1_monthly_{}{:02d}_{}.nc".format(year, month, period)
+
+            utils.netcdf_write(out_filename, monthly_grid, OBS_ORDER, grid_lats, grid_lons, times, frequency = "M")
 
             # clear up memory
             del daily_grid
@@ -243,8 +272,12 @@ def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, e
 	    # the influence of the outliers (we've done our best to ensure these are good values) 
             monthly_5by5, grid5_lats, grid5_lons = utils.grid_5by5(monthly_grid, grid_lats, grid_lons, doMedian = doMedian)
 
-            utils.netcdf_write(OUT_LOCATION + OUTROOT + "_5x5_monthly_{}{:02d}.nc".format(year, month), \
-                                   monthly_5by5, OBS_ORDER, grid5_lats, grid5_lons, times, frequency = "M")
+            if period == "both":
+                out_filename = OUT_LOCATION + OUTROOT + "_5x5_monthly_{}{:02d}.nc".format(year, month)
+            else:
+                out_filename = OUT_LOCATION + OUTROOT + "_5x5_monthly_{}{:02d}_{}.nc".format(year, month, period)
+
+            utils.netcdf_write(out_filename, monthly_5by5, OBS_ORDER, grid5_lats, grid5_lons, times, frequency = "M")
 
 
     return # do_gridding
@@ -264,11 +297,13 @@ if __name__=="__main__":
                         help='which month to start run, default = 1')
     parser.add_argument('--end_month', dest='end_month', action='store', default = 12,
                         help='which month to end run, default = 12')
+    parser.add_argument('--period', dest='period', action='store', default = "both",
+                        help='which period to run for (day/night/both), default = "both"')
     args = parser.parse_args()
 
 
     do_gridding(start_year = int(args.start_year), end_year = int(args.end_year), \
-                    start_month = int(args.start_month), end_month = int(args.end_month))
+                    start_month = int(args.start_month), end_month = int(args.end_month), period = str(args.period))
 
 # END
 # ************************************************************************
