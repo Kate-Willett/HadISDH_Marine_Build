@@ -4,7 +4,7 @@
 
 # Work out what the name of the script is
 echo "Command: $0 $*"
-progtorun='make_and_full_qc.py
+progtorun='make_and_full_qc.py'
 echo "Program to run: $progtorun"
 
 config='configuration.txt'

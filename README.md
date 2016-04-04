@@ -51,8 +51,10 @@ height bias adjustment, instrument type adjustment.
 
 Add code to grid the data: THIS IS NOT SO SIMPLE!
 - first grid to closest 3 hourly (00, 03....21) 1by1s (most likely using the anomalies) - could use winsorising or median?
-- average time first in the 1by1s
-- average dailies to 5by5s
+- average time first over days in the 1by1s - mean of at least 4 obs per day, check for sampling in both halves of day, may mean over both halves and then mean of means
+- average dailies to pentad 1by1s (at least 2 days present) - mean
+- average dailies to monthly 1by1s (at least 50% of days present) - mean
+- average monthly 1by1s over 5by5 grids (at least one 1by1) - mean
 
 Add code to assess climatological uncertainties at the gridbox scale
 
@@ -72,6 +74,156 @@ If iii) displays the bias, Dave Berry may be correct in ascribing it to real cli
 
 ******************************************************************
 Work Done:
+
+1998 06 - way more obs for 1x1 daily day and night rather than the full daily. Monthly coverage is horrendous - even
+at 5x5. We REALLY need to increase the coverage so either drastically reducing minimum thresholds. Daily full should
+be similar to day and night. Maybe its too much to expect a whole day in a grid box - we coul average all day and
+night dailies to 5 by 5 monthlies?
+
+Ultimately - we're gridding anomalies - so can just grid everything within the
+month??? Better to take care over the climatologies but the anomalie grids can
+be more relaxed.
+
+Apr 4th
+[KW]
+The PlotMetaData_APR2016.py is now working (and on SLURM as long as matpltlib is set to use 'agg'.
+I have run for 
+ALL obs
+SHIP only (PT = 0-5)
+ - SHIP0
+ - SHIP1
+ - SHIP2
+ - SHIP3
+ - SHIP4
+ - SHIP5
+BUOY only (PT = 6 or 8 - moored or ice)
+PLATFORM only (PT = 9, 10 or 15)
+
+It is clear from this that there is only really metadata for ships - very very little bit for buoys - instrument type is S/SN (screen, ships screen) for a few, no type for others
+It is clear that ships make up the majority of the obs for most of the records but buoys are almost equal by 1999 and a >100000 more by 2002. There are quite a few (<100000) platform obs,
+peaking first in the late 1980s and then much more around 2009 to 2013 reaching > 200000 obs. SHIPS 2 (ocean station vessell off station) and 5 (ship) are the most prolific. 
+
+Using a conversion from HOA or HOP to HOB - we can provide an estimate obs height for 30% to 70% of ship obs from 1973 to 2007. HOP looks similar to HOB and HOT (HOT slightly smaller than
+HOB - but fewer obs so could just be missing the higher estimates). HOA ~10m higher. For instrument exposre there are 30% to 70% (1973 to 2007) which have info for either thermometer or
+hygrometer available - and so can be adjusted where necessary. Around 50% of those with info are from unventilated screens - % ot total obs will be much lower of course  - can assess for
+each year deptending on whether we choose to include buoys and platforms (assume all buoys are unaspirated?) Josey et al 1999 (30% estimated to be unventilated - so probably similar). 
+
+For the buoys - can we make an assumption? Only reported height of HOP is 19m which sounds like a lot for a Buoy - perhaps an ice buoy? May be best to ignore buoys as they are 
+more likely to be contaminated? http://www.ndbc.noaa.gov/bmanht.shtml suggests height of thermometers at 4m for most NDBC buoys but then puts some barometer heights at ~180m! That sounds a
+bit screwy. or at least large uncertainty? +/-10m? For instrument type there are only a few with info 1988,1989, 1994-1997 - 100% unventilated screens!!! So - apply bias correction to ALL
+BUOYS!
+
+For the platforms - these could be anything - maybe best to ignore these two? or at least large uncertainty? +/-20m? No info on instrument type - assume unventilated? Add large uncertainty
+estimate to account for this!!!
+
+The few SHIP0s (1973-1978 only) with even fewer reported HOA/HOP are around 27m HOA and 18m HOP - quite large st dev.
+~30% have instrument type, 50-60% of those are unventilated.
+
+The even fewer SHIP1s (1973-1975) with few reported HOA/HOP are around 25m HOA and 17m HOP - quite large st dev.
+46-94% have instrument info - mostly slings/whirlies. <= 20% unventilated screen.
+
+The SHIP2s have no height info or instrument info.
+
+The extremely few (1973-1974) SHIP3s have 25% HOA at 25m HOP at 11 - st dev ~2-3m. All with info are slings/whirlies.
+
+The extremely (2013, 2014) few SHIP4s have no height info. No instrument info.
+
+The VAST majority are SHIP5s and we have HOA/HOP/HOB/HOT for 30-70% of these. HOB/HOT ~22m, HOA ~32m, HOP ~22m. There are also a good number of ships with LOV data 1994 to 2007 which may
+add a few more height estimates to obs. 30-75% have instrument info - 30-60% unventilated screens, ~40%
+sling/shirlies, ~10% ventilated screen.
+
+We now have MANY text files with various statistics for heights, number of observations, percentage, best fit linear models and also instrument type breakdown:
+InstrumentMetaData_*_ERAclimNBC_APR2016.txt
+HeightMetaData_*_ERAclimNBC_APR2016.txt
+There are plots to go with 'all' but not for 'ships','buoys','platforms' - easy to plot if needed later. All
+assessed annually.
+Can use these text files to create plots of contributions from obs types/instrument/heights over time.
+
+We probably want to look at obs that get kicked out from qc too - are these predominantly one type?
+
+WORK TO DO:
+
+Progs to write:
+Break down of QC failing obs by platform type and instrument type
+
+Add to QC - output a new_suite_197301_ERAclimBC_extended.txt: The bias corrected obs will be in the normal version
+too. Extended will contain both bias corrected and uncorrected actual and anomalies.
+Flag for 0s prevalence - use track check. If track is > 50% .0s (and longer than 24 obs), flag as a ATround or
+DPTround - use nbud as I have no idea what this is for - or, only list in the _extended.txt
+ - Add UNCround for every ob with an ATround and or DPTround.
+Apply 3.4% adjustment (reduction) to specific humidity - and back out to all other humidity variables - BEFORE clim
+check. Apply this to ship obs from unventilated screens, all buoys and platforms. Apply 1/3rd or this adjustment 
+to ship obs with no info (after Josey et al (1999) estimate of 30% unscreened - although we could raise this to 50%?)
+A 3.4% reduction in q can be backed out to a change in e, reverse calculate Td, RH, then reverse calculate DPD and
+Tw.
+ - Add UNCscreen to all obs.
+For obs without HOB or HOT - estimate from HOA, HOP or LOV. For obs (ships only) with no height info - estimate 
+based on year and linear increment from 16 to 24 m 1973-2007.
+ - Add UNCheight for all esimated heights - will need to have figured out height adjustment.
+ - Add UNCheight to buoys +/- 10m - will need to have figured out height adjustment.
+ - Add UNCheight to platforms +/- 20m - will need to have figured out heigh adjustment.
+Add measurement uncertainty UNCmeas based on table
+ALL UNCERTAINTIES WILL BE PROVIDED FOR AT and DPT - and equivalent amounts calculated for all other humidity
+variables.
+
+ALSO: 
+Compare OBS clims with ERAclims. Is there an overall 'bias'? Can this be used to adjust ERAclim in any sensible way?
+WE can't only use OBSclims because there are too few data points represented. It would be better to bias correct
+ERAclim.
+
+Mar 31st
+[KW]
+I've been looking at odd months of data to see whether there is much difference between day and nighttime obs. In short - the positive skew in the anomalies is still very
+much present in both AT and DPT. So, I think that this is most likely to be a bias relative to the ERA climatologies. We had previously thought that it could be a warm period
+related to ENSO or other modes of variability but it is common to all months looked at so far.
+
+The anomalies of both AT and DPT show very clear cutoffs at the limit of the climatology check. This is especially noticeable in the Northern mid-latitudes where the maximum
+permitted anomaly is 13 deg (4.5 * sd where sd is set to 3 if it is larger in reality). This is larger than the previous clim test of a flat 10 deg everywhere. You can also
+see that the 'good' obs anomalies are generally much narrower than the 'all obs'. By doing this we are removing the obviously bad data very well. However, we're clearly
+removing good data too. Its difficult to do a better job here. 4.5*sd is fairly generous for getting rid of outliers (removes <0.1% of data). We could arguably raise the
+minimum permitted sd from 0.5 to 1 deg C - so 4.5*1 = 4.5 deg minimum threshold. We could raise the maximum permitted sd from 3 deg to 4 - we could well be losing a lot of
+coastal data.
+
+AT from ERA pentad clim st devs (st dev of all pentads going into climatology)
+75% within 3deg
+84% within 4deg
+91% within 5deg
+96% within 6deg
+mean = 2.1 deg, st dev = 1.76
+
+DPT from ERA pentad clim st devs (st dev of all pentads going into climatology)
+71% within 3deg
+81% within 4deg
+89% within 5deg
+95% within 6deg
+mean = 2.1 deg, st dev = 1.76
+
+If we allowed min=1 max=4 then 4.5*1 to 4 = 4.5 to 18 deg anomalies permitted - quite a lot but we are dealing with the diurnal cycle verses pentad mean?
+So - ok to go with 0.5 and 3 for first stab - to create obs clims - from then on, go with 1 and 4.5. May assess for v2?
+
+Also looked at obs height as provided by HOT, HOB or possibly inferred from LOV, HOP or HOA.
+HOT and or HOB are not often present.
+Can we infer HOT/HOB from HOA or HOP of LOV?
+Generally, HOA is higher than HOP - not a clear relationship.
+Generally, HOA is ~12m higher than HOT or HOB but this needs to be tested across more months - does this change over time/latitude etc?
+Generally, LOV is ~10*HOT/HOB
+I'm now writing some code to read in groups of months, pull out LOV,HOA,HOP,HOT,HOB,PT - and also the type/exposure info TOT, EOT, TOH, EOH
+ - plots, EOT/EOH by latitude where 0 = none, 1 = aspirated/ventilated (A/VS), 2 = whirled (SG/SL/W), 3 = screen not aspirated (S/SN), 4 = unscreend (US)
+ - prints, number and % of obs with TOT, EOT, TOH and EOH present
+ 
+ - plots, HOB, HOT, HOA, HOP, LOV (second axis?) by latitude
+ - prints, number and % of obs with HOB, HOT, HOA, HOP and LOV
+ - plots histograms of HOB, HOT, HOA, HOP and LOV
+ - prints mean and stdevs
+ - plots, HOA vs HOT, HOA vs HOB, HOP vs HOB, HOP vs HOT with lines of best fit
+ - prints, number and % where HOA and HOT present, HOA and HOB present, HOP and HOB present, HOP and HOT present, print equation for fit
+ - plots difference by Height of anemometer/platform 
+ - prints mean and stdevs of differences
+ - plots, LOV vs HOT, LOV vs HOB with lines of best fit
+ - prints, number and % where LOV and HOB present, where LOV and HOT present and equations for fit
+ - plots ratios of HOB and HOT to LOV by length of vessell
+ - prints mean and stddev of differences
+
 Mar 30th
 [KW]
 Some thoughts on the use of median vs mean 
@@ -420,10 +572,13 @@ This will help us to make an assumption over whether the no-EOH obs are more lik
 (greater than S/SN/VS?).
 
 
-What about solar bias?
-This shouldn't affect Td (or therefore q, e, Td) although it could affect the decision over whether it is an icebulb
+What about solar bias? NOCS has NO solar correction applied to Td - only to T!!!
+This shouldn't affect Td directly (or therefore q, e, Td) although it could affect the decision over whether it is an icebulb
 but in these cases the humidity is very low.
-This will affect RH, DPD, Td and Tw and so we either need to bias correct or use night humidities.
+However, Td is most likely derived from T and Tw or T and RH - so it could be affected - we're seeing positive skew in northern mid-lats anomalies of Td and T for Dec 1973 and Jan
+2010. 
+Any affect on T but not Td would still affect RH, DPD and Tw and so we either need to bias correct or use night humidities.
+If Td is also affected then q, e and Td will also be affected.
 Bias correction seems involved and ideally we would perform some analysis to assess how bad this is. Could use the mode
 from Berry et al. 2004 and Berry and Kent (2005).
 I think for version 1 - use night humidities. Good to show the difference from this baseline anyway.
