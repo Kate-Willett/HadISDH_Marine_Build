@@ -16,6 +16,9 @@
 # -----------------------
 # inbuilt:
 # import datetime as dt
+## Folling two lines should be uncommented if using with SPICE or screen
+## import matplotlib
+## matplotlib.use('Agg')
 # import matplotlib.pyplot as plt
 # import numpy as np
 # from matplotlib.dates import date2num,num2date
@@ -75,6 +78,9 @@
 #                                 START
 #************************************************************************
 import datetime as dt
+# Folling two lines should be uncommented if using with SPICE or screen
+## import matplotlib
+## matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.dates import date2num,num2date
@@ -135,8 +141,8 @@ def ReadMDSkate(TheYear,TheMonth,TheType):
     
     MDSDict['shipid']=np.array(RawData['f0'])
     MDSDict['UID']=np.array(RawData['f1'])
-    MDSDict['LAT']=np.array(RawData['f2'])
-    MDSDict['LON']=np.array(RawData['f3'])
+    MDSDict['LAT']=np.array(RawData['f2'])/100.
+    MDSDict['LON']=np.array(RawData['f3'])/100.
     MDSDict['YR']=np.array(RawData['f4'])
     MDSDict['MO']=np.array(RawData['f5'])
     MDSDict['DY']=np.array(RawData['f6'])
@@ -187,7 +193,7 @@ def ReadMDSkate(TheYear,TheMonth,TheType):
     MDSDict['EOT']=np.array(RawData['f46'])
     MDSDict['TOH']=np.array(RawData['f47'])
     MDSDict['EOH']=np.array(RawData['f48'])
-#    MDSDict['LOV']=np.array(RawData['f49'])
+    MDSDict['LOV']=np.array(RawData['f49'])
     MDSDict['HOP']=np.array(RawData['f50'])
     MDSDict['HOT']=np.array(RawData['f51'])
     MDSDict['HOB']=np.array(RawData['f52'])

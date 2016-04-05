@@ -40,6 +40,7 @@ def base_qc_report(rep):
                 qc.date_check(rep.getvar('YR'), rep.getvar('MO'),
                               rep.getvar('DY'), rep.getvar('HR')))
     
+# KW Test for day 1=day, 0=night
     if (rep.get_qc('POS', 'pos') == 0 and 
         rep.get_qc('POS', 'date') == 0):
         rep.set_qc('POS', 'day', 
@@ -113,11 +114,11 @@ def base_qc_report(rep):
 #               qc.climatology_check(rep.getvar('DPT'), rep.getnorm('DPT'), 10.0))
     if (qc.value_check(rep.getstdev('DPT')) == 0): 
         if (rep.getstdev('DPT') > 3.):
-	    dptlimit = 4.5*3	    
+	    dptlimit = 4.5*3	    # greater than clim+/-10deg (13.5 deg)
 	elif ((rep.getstdev('DPT') > 0.5) & (rep.getstdev('DPT') < 3)):
 	    dptlimit = 4.5*rep.getstdev('DPT')
 	else: 
-	    dptlimit = 4.5*0.5
+	    dptlimit = 4.5*0.5 	    # less than clim+/- 10deg (2.25 deg)
     else:
         dptlimit = 10.
     rep.set_qc('DPT', 'clim', 
@@ -432,7 +433,7 @@ def main(argv):
             if ((readyear > 2007) & (readyear < 2015)):
                 filename = icoads_dir+'/R2.5.2.'+syr+'.'+smn+'.gz'
             if (readyear >= 2015):
-                filename = recent_icoads_dir+'/IMMA.'+syr+'.'+smn+'.Z'
+                filename = recent_icoads_dir+'/IMMA.'+syr+'.'+smn+'.gz'
     
             icoads_file = gzip.open(filename,"r")
 
@@ -487,8 +488,9 @@ def main(argv):
 # KW So I've noticed that if one of the listed keys above isn't in the ob then a data['key'] isn't
 # set up (makes sense!) so when I come to print them later it all goes to pot
 # So, I loop through the non-core0 keys here to add blank keys where they are missing
+# KW Added 'UID' to this list because it is not present in the RECENT_ICOADS (2015+)
 		    for inkey in ['DUPS','COR','TOB','TOT','EOT',
-		                  'TOH','EOH','SIM','LOV','HOP','HOT','HOB','HOA','SMF']:
+		                  'TOH','EOH','SIM','LOV','HOP','HOT','HOB','HOA','SMF','UID']:
 		        if not(inkey in keys):
 			    #print("Missing key: ",inkey)
 			    rec.data[inkey] = None
@@ -530,7 +532,7 @@ def main(argv):
 # Use my new routine as part of the Extended_IMMA MarineReport class rep.calcvar() 
 # This routine returns values as None if there is no climslp or if RH is < 0 or > 150.
                         rep.calcvar(['SHU','VAP','CRH','CWB','DPD'])
-
+			
 # Now we have the checker for very silly values - which will just break the loop
 # Inadvertantly, this kicks out any ob for which no climatology is available - the ones that would late fail pos or date checks
 # Later on - we may change this to just set the humidity values to missing rather than delete the ob. SST might be ok after all.
@@ -591,6 +593,9 @@ def main(argv):
                             rep.calculate_dt()
 
                         rep = base_qc_report(rep)
+
+#			print(rep.getvar('ID'),rep.getvar('AT'),rep.getvar('DPT'),rep.getvar('SHU'),rep.getvar('CRH'),rep.getvar('VAP'))
+#                        pdb.set_trace()
 
                         reps.append(rep)
                         count += 1
@@ -653,6 +658,7 @@ def main(argv):
 
         tim3 = time.time()
         print "obs track checked in ", tim3-tim2, len(reps)
+	pdb.set_trace()
 
 #*******************************
 # KW Commented out for now to save time on debug
