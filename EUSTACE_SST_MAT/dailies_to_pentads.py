@@ -20,7 +20,7 @@ import gc
 import utils
 
 doMedian = False
-N_OBS = 2
+N_OBS = 1 # data on at least one day of the pentad
 
 
 # Constants in CAPS

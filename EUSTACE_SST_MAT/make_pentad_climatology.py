@@ -42,16 +42,18 @@ grid_lons = np.arange(-180 + DELTA_LAT, 180 + DELTA_LON, DELTA_LON)
 
 # subroutine start
 #*********************************************
-def calculate_climatology(start_year = 1981, end_year = 2010, period = "both"):
+def calculate_climatology(start_year = 1981, end_year = 2010, period = "both", do3hr = False):
     '''
     Convert dailies to pentads 1x1
 
     :param int start_year: start year to process
     :param int end_year: end year to process
     :param str period: which period to do day/night/both?
+    :param bool do3hr: run on 3hr --> pentad data
 
     :returns:
     '''
+    print "Do 3hrly: {}".format(do3hr)
 
     N_YEARS = end_year - start_year + 1
 
@@ -79,11 +81,15 @@ def calculate_climatology(start_year = 1981, end_year = 2010, period = "both"):
             print year
 
             if period == "both":
-                filename = DATA_LOCATION + "{}_1x1_pentad_{}.nc".format(OUTROOT, year)
-                # filename = DATA_LOCATION + "{}_1x1_pentad_from_3hrly_{}.nc".format(OUTROOT, year)
+                if do3hr:
+                    filename = DATA_LOCATION + "{}_1x1_pentad_from_3hrly_{}.nc".format(OUTROOT, year)
+                else:
+                    filename = DATA_LOCATION + "{}_1x1_pentad_{}.nc".format(OUTROOT, year)
             else:
-                filename = DATA_LOCATION + "{}_1x1_pentad_{}_{}.nc".format(OUTROOT, year, period)
-                # filename = DATA_LOCATION + "{}_1x1_pentad_from_3hrly_{}_{}.nc".format(OUTROOT, year, period)
+                if do3hr:
+                    filename = DATA_LOCATION + "{}_1x1_pentad_from_3hrly_{}_{}.nc".format(OUTROOT, year, period)
+                else:
+                    filename = DATA_LOCATION + "{}_1x1_pentad_{}_{}.nc".format(OUTROOT, year, period)
 
             ncdf_file = ncdf.Dataset(filename,'r', format='NETCDF4')
 
@@ -111,16 +117,29 @@ def calculate_climatology(start_year = 1981, end_year = 2010, period = "both"):
 
     # write files
     if period == "both":
-        out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_climatology.nc"
+        if do3hr:
+            out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_climatology_from_3hrly.nc"
+        else:
+            out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_climatology.nc"
     else:
-        out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_climatology_{}.nc".format(period)
+        if do3hr:
+            out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_climatology_from_3hrly_{}.nc".format(period)
+        else:
+            out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_climatology_{}.nc".format(period)
 
     utils.netcdf_write(out_filename, all_clims, OBS_ORDER, grid_lats, grid_lons, times, frequency = "P")
 
     if period == "both":
-        out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_stdev.nc"
+        if do3hr:
+            out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_stdev_from_3hrly.nc"
+        else:
+            out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_stdev.nc"
     else:
-        out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_stdev_{}.nc".format(period)
+        if do3hr:
+            out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_stdev_from_3hrly_{}.nc".format(period)
+        else:
+            out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_stdev_{}.nc".format(period)
+
     utils.netcdf_write(out_filename, all_stds, OBS_ORDER, grid_lats, grid_lons, times, frequency = "P")
 
     return # calculate_climatology
@@ -138,9 +157,11 @@ if __name__=="__main__":
                         help='which year to end run, default = 2010')
     parser.add_argument('--period', dest='period', action='store', default = "both",
                         help='which period to run for (day/night/both), default = "both"')
+    parser.add_argument('--do3hr', dest='do3hr', action='store_true', default = "False",
+                        help='run on 3hr --> pentad data (rather than daily --> pentad), default = False')
     args = parser.parse_args()
 
 
-    calculate_climatology(start_year = int(args.start_year), end_year = int(args.end_year), period = str(args.period))
+    calculate_climatology(start_year = int(args.start_year), end_year = int(args.end_year), period = str(args.period), do3hr = args.do3hr)
 
 # 
