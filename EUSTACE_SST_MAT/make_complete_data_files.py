@@ -35,7 +35,7 @@ mdi = -1.e30
 # need to merge the pentads (1x1) and the monthlies (5x5)
 
 #************************************************************************
-def combine_files(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, end_month = 12):
+def combine_files(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, end_month = 12, period = "both"):
 
     OBS_ORDER = utils.make_MetVars(mdi, multiplier = False)
     '''
@@ -45,6 +45,7 @@ def combine_files(start_year = START_YEAR, end_year = END_YEAR, start_month = 1,
     :param int end_year: end year to process
     :param int start_month: start month to process
     :param int end_month: end month to process
+    :param str period: which period to do day/night/both?
 
     :returns:
     '''
@@ -69,7 +70,13 @@ def combine_files(start_year = START_YEAR, end_year = END_YEAR, start_month = 1,
 
         for y, year in enumerate(np.arange(start_year, end_year + 1)):
 
-            filename = DATA_LOCATION + "{}_1x1_pentad_{}.nc".format(OUTROOT, year)
+            if period == "both":
+                filename = DATA_LOCATION + "{}_1x1_pentad_{}.nc".format(OUTROOT, year)
+                # filename = DATA_LOCATION + "{}_1x1_pentad_from_3hrly_{}.nc".format(OUTROOT, year)
+            else:
+                filename = DATA_LOCATION + "{}_1x1_pentad_{}_{}.nc".format(OUTROOT, year, period)
+                # filename = DATA_LOCATION + "{}_1x1_pentad_from_3hrly_{}_{}.nc".format(OUTROOT, year, perio
+
             ncdf_file = ncdf.Dataset(filename,'r', format='NETCDF4')
 
             time = ncdf_file.variables["time"]
@@ -95,8 +102,12 @@ def combine_files(start_year = START_YEAR, end_year = END_YEAR, start_month = 1,
         times.data = np.arange(all_pentads.shape[1])
 
         # and write file
-        utils.netcdf_write(DATA_LOCATION + OUTROOT + "_1x1_pentads_{}.nc".format(var.name), \
-                               all_pentads, OBS_ORDER, grid_lats, grid_lons, times, frequency = "P", single = var)
+        if period == "both":
+            DATA_LOCATION + OUTROOT + "_1x1_pentads_{}.nc".format(var.name)
+        else:
+            DATA_LOCATION + OUTROOT + "_1x1_pentads_{}_{}.nc".format(var.name, period)
+
+        utils.netcdf_write(out_filename, all_pentads, OBS_ORDER, grid_lats, grid_lons, times, frequency = "P", single = var)
 
 
     # Reset the data holding arrays and objects
@@ -112,7 +123,11 @@ def combine_files(start_year = START_YEAR, end_year = END_YEAR, start_month = 1,
 
         for month in np.arange(start_month, end_month + 1):
 
-            filename = DATA_LOCATION + "{}_5x5_monthly_{}{:02d}.nc".format(OUTROOT, year, month)
+            if period == "both":
+                filename = DATA_LOCATION + "{}_5x5_monthly_{}{:02d}.nc".format(OUTROOT, year, month)
+            else:
+                filename = DATA_LOCATION + "{}_5x5_monthly_{}{:02d}_{}.nc".format(OUTROOT, year, month, period)
+
             ncdf_file = ncdf.Dataset(filename,'r', format='NETCDF4')
 
             time = ncdf_file.variables["time"]
@@ -155,8 +170,12 @@ def combine_files(start_year = START_YEAR, end_year = END_YEAR, start_month = 1,
     times.data = np.arange(var.data.shape[0])
 
     # and write file
-    utils.netcdf_write(DATA_LOCATION + OUTROOT + "_5x5_monthly.nc", \
-                           all_data, OBS_ORDER, grid5_lats, grid5_lons, times, frequency = "Y")
+    if period == "both":
+        out_filename = DATA_LOCATION + OUTROOT + "_5x5_monthly.nc"
+    else:
+        out_filename = DATA_LOCATION + OUTROOT + "_5x5_monthly_{}.nc".format(period)
+
+    utils.netcdf_write(out_filename, all_data, OBS_ORDER, grid5_lats, grid5_lons, times, frequency = "Y")
 
     return # combine_files
 
@@ -175,8 +194,10 @@ if __name__=="__main__":
                         help='which month to start run, default = 1')
     parser.add_argument('--end_month', dest='end_month', action='store', default = 12,
                         help='which month to end run, default = 12')
+    parser.add_argument('--period', dest='period', action='store', default = "both",
+                        help='which period to run for (day/night/both), default = "both"')
     args = parser.parse_args()
 
 
     combine_files(start_year = int(args.start_year), end_year = int(args.end_year), \
-                    start_month = int(args.start_month), end_month = int(args.end_month))
+                    start_month = int(args.start_month), end_month = int(args.end_month), period = str(args.period))

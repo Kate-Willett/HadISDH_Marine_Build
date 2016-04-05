@@ -444,7 +444,7 @@ def process_qc_flags(qc_flags, these_flags):
     8 - unable to test
     9 - not run (failure further up chain?)
     '''
-
+    # set up a mask with every point set
     mask = np.ones((qc_flags.shape[0], len(these_flags.keys())))
 
     fl_loc = 0
@@ -452,7 +452,7 @@ def process_qc_flags(qc_flags, these_flags):
 
         fl, = np.where(QC_FLAGS == flag)[0]
 
-        # settings of 0 or 9 allowed - unset these.
+        # specified settings allowed - unset these locations
         good_locs, = np.where(qc_flags[:,fl] == value)          
         mask[good_locs, fl_loc] = 0
 
@@ -460,6 +460,9 @@ def process_qc_flags(qc_flags, these_flags):
 
     complete_mask = np.sum(mask, axis = 1) # get sum for each obs.  If zero, then fine, if not then mask
     complete_mask[complete_mask > 0] = 1
+
+    # RJHD 31 March 2016
+    # checked against December 1973.  Have 138144 obs, of which 108988 are good and 29156 are bad.
 
     return complete_mask # process_qc_flags
 
@@ -499,7 +502,7 @@ def grid_5by5(data, grid_lats, grid_lons, doMedian = True):
     assert len(grid_lats) == 180
     assert len(grid_lons) == 360
 
-    N_OBS = 5 # out of possible 25
+    N_OBS = 1 # out of possible 25
     DELTA = 5
     # box edges
     new_lats = np.arange(-90+DELTA, 90+DELTA, DELTA)
@@ -545,7 +548,7 @@ def grid_1by1_cam(clean_data, hours_since, lat_index, lon_index, grid_hours, gri
 
     # set up the array
     this_month_grid = np.ma.zeros([len(OBS_ORDER),len(grid_hours),len(grid_lats), len(grid_lons)], fill_value = mdi)
-    this_month_grid.mask = np.ones([len(OBS_ORDER),len(grid_hours),len(grid_lats), len(grid_lons)])
+    this_month_grid.mask = np.zeros([len(OBS_ORDER),len(grid_hours),len(grid_lats), len(grid_lons)])
 
     mesh_lats, mesh_lons = np.meshgrid(grid_lats, grid_lons)
 
@@ -570,17 +573,26 @@ def grid_1by1_cam(clean_data, hours_since, lat_index, lon_index, grid_hours, gri
                         if len(locs) > 0: # only continue if there are data to process
                       
                             if doMedian:
-                                this_month_grid[:, gh, lt, ln] = np.ma.median(clean_data[locs, :][:, cols], axis = 0)
+                                average = np.ma.median(clean_data[locs, :][:, cols], axis = 0)
                             else:
-                                this_month_grid[:, gh, lt, ln] = np.ma.mean(clean_data[locs, :][:, cols], axis = 0)
+                                average = np.ma.mean(clean_data[locs, :][:, cols], axis = 0)
 
-                            this_month_grid.mask[:, gh, lt, ln] = False # unset the mask
+                            # if there is data then copy into final array
+                            if len(average.compressed()) > 0:
+                                this_month_grid[:, gh, lt, ln] = average
+                                this_month_grid.mask[:, gh, lt, ln] = False # unset the mask
 
-#                        if timestamp >= 21: break
+                            # ensure that mask is set otherwise
+                            else:
+                                this_month_grid.mask[:, gh, lt, ln] = True
 
-#                        raw_input("stop hr {}".format(timestamp))
-#                raw_input("stop lon{}".format(glon))
-#        raw_input("stop lat {}".format(glat))
+                        # ensure that mask is set otherwise
+                        else:
+                            this_month_grid.mask[:, gh, lt, ln] = True # ensure mask is set
+                else:
+                    this_month_grid.mask[:, :, lt, ln] = True # ensure mask is set
+        else:
+            this_month_grid.mask[:, :, lt, :] = True # ensure mask is set
 
     return this_month_grid # grid_1by1_cam
 
@@ -617,5 +629,25 @@ def day_of_year(year, month):
 
     return diff.days # day_of_year
 
+#*******************************************************
+def bn_median(masked_array, axis=None):
+    """
+    https://github.com/astropy/ccdproc/blob/122cdbd5713140174f057eaa8fdb6f9ce03312df/docs/ccdproc/bottleneck_example.rst
+    Perform fast median on masked array
+
+    Parameters
+
+    masked_array : `numpy.ma.masked_array`
+        Array of which to find the median.
+
+    axis : int, optional
+        Axis along which to perform the median. Default is to find the median of
+        the flattened array.
+    """
+    import bottleneck as bn
+    data = masked_array.filled(fill_value=np.NaN)
+    med = bn.nanmedian(data, axis=axis)
+    # construct a masked array result, setting the mask from any NaN entries
+    return np.ma.array(med, mask=np.isnan(med)) # bn_median
 # END
 # ************************************************************************

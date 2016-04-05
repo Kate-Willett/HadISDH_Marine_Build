@@ -42,12 +42,13 @@ grid_lons = np.arange(-180 + DELTA_LAT, 180 + DELTA_LON, DELTA_LON)
 
 # subroutine start
 #*********************************************
-def calculate_climatology(start_year = 1981, end_year = 2010):
+def calculate_climatology(start_year = 1981, end_year = 2010, period = "both"):
     '''
     Convert dailies to pentads 1x1
 
     :param int start_year: start year to process
     :param int end_year: end year to process
+    :param str period: which period to do day/night/both?
 
     :returns:
     '''
@@ -77,8 +78,12 @@ def calculate_climatology(start_year = 1981, end_year = 2010):
 
             print year
 
-            filename = DATA_LOCATION + "{}_1x1_pentad_{}.nc".format(OUTROOT, year)
-#            filename = DATA_LOCATION + "{}_1x1_pentad_from_3hrly_{}.nc".format(OUTROOT, year)
+            if period == "both":
+                filename = DATA_LOCATION + "{}_1x1_pentad_{}.nc".format(OUTROOT, year)
+                # filename = DATA_LOCATION + "{}_1x1_pentad_from_3hrly_{}.nc".format(OUTROOT, year)
+            else:
+                filename = DATA_LOCATION + "{}_1x1_pentad_{}_{}.nc".format(OUTROOT, year, period)
+                # filename = DATA_LOCATION + "{}_1x1_pentad_from_3hrly_{}_{}.nc".format(OUTROOT, year, period)
 
             ncdf_file = ncdf.Dataset(filename,'r', format='NETCDF4')
 
@@ -90,7 +95,7 @@ def calculate_climatology(start_year = 1981, end_year = 2010):
 
         # collapse down the years
         if doMedian:
-            all_clims[v, :, :, :] = np.ma.median(all_pentads, axis = 0)
+            all_clims[v, :, :, :] = utils.bn_median(all_pentads, axis = 0)
         else:
             all_clims[v, :, :, :] = np.ma.mean(all_pentads, axis = 0)
 
@@ -104,11 +109,19 @@ def calculate_climatology(start_year = 1981, end_year = 2010):
     times = utils.TimeVar("time", "time since 1/1/{} in days".format(1), "days", "time")
     times.data = np.arange(0, 73) * 5
 
-    # write file
-    utils.netcdf_write(DATA_LOCATION + OUTROOT + "_1x1_pentad_climatology.nc", \
-                           all_clims, OBS_ORDER, grid_lats, grid_lons, times, frequency = "P")
-    utils.netcdf_write(DATA_LOCATION + OUTROOT + "_1x1_pentad_stdev.nc", \
-                           all_stds, OBS_ORDER, grid_lats, grid_lons, times, frequency = "P")
+    # write files
+    if period == "both":
+        out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_climatology.nc"
+    else:
+        out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_climatology_{}.nc".format(period)
+
+    utils.netcdf_write(out_filename, all_clims, OBS_ORDER, grid_lats, grid_lons, times, frequency = "P")
+
+    if period == "both":
+        out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_stdev.nc"
+    else:
+        out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_stdev_{}.nc".format(period)
+    utils.netcdf_write(out_filename, all_stds, OBS_ORDER, grid_lats, grid_lons, times, frequency = "P")
 
     return # calculate_climatology
 
@@ -123,10 +136,11 @@ if __name__=="__main__":
                         help='which year to start run, default = 1981')
     parser.add_argument('--end_year', dest='end_year', action='store', default = 2010,
                         help='which year to end run, default = 2010')
+    parser.add_argument('--period', dest='period', action='store', default = "both",
+                        help='which period to run for (day/night/both), default = "both"')
     args = parser.parse_args()
 
 
-    calculate_climatology(start_year = int(args.start_year), end_year = int(args.end_year))
+    calculate_climatology(start_year = int(args.start_year), end_year = int(args.end_year), period = str(args.period))
 
-# END
-# ************************************************************************
+# 

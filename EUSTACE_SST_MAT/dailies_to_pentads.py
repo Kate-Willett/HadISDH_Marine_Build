@@ -44,12 +44,13 @@ grid_lats = np.arange(-90 + DELTA_LAT, 90 + DELTA_LAT, DELTA_LAT)
 grid_lons = np.arange(-180 + DELTA_LAT, 180 + DELTA_LON, DELTA_LON)
 
 #************************************************************************
-def do_conversion(start_year = START_YEAR, end_year = END_YEAR):
+def do_conversion(start_year = START_YEAR, end_year = END_YEAR, period = "both"):
     '''
     Convert dailies to pentads 1x1
 
     :param int start_year: start year to process
     :param int end_year: end year to process
+    :param str period: which period to do day/night/both?
 
     :returns:
     '''
@@ -58,7 +59,7 @@ def do_conversion(start_year = START_YEAR, end_year = END_YEAR):
 
         # set up empty data array
         all_dailies = np.ma.zeros([len(OBS_ORDER), utils.days_in_year(year), len(grid_lats), len(grid_lons)])
-        all_dailies.mask = np.ma.ones([len(OBS_ORDER), utils.days_in_year(year), len(grid_lats), len(grid_lons)])
+        all_dailies.mask = np.zeros([len(OBS_ORDER), utils.days_in_year(year), len(grid_lats), len(grid_lons)])
         all_dailies.fill_value = mdi
 
         year_start = dt.datetime(year, 1, 1, 0, 0)
@@ -69,7 +70,10 @@ def do_conversion(start_year = START_YEAR, end_year = END_YEAR):
             month_start = utils.day_of_year(year, month)
             month_end = month_start + calendar.monthrange(year, month)[1]
 
-            filename = "{}/{}_1x1_daily_{}{:02d}.nc".format(DATA_LOCATION, OUTROOT, year, month)
+            if period == "both":
+                filename = "{}/{}_1x1_daily_{}{:02d}.nc".format(DATA_LOCATION, OUTROOT, year, month)
+            else:
+                filename = "{}/{}_1x1_daily_{}{:02d}_{}.nc".format(DATA_LOCATION, OUTROOT, year, month, period)
 
             ncdf_file = ncdf.Dataset(filename,'r', format='NETCDF4')
 
@@ -105,11 +109,11 @@ def do_conversion(start_year = START_YEAR, end_year = END_YEAR):
         n_obs_per_pentad = np.ma.count(all_dailies, axis = 2) 
 
         if doMedian:
-            pentad_grid = np.ma.median(all_dailies, axis = 2)
+            pentad_grid = utils.bn_median(all_dailies, axis = 2)
         else:
             pentad_grid = np.ma.mean(all_dailies, axis = 2)
 
-        pentad_grid.mask[n_obs_per_pentad < N_OBS] = True # mask where fewer than 3 days have values # KW THIS IS ACTUALLY 2 - WHICH I THINK IS GOOD
+        pentad_grid.mask[n_obs_per_pentad < N_OBS] = True # mask where fewer than 2 days have values # KW THIS IS ACTUALLY 2 - WHICH I THINK IS GOOD
 
         # clear up memory
         del all_dailies
@@ -119,7 +123,7 @@ def do_conversion(start_year = START_YEAR, end_year = END_YEAR):
         if calendar.isleap(year):
             #  overwrite this with the me(di)an of a 6-day pentad
             if doMedian:
-                pentad_grid[:, 11, :, :] = np.ma.median(incl_feb29th, axis = 1)
+                pentad_grid[:, 11, :, :] = utils.bn_median(incl_feb29th, axis = 1)
             else:
                 pentad_grid[:, 11, :, :] = np.ma.mean(incl_feb29th, axis = 1)
 
@@ -132,8 +136,12 @@ def do_conversion(start_year = START_YEAR, end_year = END_YEAR):
         times = utils.TimeVar("time", "time since 1/1/{} in hours".format(year), "hours", "time")
         times.data = np.arange(0, pentad_grid.shape[1]) * 5 * 24
 
-        utils.netcdf_write(DATA_LOCATION + OUTROOT + "_1x1_pentad_{}.nc".format(year), \
-                               pentad_grid, OBS_ORDER, grid_lats, grid_lons, times, frequency = "P")
+        if period == "both":
+            out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_{}.nc".format(year)
+        else:
+            out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_{}_{}.nc".format(year, period)
+            
+        utils.netcdf_write(out_filename, pentad_grid, OBS_ORDER, grid_lats, grid_lons, times, frequency = "P")
 
         del n_obs_per_pentad
         del pentad_grid
@@ -152,10 +160,12 @@ if __name__=="__main__":
                         help='which year to start run, default = 1973')
     parser.add_argument('--end_year', dest='end_year', action='store', default = END_YEAR,
                         help='which year to end run, default = present')
+    parser.add_argument('--period', dest='period', action='store', default = "both",
+                        help='which period to run for (day/night/both), default = "both"')
     args = parser.parse_args()
 
 
-    do_conversion(start_year = int(args.start_year), end_year = int(args.end_year))
+    do_conversion(start_year = int(args.start_year), end_year = int(args.end_year), period = str(args.period))
 
 # END
 # ************************************************************************
