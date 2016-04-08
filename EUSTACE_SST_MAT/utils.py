@@ -192,7 +192,7 @@ def read_global_attributes(attr_file):
         
     except IOError:
         print "Attributes file not found at " + attr_file
-    
+        raise IOError
     
     attributes = {}
     
@@ -236,12 +236,14 @@ def write_netcdf_variable(outfile, var, v, data, frequency, do_zip = True):
     return # write_netcdf_variable
 
 #*****************************************************
-def netcdf_write(filename, data, variables, lats, lons, time, do_zip = True, frequency = "H", single = ""):
+def netcdf_write(filename, data, n_grids, n_obs, variables, lats, lons, time, do_zip = True, frequency = "H", single = ""):
     '''
     Write the relevant fields out to a netCDF file.
     
     :param str filename: output filename
     :param array data: the whole data array [nvars, nhours, nlats, nlons]
+    :param array n_grids: number of grid boxes/days/hours for each field from prior processing step
+    :param array n_obs: number of observations for each field
     :param list variables: the variables in order to output
     :param array lats: the latitudes
     :param array lons: the longitudes
@@ -305,6 +307,25 @@ def netcdf_write(filename, data, variables, lats, lons, time, do_zip = True, fre
 
         for v, var in enumerate(variables):
             write_netcdf_variable(outfile, var, v, data, frequency, do_zip = do_zip)
+
+    # write number of observations 
+
+
+    nc_var = outfile.createVariable("n_grids", np.dtype('int16'), ('time','latitude','longitude',), zlib = do_zip, fill_value = -1)
+
+    nc_var.long_name = "Number of grid boxes/days/hours going into this grid box"
+    nc_var.units = "1"
+    nc_var.missing_value = -1
+    nc_var.standard_name = "Number of grid boxes/days/hours"
+    nc_var[:] = np.ma.masked_where(n_grids <=0, n_grids)
+
+    nc_var = outfile.createVariable("n_obs", np.dtype('int16'), ('time','latitude','longitude',), zlib = do_zip, fill_value = -1)
+
+    nc_var.long_name = "Number of raw observations going into this grid box"
+    nc_var.units = "1"
+    nc_var.missing_value = -1
+    nc_var.standard_name = "Number of Observations"
+    nc_var[:] = np.ma.masked_where(n_obs <= 0, n_obs)
 
     # Global Attributes
     # from file
@@ -485,51 +506,7 @@ def day_or_night(qc_flags):
     return day_locs, night_locs # day_or_night
 
 #*********************************************************
-def grid_5by5(data, grid_lats, grid_lons, doMedian = True):
-    '''
-    Make a coarser grid
-
-    :param array data: input 1x1 data
-    :param array grid_lats: input 1degree lats (box edges)
-    :param array grid_lons: input 1degree lons (box edges)
-    :param bool doMedian: use the median (default) instead of the mean
-    
-    :returns: new_data, new_llats, new_lons - updated to 5x5
-    '''
-
-    # assert the shapes are correct - blc at -89, -179, trc at 90, 180
-    #    Using upper right corner of box as index, and have nothing at -90, -180
-    assert len(grid_lats) == 180
-    assert len(grid_lons) == 360
-
-    N_OBS = 1 # out of possible 25
-    DELTA = 5
-    # box edges
-    new_lats = np.arange(-90+DELTA, 90+DELTA, DELTA)
-    new_lons = np.arange(-180+DELTA, 180+DELTA, DELTA)
-
-    new_data = np.ma.zeros((data.shape[0], len(new_lats), len(new_lons)))
-    new_data.mask = np.ones((data.shape[0], len(new_lats), len(new_lons)))
-    new_data.fill_value = data.fill_value
-    
-    for lt, lat in enumerate(np.arange(0, len(grid_lats), DELTA) + 1):
-        for ln, lon in enumerate(np.arange(0, len(grid_lons), DELTA) + 1):
-           
-            for var in range(data.shape[0]):
-                if doMedian:
-                    new_data[var, lt-1, ln-1] = np.ma.median(data[var, lat-DELTA:lat, lon-DELTA:lon])
-                else:
-                    new_data[var, lt-1, ln-1] = np.ma.mean(data[var, lat-DELTA:lat, lon-DELTA:lon])
-
-                n_obs = np.ma.count(data[var, lat-DELTA:lat, lon-DELTA:lon])
-
-                if n_obs < N_OBS:
-                    new_data.mask[var, lt-1, ln-1] = True
-
-    return new_data, new_lats, new_lons # grid_5by5
-
-#*********************************************************
-def grid_1by1_cam(clean_data, hours_since, lat_index, lon_index, grid_hours, grid_lats, grid_lons, OBS_ORDER, mdi, doMedian = True):
+def grid_1by1_cam(clean_data, raw_qc, hours_since, lat_index, lon_index, grid_hours, grid_lats, grid_lons, OBS_ORDER, mdi, doMedian = True):
     '''
     Grid using the Climate Anomaly Method on 1x1 degree for each month
 
@@ -544,11 +521,13 @@ def grid_1by1_cam(clean_data, hours_since, lat_index, lon_index, grid_hours, gri
     :param float mdi: missing data indicator
     :param bool doMedian: use the median (default) instead of the mean
     '''
-
+    day_flag_loc, = np.where(QC_FLAGS == 'day')[0]
 
     # set up the array
     this_month_grid = np.ma.zeros([len(OBS_ORDER),len(grid_hours),len(grid_lats), len(grid_lons)], fill_value = mdi)
     this_month_grid.mask = np.zeros([len(OBS_ORDER),len(grid_hours),len(grid_lats), len(grid_lons)])
+    this_month_obs = np.zeros([len(grid_hours),len(grid_lats), len(grid_lons)])
+    this_month_time = np.zeros([len(grid_hours),len(grid_lats), len(grid_lons)])
 
     mesh_lats, mesh_lons = np.meshgrid(grid_lats, grid_lons)
 
@@ -577,10 +556,21 @@ def grid_1by1_cam(clean_data, hours_since, lat_index, lon_index, grid_hours, gri
                             else:
                                 average = np.ma.mean(clean_data[locs, :][:, cols], axis = 0)
 
+                            day_flags = raw_qc[locs, :][:, day_flag_loc]                            
+
                             # if there is data then copy into final array
                             if len(average.compressed()) > 0:
                                 this_month_grid[:, gh, lt, ln] = average
                                 this_month_grid.mask[:, gh, lt, ln] = False # unset the mask
+
+                                # number of raw observations going into this grid box time stamp
+                                this_month_obs[gh, lt, ln] = np.ma.compress_rows(clean_data[locs, :][:, cols]).shape[0]
+
+                                # restricting to day or night then set the flag and it's allowed value (Extended_IMMA.py line 668 - #0=night, 1=day)
+                                if len(np.unique(day_flags)) == 1:
+                                    this_month_time[gh, lt, ln] = np.unique(day_flags)
+                                else: # if a mix then force to be a day (KW in discussion with RD, 6 April 2016)
+                                    this_month_time[gh, lt, ln] = 1
 
                             # ensure that mask is set otherwise
                             else:
@@ -594,7 +584,79 @@ def grid_1by1_cam(clean_data, hours_since, lat_index, lon_index, grid_hours, gri
         else:
             this_month_grid.mask[:, :, lt, :] = True # ensure mask is set
 
-    return this_month_grid # grid_1by1_cam
+    return this_month_grid, this_month_obs, this_month_time # grid_1by1_cam
+
+#*********************************************************
+def grid_5by5(data, n_obs, grid_lats, grid_lons, doMedian = True, daily = True):
+    '''
+    Make a coarser grid and go from daily to monthly
+
+    As passing in only one month at a time, just average over all timestamps
+
+    :param array data: input 1x1 data (daily)
+    :param array n_obs: number of raw observations going into each daily 1x1 grid box
+    :param array grid_lats: input 1degree lats (box edges)
+    :param array grid_lons: input 1degree lons (box edges)
+    :param bool doMedian: use the median (default) instead of the mean
+    :param bool daily: input data is daily or not (i.e. monthly)
+    
+    :returns: new_data, new_lats, new_lons - updated to 5x5
+    '''
+
+    # assert the shapes are correct - blc at -89, -179, trc at 90, 180
+    #    Using upper right corner of box as index, and have nothing at -90, -180
+    assert len(grid_lats) == 180
+    assert len(grid_lons) == 360
+
+    if daily:
+        N_OBS = 0.3 * data.shape[1]  # 30% of days in month
+    else:
+        N_OBS = 1 # out of possible 25 1x1 monthly fields
+
+    DELTA = 5
+    # box edges
+    new_lats = np.arange(-90+DELTA, 90+DELTA, DELTA)
+    new_lons = np.arange(-180+DELTA, 180+DELTA, DELTA)
+
+    new_data = np.ma.zeros((data.shape[0], len(new_lats), len(new_lons)))
+    new_data.mask = np.ones((data.shape[0], len(new_lats), len(new_lons)))
+    new_data.fill_value = data.fill_value
+    
+    n_grids_array = np.ones((len(new_lats), len(new_lons)))
+    n_obs_array = np.ones((len(new_lats), len(new_lons)))
+
+    for lt, lat in enumerate(np.arange(0, len(grid_lats), DELTA) + DELTA):
+        for ln, lon in enumerate(np.arange(0, len(grid_lons), DELTA) + DELTA):
+           
+            # difficult to do over both space (and time) axes all at once
+            for var in range(data.shape[0]):
+                if doMedian:
+                    if daily:
+                        new_data[var, lt, ln] = np.ma.median(data[var, :, lat-DELTA:lat, lon-DELTA:lon])
+                    else:
+                        new_data[var, lt, ln] = np.ma.median(data[var, lat-DELTA:lat, lon-DELTA:lon])
+                else:
+                    if daily:
+                        new_data[var, lt, ln] = np.ma.mean(data[var, :, lat-DELTA:lat, lon-DELTA:lon])
+                    else:
+                        new_data[var, lt, ln] = np.ma.mean(data[var, lat-DELTA:lat, lon-DELTA:lon])
+
+                if daily:
+                    n_grids = np.ma.count(data[var, :, lat-DELTA:lat, lon-DELTA:lon])
+                else:
+                    n_grids = np.ma.count(data[var, lat-DELTA:lat, lon-DELTA:lon])
+
+                n_grids_array[lt, ln] = n_grids
+
+                if n_grids < N_OBS:
+                    new_data.mask[var, lt, ln] = True
+                 
+                if daily:
+                    n_obs_array[lt, ln] = np.sum(n_obs[:, lat-DELTA:lat, lon-DELTA:lon])
+                else:
+                    n_obs_array[lt, ln] = np.sum(n_obs[lat-DELTA:lat, lon-DELTA:lon])
+
+    return new_data, n_grids_array, n_obs_array, new_lats, new_lons # grid_5by5
 
 #*********************************************************
 def days_in_year(year):

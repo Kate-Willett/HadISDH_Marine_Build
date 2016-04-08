@@ -44,13 +44,13 @@ grid_lats = np.arange(-90 + DELTA_LAT, 90 + DELTA_LAT, DELTA_LAT)
 grid_lons = np.arange(-180 + DELTA_LAT, 180 + DELTA_LON, DELTA_LON)
 
 #************************************************************************
-def do_conversion(start_year = START_YEAR, end_year = END_YEAR, period = "both"):
+def do_conversion(start_year = START_YEAR, end_year = END_YEAR, period = "all"):
     '''
     Convert dailies to pentads 1x1
 
     :param int start_year: start year to process
     :param int end_year: end year to process
-    :param str period: which period to do day/night/both?
+    :param str period: which period to do day/night/all?
 
     :returns:
     '''
@@ -62,6 +62,8 @@ def do_conversion(start_year = START_YEAR, end_year = END_YEAR, period = "both")
         all_dailies.mask = np.zeros([len(OBS_ORDER), utils.days_in_year(year), len(grid_lats), len(grid_lons)])
         all_dailies.fill_value = mdi
 
+        all_n_obs = np.zeros([utils.days_in_year(year), len(grid_lats), len(grid_lons)])
+
         year_start = dt.datetime(year, 1, 1, 0, 0)
 
         for month in np.arange(12) + 1:
@@ -70,10 +72,7 @@ def do_conversion(start_year = START_YEAR, end_year = END_YEAR, period = "both")
             month_start = utils.day_of_year(year, month)
             month_end = month_start + calendar.monthrange(year, month)[1]
 
-            if period == "both":
-                filename = "{}/{}_1x1_daily_{}{:02d}.nc".format(DATA_LOCATION, OUTROOT, year, month)
-            else:
-                filename = "{}/{}_1x1_daily_{}{:02d}_{}.nc".format(DATA_LOCATION, OUTROOT, year, month, period)
+            filename = "{}/{}_1x1_daily_{}{:02d}_{}.nc".format(DATA_LOCATION, OUTROOT, year, month, period)
 
             ncdf_file = ncdf.Dataset(filename,'r', format='NETCDF4')
 
@@ -84,6 +83,12 @@ def do_conversion(start_year = START_YEAR, end_year = END_YEAR, period = "both")
                     all_dailies[v, month_start:, :, :] = ncdf_file.variables[var.name][:]
                 else:
                     all_dailies[v, month_start:month_end, :, :] = ncdf_file.variables[var.name][:]
+
+            # now get number of observations
+            if month == 12:
+                all_n_obs[month_start:, :, :] = ncdf_file.variables["n_obs"][:]
+            else:
+                all_n_obs[month_start:month_end, :, :] = ncdf_file.variables["n_obs"][:]
 
 
         if calendar.isleap(year):
@@ -100,24 +105,32 @@ def do_conversion(start_year = START_YEAR, end_year = END_YEAR, period = "both")
             all_dailies = np.ma.array(all_dailies, mask = mask)
             del mask
 
+            # number of observations
+            incl_feb29th_n_obs = all_n_obs[55:61, :, :]
+            all_n_obs = np.delete(all_n_obs, 59, 0)         
+
         else:
             assert all_dailies.shape[1] == 365
 
         shape = all_dailies.shape
         all_dailies = all_dailies.reshape(shape[0], -1, 5, shape[-2], shape[-1])
 
-        n_obs_per_pentad = np.ma.count(all_dailies, axis = 2) 
+        n_days_per_pentad = np.ma.count(all_dailies, axis = 2) 
 
         if doMedian:
             pentad_grid = utils.bn_median(all_dailies, axis = 2)
         else:
             pentad_grid = np.ma.mean(all_dailies, axis = 2)
 
-        pentad_grid.mask[n_obs_per_pentad < N_OBS] = True # mask where fewer than 2 days have values # KW THIS IS ACTUALLY 2 - WHICH I THINK IS GOOD
-
         # clear up memory
         del all_dailies
         gc.collect()
+
+        all_n_obs = all_n_obs.reshape(-1, 5, shape[-2], shape[-1])
+        all_n_obs = np.sum(all_n_obs, axis = 1)
+
+        pentad_grid.mask[n_days_per_pentad < N_OBS] = True # mask where fewer than 2 days have values # KW THIS IS ACTUALLY 2 - WHICH I THINK IS GOOD
+
 
         # the pentad containing feb 29th is the 11th in the year
         if calendar.isleap(year):
@@ -128,23 +141,24 @@ def do_conversion(start_year = START_YEAR, end_year = END_YEAR, period = "both")
                 pentad_grid[:, 11, :, :] = np.ma.mean(incl_feb29th, axis = 1)
 
 
-            n_obs_per_pentad = np.ma.count(incl_feb29th, axis = 1)
-            pentad_grid.mask[:, 11, :, :][n_obs_per_pentad < N_OBS] = True 
+            feb_n_days_per_pentad = np.ma.count(incl_feb29th, axis = 1)
+            pentad_grid.mask[:, 11, :, :][feb_n_days_per_pentad < N_OBS] = True 
+            n_days_per_pentad[:, 11, :, :] = feb_n_days_per_pentad
+
+            all_n_obs[11, :, :] = np.sum(incl_feb29th_n_obs, axis = 0)
 
             print "processed Feb 29th"
                 
         times = utils.TimeVar("time", "time since 1/1/{} in hours".format(year), "hours", "time")
         times.data = np.arange(0, pentad_grid.shape[1]) * 5 * 24
 
-        if period == "both":
-            out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_{}.nc".format(year)
-        else:
-            out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_{}_{}.nc".format(year, period)
+        out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_{}_{}.nc".format(year, period)
             
-        utils.netcdf_write(out_filename, pentad_grid, OBS_ORDER, grid_lats, grid_lons, times, frequency = "P")
+        utils.netcdf_write(out_filename, pentad_grid, n_days_per_pentad[0], all_n_obs, OBS_ORDER, grid_lats, grid_lons, times, frequency = "P")
 
-        del n_obs_per_pentad
         del pentad_grid
+        del all_n_obs
+        del n_days_per_pentad
         gc.collect()
 
     return # do_conversion
@@ -160,8 +174,8 @@ if __name__=="__main__":
                         help='which year to start run, default = 1973')
     parser.add_argument('--end_year', dest='end_year', action='store', default = END_YEAR,
                         help='which year to end run, default = present')
-    parser.add_argument('--period', dest='period', action='store', default = "both",
-                        help='which period to run for (day/night/both), default = "both"')
+    parser.add_argument('--period', dest='period', action='store', default = "all",
+                        help='which period to run for (day/night/all), default = "all"')
     args = parser.parse_args()
 
 

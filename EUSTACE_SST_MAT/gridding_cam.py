@@ -14,6 +14,7 @@ import matplotlib
 matplotlib.use('Agg') 
 import calendar
 import gc
+import copy
 
 import utils
 import plot_qc_diagnostics
@@ -45,8 +46,8 @@ doMedian = False
 doMonthlies = True
 doPentads = False
 
-N_OBS_DAY = 3
-N_OBS_FRAC_MONTH = 0.5
+N_OBS_DAY = 2
+N_OBS_FRAC_MONTH = 0.3
 
 # Constants in CAPS
 OUTROOT = "ERAclimNBC"
@@ -75,7 +76,7 @@ grid_lons = np.arange(-180 + DELTA_LON, 180 + DELTA_LON, DELTA_LON)
 fields = mds.TheDelimiters
 
 #************************************************************************
-def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, end_month = 12, period = "both"):
+def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, end_month = 12, period = "all"):
     '''
     Do the gridding, first to 3hrly 1x1, then to daily 1x1 and finally monthly 1x1 and 5x5
 
@@ -83,19 +84,13 @@ def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, e
     :param int end_year: end year to process
     :param int start_month: start month to process
     :param int end_month: end month to process
-    :param str period: which period to do day/night/both?
+    :param str period: which period to do day/night/all?
 
     :returns:
     '''
 
     # flags to check on and values to allow through
     these_flags = {"ATbud":0, "ATclim":0,"ATrep":0,"DPTbud":0,"DPTclim":0,"DPTssat":0,"DPTrep":0,"DPTrepsat":0}
-
-    # restricting to day or night then set the flag and it's allowed value (Extended_IMMA.py line 668 - #0=night, 1=day)
-    if period == "day":
-        these_flags['day'] = 1
-    elif period == "night":
-        these_flags['day'] = 0
 
 
     # spin through years and months to read files
@@ -140,7 +135,7 @@ def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, e
                 for variable in OBS_ORDER:
                     if variable.name in ["dew_point_temperature", "specific_humidity", "relative_humidity", "dew_point_temperature_anomalies", "specific_humidity_anomalies", "relative_humidity_anomalies"]:
 
-                        plot_qc_diagnostics.values_vs_lat(variable, lats, raw_obs[:, variable.column], raw_qc, PLOT_LOCATION + "qc_actuals_{}_{}{:02d}.png".format(variable.name, year, month), multiplier = variable.multiplier)
+                        plot_qc_diagnostics.values_vs_lat(variable, lats, raw_obs[:, variable.column], raw_qc, these_flags, PLOT_LOCATION + "qc_actuals_{}_{}{:02d}.png".format(variable.name, year, month), multiplier = variable.multiplier)
 
 
             # QC sub-selection
@@ -172,113 +167,199 @@ def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, e
 
             # NOTE - ALWAYS GIVING TOP-RIGHT OF BOX TO GIVE < HARD LIMIT (as opposed to <=)
             # do the gridding
-            this_month_grid = utils.grid_1by1_cam(clean_data, hours_since, lat_index, lon_index, grid_hours, grid_lats, grid_lons, OBS_ORDER, mdi, doMedian = True)
+            # extract the full grid, number of obs, and day/night flag
+            raw_month_grid, raw_month_n_obs, this_month_period = utils.grid_1by1_cam(clean_data, raw_qc, hours_since, lat_index, lon_index, grid_hours, grid_lats, grid_lons, OBS_ORDER, mdi, doMedian = True)
+            print "successfully read data into 1x1 3hrly grids"
 
-            # have one month of gridded data.
-            if period == "both":
-                out_filename = OUT_LOCATION + OUTROOT + "_1x1_3hr_{}{:02d}.nc".format(year, month)
-            else:
-                out_filename = OUT_LOCATION + OUTROOT + "_1x1_3hr_{}{:02d}_{}.nc".format(year, month, period)
+            # create matching array size
+            this_month_period = np.tile(this_month_period, (len(OBS_ORDER),1,1,1))
 
-            utils.netcdf_write(out_filename, this_month_grid, OBS_ORDER, grid_lats, grid_lons, times, frequency = "H")
+            for period in ["all", "day", "night"]:
 
-            # now average over time
-            # Dailies
-            daily_hours = grid_hours.reshape(-1, 24/DELTA_HOUR)
+                if period == "day":
+                    this_month_grid = np.ma.masked_where(this_month_period == 1, raw_month_grid)
+                    this_month_obs = np.ma.masked_where(this_month_period[0] == 1, raw_month_n_obs) # and take first slice to re-match the array size
+                elif period == "night":
+                    this_month_grid = np.ma.masked_where(this_month_period == 0, raw_month_grid)
+                    this_month_obs = np.ma.masked_where(this_month_period[0] == 0, raw_month_n_obs) # and take first slice to re-match the array size
+                else:
+                    this_month_grid = copy.deepcopy(raw_month_grid)
+                    this_month_obs = copy.deepcopy(raw_month_n_obs)
+                    
+                # have one month of gridded data.
+                out_filename = OUT_LOCATION + OUTROOT + "_1x1_3hr_{}{:02d}_{}.nc".format(year, month, period)              
 
-            shape = this_month_grid.shape
-            this_month_grid = this_month_grid.reshape(shape[0], -1, 24/DELTA_HOUR, shape[2], shape[3])
+                utils.netcdf_write(out_filename, this_month_grid, np.zeros(this_month_obs.shape), this_month_obs, OBS_ORDER, grid_lats, grid_lons, times, frequency = "H")
 
-            if doMedian:
-                daily_grid = np.ma.median(this_month_grid, axis = 2)
-            else:
-                daily_grid = np.ma.mean(this_month_grid, axis = 2)
-            daily_grid.fill_value = mdi
+                # now average over time
+                # Dailies
+                daily_hours = grid_hours.reshape(-1, 24/DELTA_HOUR)
 
-            # filter on number of observations/day
-            n_obs_per_day = np.ma.count(this_month_grid, axis = 2) 
+                shape = this_month_grid.shape
+                this_month_grid = this_month_grid.reshape(shape[0], -1, 24/DELTA_HOUR, shape[2], shape[3])
+                this_month_obs = this_month_obs.reshape(-1, 24/DELTA_HOUR, shape[2], shape[3])
 
-            if period == "both":
-                bad_locs = np.where(n_obs_per_day < N_OBS_DAY) # at least 3 of possible 8 3-hourly values (6hrly data *KW OR AT LEAST 4 3HRLY OBS PRESENT*)
-            else:
-                bad_locs = np.where(n_obs_per_day < np.floor(N_OBS_DAY / 2.)) # at least 1 of possible 8 3-hourly values (6hrly data *KW OR AT LEAST 4 3HRLY OBS PRESENT*)
-                
-            daily_grid.mask[bad_locs] = True
-          
-            if plots:
-                # plot the distribution of hours
+                if doMedian:
+                    daily_grid = np.ma.median(this_month_grid, axis = 2)
+                else:
+                    daily_grid = np.ma.mean(this_month_grid, axis = 2)
+                daily_grid.fill_value = mdi
 
-                plt.clf()
-                plt.hist(n_obs_per_day[0].reshape(-1), bins = np.arange(0,10)+0.5, align = "mid", log = True, rwidth=0.5)
-                plt.savefig(PLOT_LOCATION + "n_obs_daily_{}{:02d}.png".format(year, month))
+                # filter on number of observations/day
+                n_hrs_per_day = np.ma.count(this_month_grid, axis = 2) 
+                n_obs_per_day = np.sum(this_month_obs, axis = 1) 
 
-            # clear up memory
-            del this_month_grid
-            gc.collect()
+                if period == "all":
+                    bad_locs = np.where(n_hrs_per_day < N_OBS_DAY) # at least 2 of possible 8 3-hourly values (6hrly data *KW OR AT LEAST 4 3HRLY OBS PRESENT*)
+                else:
+                    bad_locs = np.where(n_hrs_per_day < np.floor(N_OBS_DAY / 2.)) # at least 1 of possible 8 3-hourly values (6hrly data *KW OR AT LEAST 4 3HRLY OBS PRESENT*)              
+                daily_grid.mask[bad_locs] = True
 
-            # write dailies file
-            times.data = daily_hours[:,0]
+                if plots:
+                    # plot the distribution of hours
 
-            if period == "both":
-                out_filename = OUT_LOCATION + OUTROOT + "_1x1_daily_{}{:02d}.nc".format(year, month)
-            else:
+                    plt.clf()
+                    plt.hist(n_hrs_per_day.reshape(-1), bins = np.arange(-1,10), align = "left", log = True, rwidth=0.5)
+                    if period == "all":
+                        plt.axvline(x = N_OBS_DAY-0.5, color = "r")
+                    else:
+                        plt.axvline(x = np.floor(N_OBS_DAY / 2.)-0.5, color = "r")       
+
+                    plt.title("Number of 1x1-3hrly in each 1x1-daily grid box")
+                    plt.xlabel("Number of 3-hrly observations (max = 8)")
+                    plt.ylabel("Frequency (log scale)")
+                    plt.savefig(PLOT_LOCATION + "n_grids_1x1_daily_{}{:02d}_{}.png".format(year, month, period))
+
+                    plt.clf()
+                    plt.hist(n_obs_per_day.reshape(-1), bins = np.arange(-5,100,5),  log = True, rwidth=0.5)                 
+                    plt.title("Total number of raw observations in each 1x1 daily grid box")
+                    plt.xlabel("Number of raw observations")
+                    plt.ylabel("Frequency (log scale)")
+                    plt.savefig(PLOT_LOCATION + "n_obs_1x1_daily_{}{:02d}_{}.png".format(year, month, period))
+
+                # clear up memory
+                del this_month_grid
+                del this_month_obs
+                gc.collect()
+
+                # write dailies file
+                times.data = daily_hours[:,0]
                 out_filename = OUT_LOCATION + OUTROOT + "_1x1_daily_{}{:02d}_{}.nc".format(year, month, period)
+                utils.netcdf_write(out_filename, daily_grid, n_hrs_per_day[0], n_obs_per_day, OBS_ORDER, grid_lats, grid_lons, times, frequency = "D")
 
-            utils.netcdf_write(out_filename, daily_grid, OBS_ORDER, grid_lats, grid_lons, times, frequency = "D")
+                # Monthlies
+                times.data = daily_hours[0,0]
 
+                if doMedian:
+                    monthly_grid = np.ma.median(daily_grid, axis = 1)
+                else:
+                    monthly_grid = np.ma.mean(daily_grid, axis = 1)
 
-            # Monthlies
-            times.data = daily_hours[0,0]
+                monthly_grid.fill_value = mdi
 
-            if doMedian:
-                monthly_grid = np.ma.median(daily_grid, axis = 1)
-            else:
-                monthly_grid = np.ma.mean(daily_grid, axis = 1)
+                # filter on number of observations/month
+                n_grids_per_month = np.ma.count(daily_grid, axis = 1) 
+                bad_locs = np.where(n_grids_per_month < calendar.monthrange(year, month)[1] * N_OBS_FRAC_MONTH) # 30% of possible daily values
+                monthly_grid.mask[bad_locs] = True
 
-            monthly_grid.fill_value = mdi
+                # number of raw observations
+                n_obs_per_month = np.sum(n_obs_per_day, axis = 0)
 
-            # filter on number of observations/month
-            n_obs_per_month = np.ma.count(daily_grid, axis = 1) 
-            bad_locs = np.where(n_obs_per_month < calendar.monthrange(year, month)[1] * N_OBS_FRAC_MONTH) # 50% of possible daily values
-            #  ***KW*** BUG *** DO YOU MEAN monthly_grid.mask[bad_locs] = True 
-	    # daily_grid.mask[bad_locs] = True
-	    monthly_grid.mask[bad_locs] = True
-#            good_locs = np.where(n_obs_per_month >= calendar.monthrange(year, month)[1] * N_OBS_FRAC_MONTH) # 50% of possible daily values
-#	     monthly_grid.mask[good_locs] = False
-           
-            if plots:
-                # plot the distribution of days
+                if plots:
+                    # plot the distribution of days
 
-                plt.clf()
-                plt.hist(n_obs_per_month[0].reshape(-1), bins = np.arange(0,calendar.monthrange(year, month)[1]+1,2)+0.5, align = "mid", log = True, rwidth=0.5)
-                plt.savefig(PLOT_LOCATION + "n_obs_monthly_{}{:02d}.png".format(year, month))
+                    plt.clf()
+                    plt.hist(n_obs_per_month.reshape(-1), bins = np.arange(-10,500,10),  log = True, rwidth=0.5)
+                    plt.title("Total number of raw observations in each 1x1 monthly grid box")
+                    plt.xlabel("Number of raw observations")
+                    plt.ylabel("Frequency (log scale)")
+                    plt.savefig(PLOT_LOCATION + "n_obs_1x1_monthly_{}{:02d}_{}.png".format(year, month, period))
 
-            # write dailies file
-            if period == "both":
-                out_filename = OUT_LOCATION + OUTROOT + "_1x1_monthly_{}{:02d}.nc".format(year, month)
-            else:
+                    plt.clf()
+                    plt.hist(n_grids_per_month[0].reshape(-1), bins = np.arange(-2,40,2), align = "left",  log = True, rwidth=0.5)
+                    plt.axvline(x = calendar.monthrange(year, month)[1] * N_OBS_FRAC_MONTH, color="r")
+                    plt.title("Total number of 1x1 daily grids in each 1x1 monthly grid")
+                    plt.xlabel("Number of 1x1 daily grids")
+                    plt.ylabel("Frequency (log scale)")
+                    plt.savefig(PLOT_LOCATION + "n_grids_1x1_monthly_{}{:02d}_{}.png".format(year, month, period))
+
+                # write monthly 1x1 file
                 out_filename = OUT_LOCATION + OUTROOT + "_1x1_monthly_{}{:02d}_{}.nc".format(year, month, period)
-
-            utils.netcdf_write(out_filename, monthly_grid, OBS_ORDER, grid_lats, grid_lons, times, frequency = "M")
-
-            # clear up memory
-            del daily_grid
-            gc.collect()
+                utils.netcdf_write(out_filename, monthly_grid, n_grids_per_month[0], n_obs_per_month, OBS_ORDER, grid_lats, grid_lons, times, frequency = "M")
+            
 
 
+                # now to re-grid to coarser resolution
+                # KW # Here we may want to use the mean because its a large area but could be sparsely
+                #             populated with quite different climatologies so we want 
+                # the influence of the outliers (we've done our best to ensure these are good values) 
 
-            # now to re-grid to coarser resolution
-	    # KW # Here we may want to use the mean because its a large area but could be sparsely populated with quite different climatologies so we want 
-	    # the influence of the outliers (we've done our best to ensure these are good values) 
-            monthly_5by5, grid5_lats, grid5_lons = utils.grid_5by5(monthly_grid, grid_lats, grid_lons, doMedian = doMedian)
-
-            if period == "both":
-                out_filename = OUT_LOCATION + OUTROOT + "_5x5_monthly_{}{:02d}.nc".format(year, month)
-            else:
+                # go from monthly 1x1 to monthly 5x5 - retained as limited overhead
+                monthly_5by5, monthly_5by5_n_grids, monthly_5by5_n_obs, grid5_lats, grid5_lons = utils.grid_5by5(monthly_grid, n_obs_per_month, grid_lats, grid_lons, doMedian = doMedian, daily = False)
                 out_filename = OUT_LOCATION + OUTROOT + "_5x5_monthly_{}{:02d}_{}.nc".format(year, month, period)
+                utils.netcdf_write(out_filename, monthly_5by5, monthly_5by5_n_grids, monthly_5by5_n_obs, OBS_ORDER, grid5_lats, grid5_lons, times, frequency = "M")
 
-            utils.netcdf_write(out_filename, monthly_5by5, OBS_ORDER, grid5_lats, grid5_lons, times, frequency = "M")
+                if plots:
+                    # plot the distribution of days
 
+                    plt.clf()
+                    plt.hist(monthly_5by5_n_obs.reshape(-1), bins = np.arange(0,100,5), log = True, rwidth=0.5)
+                    plt.title("Total number of raw observations in each 5x5 monthly grid box")
+                    plt.xlabel("Number of raw observations")
+                    plt.ylabel("Frequency (log scale)")
+                    plt.savefig(PLOT_LOCATION + "n_obs_5x5_monthly_{}{:02d}_{}.png".format(year, month, period))
+
+                    plt.clf()
+                    plt.hist(monthly_5by5_n_grids.reshape(-1), bins = np.arange(-2,30,2), align = "left", log = True, rwidth=0.5)
+                    plt.axvline(x = 1, color="r")
+                    plt.title("Total number of 1x1 monthly grids in each 5x5 monthly grid")
+                    plt.xlabel("Number of 1x1 monthly grids")
+                    plt.ylabel("Frequency (log scale)")
+                    plt.savefig(PLOT_LOCATION + "n_grids_5x5_monthly_{}{:02d}_{}.png".format(year, month, period))
+
+                # clear up memory
+                del monthly_grid
+                del monthly_5by5
+                del monthly_5by5_n_grids
+                del monthly_5by5_n_obs
+                del n_grids_per_month
+                del n_obs_per_month
+                del n_hrs_per_day
+                gc.collect()
+
+                # go direct from daily 1x1 to monthly 5x5
+                monthly_5by5, monthly_5by5_n_grids, monthly_5by5_n_obs, grid5_lats, grid5_lons = utils.grid_5by5(daily_grid, n_obs_per_day, grid_lats, grid_lons, doMedian = doMedian, daily = True)
+
+                out_filename = OUT_LOCATION + OUTROOT + "_5x5_monthly_from_daily_{}{:02d}_{}.nc".format(year, month, period)
+
+                utils.netcdf_write(out_filename, monthly_5by5, monthly_5by5_n_grids, monthly_5by5_n_obs, OBS_ORDER, grid5_lats, grid5_lons, times, frequency = "M")
+
+                if plots:
+                    # plot the distribution of days
+
+                    plt.clf()
+                    plt.hist(monthly_5by5_n_obs.reshape(-1), bins = np.arange(-10,1000,10),  log = True, rwidth=0.5)
+                    plt.title("Total number of raw observations in each 5x5 monthly grid box")
+                    plt.xlabel("Number of raw observations")
+                    plt.ylabel("Frequency (log scale)")
+                    plt.savefig(PLOT_LOCATION + "n_obs_5x5_monthly_from_daily_{}{:02d}_{}.png".format(year, month, period))
+
+                    plt.clf()
+                    plt.hist(monthly_5by5_n_grids.reshape(-1), bins = np.arange(-5,100,5), align = "left", log = True, rwidth=0.5)
+                    plt.axvline(x = (0.3 * daily_grid.shape[0]), color="r")
+                    plt.title("Total number of 1x1 daily grids in each 5x5 monthly grid")
+                    plt.xlabel("Number of 1x1 daily grids")
+                    plt.ylabel("Frequency (log scale)")
+                    plt.savefig(PLOT_LOCATION + "n_grids_5x5_monthly_from_daily_{}{:02d}_{}.png".format(year, month, period))
+
+#                raw_input("stop")
+
+                del daily_grid
+                del monthly_5by5
+                del n_obs_per_day
+                del monthly_5by5_n_grids
+                del monthly_5by5_n_obs
+                gc.collect()
 
     return # do_gridding
 

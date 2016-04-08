@@ -38,17 +38,17 @@ DELTA_LON = 1
 grid_lats = np.arange(-90 + DELTA_LAT, 90 + DELTA_LAT, DELTA_LAT)
 grid_lons = np.arange(-180 + DELTA_LAT, 180 + DELTA_LON, DELTA_LON)
 
-
+N_YEARS_PRESENT = 15 # number of years present to calculate climatology
 
 # subroutine start
 #*********************************************
-def calculate_climatology(start_year = 1981, end_year = 2010, period = "both", do3hr = False):
+def calculate_climatology(start_year = 1981, end_year = 2010, period = "all", do3hr = False):
     '''
     Convert dailies to pentads 1x1
 
     :param int start_year: start year to process
     :param int end_year: end year to process
-    :param str period: which period to do day/night/both?
+    :param str period: which period to do day/night/all?
     :param bool do3hr: run on 3hr --> pentad data
 
     :returns:
@@ -72,32 +72,30 @@ def calculate_climatology(start_year = 1981, end_year = 2010, period = "both", d
         # number of pentads = 365/5 = 73
         # set up empty data array
         all_pentads = np.ma.zeros([N_YEARS, 73, len(grid_lats), len(grid_lons)])
-        all_pentads.mask = np.ones([N_YEARS, 73, len(grid_lats), len(grid_lons)])
+        all_pentads.mask = np.zeros([N_YEARS, 73, len(grid_lats), len(grid_lons)])
         all_pentads.fill_value = mdi
+
+        all_n_obs = np.zeros([N_YEARS, 73, len(grid_lats), len(grid_lons)])
 
         # read in relevant years
         for y, year in enumerate(np.arange(start_year, end_year + 1)): 
 
             print year
 
-            if period == "both":
-                if do3hr:
-                    filename = DATA_LOCATION + "{}_1x1_pentad_from_3hrly_{}.nc".format(OUTROOT, year)
-                else:
-                    filename = DATA_LOCATION + "{}_1x1_pentad_{}.nc".format(OUTROOT, year)
+            if do3hr:
+                filename = DATA_LOCATION + "{}_1x1_pentad_from_3hrly_{}_{}.nc".format(OUTROOT, year, period)
             else:
-                if do3hr:
-                    filename = DATA_LOCATION + "{}_1x1_pentad_from_3hrly_{}_{}.nc".format(OUTROOT, year, period)
-                else:
-                    filename = DATA_LOCATION + "{}_1x1_pentad_{}_{}.nc".format(OUTROOT, year, period)
+                filename = DATA_LOCATION + "{}_1x1_pentad_{}_{}.nc".format(OUTROOT, year, period)
 
             ncdf_file = ncdf.Dataset(filename,'r', format='NETCDF4')
 
             all_pentads[y, :, :, :] = ncdf_file.variables[var.name][:]
 
+            if v == 0:
+                all_n_obs[y, :, :, :] = ncdf_file.variables["n_obs"][:]
 
         # vars x years x pentads x lats x lons
-        n_obs = np.ma.count(all_pentads, axis = 0)
+        n_grids = np.ma.count(all_pentads, axis = 0)
 
         # collapse down the years
         if doMedian:
@@ -108,39 +106,31 @@ def calculate_climatology(start_year = 1981, end_year = 2010, period = "both", d
         all_stds[v, :, :, :] = np.ma.std(all_pentads, axis = 0)
 
         # mask where fewer than 50% of years have data
-#        locs = np.ma.where(n_obs < N_YEARS*0.5)
-#        all_clims[v, :, :, :].mask[locs] = True
+        locs = np.ma.where(n_grids < N_YEARS_PRESENT)
+        all_clims[v, :, :, :].mask[locs] = True
+
+    # now process number of observations
+        
+    all_obs = np.sum(all_n_obs, axis = 0)
 
     # set up time array
     times = utils.TimeVar("time", "time since 1/1/{} in days".format(1), "days", "time")
     times.data = np.arange(0, 73) * 5
 
     # write files
-    if period == "both":
-        if do3hr:
-            out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_climatology_from_3hrly.nc"
-        else:
-            out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_climatology.nc"
+    if do3hr:
+        out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_climatology_from_3hrly_{}.nc".format(period)
     else:
-        if do3hr:
-            out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_climatology_from_3hrly_{}.nc".format(period)
-        else:
-            out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_climatology_{}.nc".format(period)
+        out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_climatology_{}.nc".format(period)
 
-    utils.netcdf_write(out_filename, all_clims, OBS_ORDER, grid_lats, grid_lons, times, frequency = "P")
+    utils.netcdf_write(out_filename, all_clims, n_grids[0], all_obs, OBS_ORDER, grid_lats, grid_lons, times, frequency = "P")
 
-    if period == "both":
-        if do3hr:
-            out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_stdev_from_3hrly.nc"
-        else:
-            out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_stdev.nc"
+    if do3hr:
+        out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_stdev_from_3hrly_{}.nc".format(period)
     else:
-        if do3hr:
-            out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_stdev_from_3hrly_{}.nc".format(period)
-        else:
-            out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_stdev_{}.nc".format(period)
+        out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_stdev_{}.nc".format(period)
 
-    utils.netcdf_write(out_filename, all_stds, OBS_ORDER, grid_lats, grid_lons, times, frequency = "P")
+    utils.netcdf_write(out_filename, all_stds, n_grids[0], all_obs, OBS_ORDER, grid_lats, grid_lons, times, frequency = "P")
 
     return # calculate_climatology
 
@@ -155,8 +145,8 @@ if __name__=="__main__":
                         help='which year to start run, default = 1981')
     parser.add_argument('--end_year', dest='end_year', action='store', default = 2010,
                         help='which year to end run, default = 2010')
-    parser.add_argument('--period', dest='period', action='store', default = "both",
-                        help='which period to run for (day/night/both), default = "both"')
+    parser.add_argument('--period', dest='period', action='store', default = "all",
+                        help='which period to run for (day/night/all), default = "all"')
     parser.add_argument('--do3hr', dest='do3hr', action='store_true', default = "False",
                         help='run on 3hr --> pentad data (rather than daily --> pentad), default = False')
     args = parser.parse_args()

@@ -34,9 +34,9 @@ month per year, to SPICE.  It only submits the next batch of 12 once there are f
 owned by hadobs in the queue.
 
 There are a number of other spice scripts present to help run the final sections:
-  spice_make_complete_files.bash
-  spice_daily_pentads.bash
-  spice_3hr_pentads.bash
+  spice_dailies_to_pentads.bash
+  spice_3hrlies_to_pentads.bash
+  spice_make_pentad_climatology.bash
 Which just run each of the python scripts alone.
 
 ***************************************************************
@@ -60,3 +60,17 @@ submit_spice_jobs.bash		Sets the gridding_cam.py jobs running in sequence - a ma
 				processes at once.  
 
 ***************************************************************
+
+SPICE files
+
+spice_hadisdh_grid_YYYYMM.bash	The SPICE batch file to set each individual month running
+
+The following all have _day, _night and "all" versions to increase parallelisation
+
+spice_3hrlies_to_pentads*.bash	The SPICE batch files to create the pentads from 3 hrly 1x1
+
+spice_dailies_to_pentads*.bash	The SPICE batch files to create the pentads from daily 1x1
+
+spice_make_pentad_climatology*.bash
+				The SPICE batch files to create the pentad climatology, from both 3hrly and
+				daily 1x1 versions.
