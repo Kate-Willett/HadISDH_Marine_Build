@@ -676,15 +676,15 @@ class MarineReport:
 # KW Added a '9' to fill the now extra element of qc_block
 					  9
                                           )
-        repout = repout + qc_block.format(self.qc.get_qc('SST','bud'),    # 0 = pass, 1 = fail, 8 = not run due to filering, 9 = not set?
+        repout = repout + qc_block.format(self.qc.get_qc('SST','bud'),    # 0 = pass, 1 = fail, 8 = not run due to filering, 9 = not set? # KW not tested for HUMIDITY RUNS
                                           self.qc.get_qc('SST','clim'),   # 0 = pass, 1 = fail, 8 = not run dur to filtering, 9 = not set?
                                           self.qc.get_qc('SST','nonorm'), 
                                           self.qc.get_qc('SST','freez'), 
                                           self.qc.get_qc('SST','noval'), 
 # KW I can't see where nbud is set - is it just 0 if not set?
-                                          self.qc.get_qc('SST', 'nbud'), 
-                                          self.qc.get_qc('SST', 'bbud'), # 0 = pass, 1-9 = fail, 9 = not set?
-                                          self.qc.get_qc('SST', 'rep'), 
+                                          self.qc.get_qc('SST', 'nbud'), # No idea what this is
+                                          self.qc.get_qc('SST', 'bbud'), # 0 = pass, 1-9 = fail, 9 = not set? # KW not tested for HUMIDITY RUNS
+                                          self.qc.get_qc('SST', 'rep'), # KW not tested for HUMIDITY RUNS
 # KW Added a '9' to fill the now extra element of qc_block
 					  9
                                           )
@@ -694,7 +694,9 @@ class MarineReport:
                                           9,
                                           self.qc.get_qc('AT','noval'),
 # KW I can't see where nbud is set - is it just 0 if not set?
-                                          self.qc.get_qc('AT',  'nbud'), 
+#                                          self.qc.get_qc('AT',  'nbud'), 
+# KW As I have no idea what nbud is I've used it to flag whole numbers instead 'round'
+                                          self.qc.get_qc('AT',  'round'), # 0 = ok, 1 = part of a track with >=50% whole numbers (at least 20obs)
                                           self.qc.get_qc('AT',  'bbud'), # 0 = pass, 1-9 = fail, 9 = not set?
                                           self.qc.get_qc('AT',  'rep'), # 0 = pass, 1 = fail, 9 = not set?
 # KW Added a '9' to fill the now extra element of qc_block
@@ -707,7 +709,9 @@ class MarineReport:
                                           self.qc.get_qc('DPT','ssat'), # KW NEW qc flag for supersaturation 0=pass, 1=td>t, 9=not set
                                           self.qc.get_qc('DPT','noval'), # KW qc flag for whether the variable is present in the ob - all present due to pre-filter
 # KW I can't see where nbud is set - is it just 0 if not set?
-                                          self.qc.get_qc('DPT',  'nbud'), # KW qc flag for ??? if a buddy check can be performed?
+#                                          self.qc.get_qc('DPT',  'nbud'), # KW qc flag for ??? if a buddy check can be performed?
+# KW As I have no idea what nbud is I've used it to flag whole numbers instead 'round'
+                                          self.qc.get_qc('DPT',  'round'), # 0 = ok, 1 = part of a track with >=50% whole numbers (at least 20obs)
                                           self.qc.get_qc('DPT',  'bbud'), # KW qc flag for the bayesian buddy check - NOT USED 0 = pass, 1-9 = fail, 9 = not set?
                                           self.qc.get_qc('DPT',  'rep'), # KW qc flag for if this value is part of a repeat string (more than 70% of 21+obs are identical)
 					  self.qc.get_qc('DPT',  'repsat')  # KW NEWqc flag for persistent saturation
@@ -899,13 +903,17 @@ class Voyage:
         :type intype: string
         
         This method goes through a voyage and finds any cases where more than a threshold fraction of 
-        the observations have the same SST or NMAT value.
-# KW Ok to just do this on SST and or NMAT and then apply results to humidity - if screwy for those, it will be 
-# for humidity too
+        the observations have the same SST or NMAT (KW: Actually AT, not NMAT!) (or DPT) value.
 
 # KW Added a component to also perform checks on persistence of 100% rh while going through the voyage.
         While going through the voyage repeated strings of 100 %rh (AT == DPT) are noted. If a string
 	extends beyond two days/48 hrs in time then all values are set to fail the repsat qc flag.
+	
+# KW Added a component to assess the proportion of values that are whole numbers for tracks longer 
+        than 20 obs - as for repeasted values check. Where this occurs, those obs will be flagged (DPTround, ATround - taking the place 
+	of ATnbud and DPTnbud!) with 1. These are for uncertainty estimation later - not deselection.	
+	MAYBE THIS ISN'T USEFUL AT THE TRACK LEVEL? BETTER AT THE DECK LEVEL? NOT SURE HOW TO ASSESS THAT THOUGH
+	TESTING FOR Dec 1973 and Jan 2010 (to also test commenting out of second rep = 0 bit
         """
 
 # KW Modified to include DPT
@@ -917,6 +925,8 @@ class Voyage:
 #initialise
         for rep in self.reps:
             rep.set_qc(intype, 'rep', 0)
+# KW Initialise the 'round' qc flag as 0
+            rep.set_qc(intype, 'round', 0)
 
         valcount = {}
         allcount = 0
@@ -972,14 +982,32 @@ class Voyage:
 #************************************************************************************************
 		
         if allcount > 20:
+# KW counter to total up howmany obs are whole numbers    	   
+	    wholenums = 0 
             for key in valcount:
                 if float(len(valcount[key]))/float(allcount) > threshold:
                     for i in valcount[key]:
                         self.reps[i].set_qc(intype, 'rep', 1)
-                else:
-                    for i in valcount[key]:
-                        self.reps[i].set_qc(intype, 'rep', 0)
-                        
+#----------------------------------------------------------------------------
+## KW I think this else bit is redundant because all reps are set to 'rep' = 0 
+#                else:
+#                    for i in valcount[key]:
+#                        self.reps[i].set_qc(intype, 'rep', 0)
+#---------------------------------------------------------------------------			
+
+# KW Now check if this key is a whole number and if so count up how many obs are in it	
+# This is quite slow because if we find too many .0s then we have to loop back through to reset the qc flags
+# Do not really want to apply this to SST but perhaps we don't need to run track check at all on SST?
+                if (float(key) - np.floor(float(key)) == 0): 
+		# careful with rounding as it isn't precise - seems ok for finding .0s but not anything else
+		# cannot round to precision without explicity formatting annoyingly
+		    wholenums = wholenums+len(valcount[key])
+            if (float(wholenums)/float(allcount) >= 0.5): # 50% threshold
+	        for key in valcount:
+		    if (float(key) - np.round(float(key)) == 0): 
+	    	        for i in valcount[key]:
+			    self.reps[i].set_qc(intype, 'round', 1)	    		
+# KW end of Kate's new code
         return 
 
     def predict_next_point(self, timediff):

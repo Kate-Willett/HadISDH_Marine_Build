@@ -40,11 +40,11 @@ DONE
 Modify the qc software to also run the qc routines.
 DONE - testing not buddy check for Td yet though.
 
-Add code to bias correct the humidity data for ship height (adjust to 10m)
-following methods described in Berry and Kent, 2011.
-
 Add code to bias correct the humidity data for screened instruments verses hand
 held instruments following methods described in Berry and Kent, 2011.
+
+Add code to bias correct the humidity data for ship height (adjust to 10m)
+following methods described in Berry and Kent, 2011. DO AFTER ADJ FOR SCREEN (Berry Thesis 2009 says to do this)
 
 Add code to assess uncertainties in the hourly data: rounding, measurement,
 height bias adjustment, instrument type adjustment.
@@ -74,15 +74,463 @@ If iii) displays the bias, Dave Berry may be correct in ascribing it to real cli
 
 ******************************************************************
 Work Done:
+APR 8th
+[KW]
+I have build PlotDecimalFreq_APR2016.py to look at the frequency of whole numbers verses decimal places throughout the record. I now have a line plot for each year
+that shows the total distribution of decimals and then the distribution for each deck present. The percentage of obs in that deck that are also flagged at ATround/DPTround 
+is also shown. These statistics - for each year (all obs) are output in text files so I can plot them later if need be. I have also pulled out the number of obs in each deck in
+each year just in case we want it - 43 decks represented in total (including ' -1'.
 
-1998 06 - way more obs for 1x1 daily day and night rather than the full daily. Monthly coverage is horrendous - even
-at 5x5. We REALLY need to increase the coverage so either drastically reducing minimum thresholds. Daily full should
-be similar to day and night. Maybe its too much to expect a whole day in a grid box - we coul average all day and
-night dailies to 5 by 5 monthlies?
+So it looks like the prevalence of .0 is throughout reducing from ~35% to 20% for AT with the most noticeable drop in 1993. It reduces from 30-40% in the 1970s to less than 20%
+by 2010s. The biggest drop is in 1980 with a smaller drop in 1982. 
 
-Ultimately - we're gridding anomalies - so can just grid everything within the
-month??? Better to take care over the climatologies but the anomalie grids can
-be more relaxed.
+******************
+GRRRR - this next bit is only because of the way python does silly things with floats - it seems impossible to actually round to 0.1 so the histogram is screwy!!! 
+What is super interesting is the VERY uneven sampling across the decimals. After .0, .5 is the next most
+heavily sampled in AT. This is not so noticable for DPT. For both DPT and AT there are VERY few .2,s .4s, .7s and .9s. This is very strange. It happens throughout the entire
+record.
+**********
+So I've changed the bins to capture -0.05 to 0.95 which should then work. How annoying!
+
+APR 7th
+[KW]
+I have now adapted make_and_full_qc.py to use min=1 and max=4 deg stdev for clim check. I could have gone larger but
+we do want to make sure as much crud as possible is kicked out and its borderline between keeping data and chucking
+rubbish. The max=3 (13.25 deg) threshold resulted in a large cut off, especially for 2015, less bad for 1980. The
+max of 4 (18 deg) would allow most of that cluster in. Any bigger and we're including a lot of negative anomalies
+that do not look that plausible. I've kept the thresholds the same for AT and DPT even though OBS DPT appears to be more
+different to ERA than AT.
+
+I have also added the ATround and DPTround qc flag (in place of nbud which I have no idea what it is). This is part
+of the Voyage.find_repeated_values() routine. For any tracks greater than 20 obs in length (same as for repeated
+values (rep) and repeated saturation (repsat) where >= 50% of obs are whole numbers, they are flagged as
+ATround/DPTround = 1. I've also commented out the 'find_repeated_values' check on SST as I don't think this is
+needed.
+
+I'm testing the new versions on Dec 1973 and Jan 2010 which had a few rep values. I would hope the 1973 one at least
+has some 'round' values too. Also checkin Jan 2015 to check anoms from clims.
+
+Also edited MDS_basic_KATE.py so that it now reads in ATround and DPTround.
+
+Now need to work on the post-processing new_suite files for bias corrections and uncertainty. Read in using
+MDS_basic_Kate.py MDStools. Reprocess using CalcHums and HeightCorrections. Write out using MDStoolsEXTWrite and
+MDStoolsUNCwrite. Also then write MDStoolsEXTRead and MDStoolsUNCRead.
+
+All looking ok so rerunning everything with new clim thresholds and round flags
+
+APR 6th
+[KW]
+
+Today I have spent a LOT of time thinking about the height corrections. Its almost doable but I'm not 100% sure I'm using the equations correctly, or iterating through appropriately. The
+BIG crux seems to be the Monin-Obukhov lenth which requires vertical flux information that we do not have. It could be that it can be approximated by -u*^3/kz but its not clear and I'm not
+really sure that we can have a negative u*.
+
+David Berry has been helping A LOT - I now have his thesis which is quite helpful.
+
+I have written a step by step procedure to iterate through but I'm not really confident in it. Parking this until David decides whether he can share his code with me on Monday.
+
+David has also given me his version of the obs for Feb 1994 which has original, height corrected, height and bias corrected version for each observation. I could use this to create a 
+new_suite_199401_BERRY,txt version of our own data that we can then select and grid as before. There are no UIDs so I would have to match up using callsign, lat, lon, day, hour, AT, SST. 
+I would also have to somehow apply those corrections to the other variables. This is worth doing at some point.
+
+There is an issue in our method because we cannot easily estimate the variance within the gridbox because we are computing from multiple processes. Actually, if we go from 1x1 days to 5x5 
+months that might allow a good estimate. This is more difficult if we use my preferred method of 1x1 daily_day/night to 5x5 monthly_day/night then combined to 5x5 monthly. Can we combine 
+the standard deviations of the two?
+
+new_suite_197301_ERAclimBC_extended.txt in ERAclimBC - bias corrections, estimated height, estimated exposure, ATround, DPTround: 
+shipid
+UID
+LAT
+LON
+YR
+MO
+DY
+HR
+
+AT   # = original
+ATA 
+SST 
+SSTA
+SLP 
+DPT 
+DPTA
+SHU 
+SHUA
+VAP 
+VAPA
+CRH 
+CRHA
+CWB 
+CWBA
+DPD 
+DPDA
+
+ATtbc  #tbc = total bias corrected (not solar!)
+ATAtbc 
+DPTtbc 
+DPTAtbc
+SHUtbc 
+SHUAtbc
+VAPtbc 
+VAPAtbc
+CRHtbc 
+CRHAtbc
+CWBtbc 
+CWBAtbc
+DPDtbc 
+DPDAtbc
+
+AThc   #hc = height corrected
+ATAhc 
+DPThc 
+DPTAhc
+SHUhc 
+SHUAhc
+VAPhc 
+VAPAhc
+CRHhc 
+CRHAhc
+CWBhc 
+CWBAhc
+DPDhc 
+DPDAhc
+
+DPTsnc # snc = screen corrected
+DPTAsnc
+SHUsnc 
+SHUAsnc
+VAPsnc 
+VAPAsnc
+CRHsnc 
+CRHAsnc
+CWBsnc 
+CWBAsnc
+DPDsnc 
+DPDAsnc
+
+ATslc
+ATAslc
+DPTslc # slc = solar bias corrected
+DPTAslc
+SHUslc 
+SHUAslc
+VAPslc 
+VAPAslc
+CRHslc 
+CRHAslc
+CWBslc 
+CWBAslc
+DPDslc 
+DPDAslc
+
+DCK
+SID
+PT
+
+EOT
+EOH
+ESTE # estimated exposure
+LOV
+HOP
+HOT
+HOB
+HOA
+ESTH # estimated height
+
+day 
+land  
+trk   
+date1 
+date2 
+pos   
+blklst
+dup   
+
+SSTbud   
+SSTclim  
+SSTnonorm
+SSTfreez 
+SSTrep   
+
+ATbud   
+ATclim  
+ATnonorm
+ATround # has .0 precision and is part of a track with>= 50% .0 that is longer than 24 obs
+ATrep   
+
+DPTbud  
+DPTclim 
+DPTssat 
+DPTround
+DPTrep  
+DPTrepsat
+
+new_suite_197301_ERAclimNOCSBC_extended.txt in ERAclimNOCSBC - NOCS bias corrections, estimated height, estimated exposure, ATround, DPTround: 
+shipid
+UID
+LAT
+LON
+YR
+MO
+DY
+HR
+
+AT   # = original
+ATA 
+SST 
+SSTA
+SLP 
+DPT 
+DPTA
+SHU 
+SHUA
+VAP 
+VAPA
+CRH 
+CRHA
+CWB 
+CWBA
+DPD 
+DPDA
+
+ATtbc  #tbc = total bias correction from NOCS
+ATAtbc 
+DPTtbc 
+DPTAtbc
+SHUtbc 
+SHUAtbc
+VAPtbc 
+VAPAtbc
+CRHtbc 
+CRHAtbc
+CWBtbc 
+CWBAtbc
+DPDtbc 
+DPDAtbc
+
+AThc   #hc = height correction from NOCS
+ATAhc 
+DPThc 
+DPTAhc
+SHUhc 
+SHUAhc
+VAPhc 
+VAPAhc
+CRHhc 
+CRHAhc
+CWBhc 
+CWBAhc
+DPDhc 
+DPDAhc
+
+DPTsnc # snc = screen correction from NOCS
+DPTAsnc
+SHUsnc 
+SHUAsnc
+VAPsnc 
+VAPAsnc
+CRHsnc 
+CRHAsnc
+CWBsnc 
+CWBAsnc
+DPDsnc 
+DPDAsnc
+
+ATslc
+ATAslc
+DPTslc # slc = solar bias correction from NOCS
+DPTAslc
+SHUslc 
+SHUAslc
+VAPslc 
+VAPAslc
+CRHslc 
+CRHAslc
+CWBslc 
+CWBAslc
+DPDslc 
+DPDAslc
+
+DCK
+SID
+PT
+
+EOT
+EOH
+ESTE # estimated exposure
+LOV
+HOP
+HOT
+HOB
+HOA
+ESTH # estimated height
+
+day 
+land  
+trk   
+date1 
+date2 
+pos   
+blklst
+dup   
+
+SSTbud   
+SSTclim  
+SSTnonorm
+SSTfreez 
+SSTrep   
+
+ATbud   
+ATclim  
+ATnonorm
+ATround # has .0 precision and is part of a track with>= 50% .0 that is longer than 24 obs
+ATrep   
+
+DPTbud   
+DPTclim  
+DPTssat  
+DPTround 
+DPTrep   
+DPTrepsat
+
+new_suite_197301_ERAclimBC_uncertainty.txt in ERAclimBC
+
+new_suite_197301_ERAclimNOCSBC_extended.txt in ERAclimNOCSBC - NOCS bias corrections, estimated height, estimated exposure, ATround, DPTround: 
+shipid
+UID
+LAT
+LON
+YR
+MO
+DY
+HR
+
+ATtotU   # = total uncertainty (any difference for anomalies vs actuals?
+DPTtotU 
+SHUtotU 
+VAPtotU 
+CRHtotU 
+CWBtotU 
+DPDtotU 
+
+ATclimU   # = total uncertainty (any difference for anomalies vs actuals?
+DPTclimU 
+SHUclimU
+VAPclimU 
+CRHclimU 
+CWBclimU 
+DPDclimU 
+
+ATheightU   #hc = height correction from NOCS
+DPTheightU 
+SHUheightU
+VAPheightU 
+CRHheightU 
+CWBheightU 
+DPDheightU 
+
+DPTscreenU # snc = screen correction from NOCS
+SHUscreenU 
+VAPscreenU 
+CRHscreenU 
+CWBscreenU 
+DPDscreenU 
+
+ATsolarU
+DPTsolarU # slc = solar bias correction from NOCS
+SHUsolarU 
+VAPsolarU 
+CRHsolarU 
+CWBsolarU 
+DPDsolarU 
+
+DCK
+SID
+PT
+
+EOT
+EOH
+ESTE # estimated exposure
+LOV
+HOP
+HOT
+HOB
+HOA
+ESTH # estimated height
+
+day 
+land  
+trk   
+date1 
+date2 
+pos   
+blklst
+dup   
+
+SSTbud   
+SSTclim  
+SSTnonorm
+SSTfreez 
+SSTrep   
+
+ATbud   
+ATclim  
+ATnonorm
+ATround # has .0 precision and is part of a track with>= 50% .0 that is longer than 24 obs
+ATrep   
+
+DPTbud   
+DPTclim  
+DPTssat  
+DPTround 
+DPTrep   
+DPTrepsat
+
+The bias corrected obs will be in the normal version
+too. Extended will contain both bias corrected and uncorrected actual and anomalies.
+Flag for 0s prevalence - use track check. If track is > 50% .0s (and longer than 20 obs - same as repeated value
+check), flag as a ATround or
+DPTround - use nbud as I have no idea what this is for - or, only list in the _extended.txt
+ - Add UNCround for every ob with an ATround and or DPTround.
+Apply 3.4% adjustment (reduction) to specific humidity - and back out to all other humidity variables - BEFORE clim
+check. Apply this to ship obs from unventilated screens, all buoys and platforms. Apply 1/3rd or this adjustment 
+to ship obs with no info (after Josey et al (1999) estimate of 30% unscreened - although we could raise this to 50%?)
+A 3.4% reduction in q can be backed out to a change in e, reverse calculate Td, RH, then reverse calculate DPD and
+Tw.
+ - Add UNCscreen to all obs.
+For obs without HOB or HOT - estimate from HOA, HOP or LOV. For obs (ships only) with no height info - estimate 
+based on year and linear increment from 16 to 24 m 1973-2007. (HEIGHT ADJ AFTER SCREEN ADJ!!!)
+ - Add UNCheight for all esimated heights - will need to have figured out height adjustment.
+ - Add UNCheight to buoys +/- 10m - will need to have figured out height adjustment.
+ - Add UNCheight to platforms +/- 20m - will need to have figured out heigh adjustment.
+Add measurement uncertainty UNCmeas based on table
+ALL UNCERTAINTIES WILL BE PROVIDED FOR AT and DPT - and equivalent amounts calculated for all other humidity
+variables.
+
+
+Apr 5th
+[KW]
+So - last night I created CompareERAOBSclims_APR2016.py to compare OBS-ERA AT and DPT climatologies for pentads 1, 13, 25, 37, 49 and 61.
+
+I was looking for any overall differences between the ERA climatology and that from the obs ICOADS: 
+>= 1 ob in 1x1 3hrly, >= 2 1x1 3hrly in 1x1 3hrlypentad, >=4 1x1 3hrlypentad in 1x1 pentad, >= 15 1x1 pentad in 30 year 1x1 pentad climatology 
+now looking to relax to:
+>= 1 ob in 1x1 3hrly, >= 1 1x1 3hrly in 1x1 3hrlypentad, >=4(or 2) 1x1 3hrlypentad in 1x1 pentad, >= 15 1x1 pentad in 30 year 1x1 pentad climatology 
+
+Really I wanted to see whether we could 'bias correct' ERA-Interim at all. I had thought that the +ve skew in anomalies in the N. Hemi mid-lats that appears in pretty much all of the months I
+have looked at so far (AT and DPT) was due a bias between ERA and OBS. The coverage of the OBS is ok but quite poor so it would be better to use ERA to allow more obs to be checked (and
+passed?) initially. Actually, it looks like ERA and OBS do not differ as much as I had expected - which is kind of nice! The maps show that the vast majority of obs are within +/- 2 degrees (AT
+and DPT). The differences are worse for DPT but not horrendously. You could just about argue that the OBS are warmer/higher dew point than ERA but there are plenty of points (especially over
+the northern Pacific) where ERA is warmer. The differences are largest in regions of relatively enclosed seas/coastlines e.g., Norwegian Sea north of Norway, Mediterranean Sea around the
+Gibralta Straits, Red Sea adn Persian Gulf, southeast coastline of Africa, southeast coastline of Australia. Although coastlines typically have a higher standard deviation in ERA this isn't the
+case for Australia, Africa or the Red Sea/Persian Gulf - which is a shame because then we could relax a little as more obs would be accepted where stdevs are higher. There is some seasonal
+variability in the differences. Until we can increase the OBS clim coverage it seems best to use ERA, which is reasonably close, with a largish range permitted (4.5*stdev where max is 4 or 5 
+deg?). I have also plotted the differences by latitude and shown a smoothed (+/- 1 deg lat box) median and 25th/75th percentile. The scatter is well spread across zero but the median difference
+does suggest an overall warm bias in the obs relative to ERA (~1deg for DPT, <1deg for AT) for most latitudes. The variance (IQR/2th-75th percentiles are much larger for DPT than AT. ERA stdevs
+don't appear to be much larger for DPT though.
+
+SHOULD HAVE A QUICk LOOK AT DIFFS FOR q, RH, e, Tw, DPD - THESE COULD WELL BE LARGER!!! DONE larger for RH
+SHOULD ALSO HAVE A QUICK LOOK AT DIFF IN STDEVS - REALLY WANT TO USE THE LARGEST!!! DONE Pretty much always smaller for OBS
 
 Apr 4th
 [KW]
@@ -145,6 +593,7 @@ WORK TO DO:
 
 Progs to write:
 Break down of QC failing obs by platform type and instrument type
+Break down of prevalance of .0s in each track/deck pre and post 1982
 
 Add to QC - output a new_suite_197301_ERAclimBC_extended.txt: The bias corrected obs will be in the normal version
 too. Extended will contain both bias corrected and uncorrected actual and anomalies.
@@ -158,7 +607,7 @@ A 3.4% reduction in q can be backed out to a change in e, reverse calculate Td, 
 Tw.
  - Add UNCscreen to all obs.
 For obs without HOB or HOT - estimate from HOA, HOP or LOV. For obs (ships only) with no height info - estimate 
-based on year and linear increment from 16 to 24 m 1973-2007.
+based on year and linear increment from 16 to 24 m 1973-2007. (HEIGHT ADJ AFTER SCREEN ADJ!!!)
  - Add UNCheight for all esimated heights - will need to have figured out height adjustment.
  - Add UNCheight to buoys +/- 10m - will need to have figured out height adjustment.
  - Add UNCheight to platforms +/- 20m - will need to have figured out heigh adjustment.
@@ -170,6 +619,19 @@ ALSO:
 Compare OBS clims with ERAclims. Is there an overall 'bias'? Can this be used to adjust ERAclim in any sensible way?
 WE can't only use OBSclims because there are too few data points represented. It would be better to bias correct
 ERAclim.
+
+NOTES:
+1998 06 - way more obs for 1x1 daily day and night rather than the full daily. Monthly coverage is horrendous - even
+at 5x5. We REALLY need to increase the coverage so either drastically reducing minimum thresholds. Daily full should
+be similar to day and night. Maybe its too much to expect a whole day in a grid box - we coul average all day and
+night dailies to 5 by 5 monthlies?
+
+Ultimately - we're gridding anomalies - so can just grid everything within the
+month??? Better to take care over the climatologies but the anomalie grids can
+be more relaxed.
+
+Also - don't need climatological anomalies - replace with climatological stdevs!
+
 
 Mar 31st
 [KW]
