@@ -64,6 +64,8 @@ def calculate_climatology(start_year = 1981, end_year = 2010, period = "all", do
 
     all_stds = np.ma.zeros([len(OBS_ORDER), 73, len(grid_lats), len(grid_lons)])
     all_stds.mask = np.ones([len(OBS_ORDER), 73, len(grid_lats), len(grid_lons)])
+    
+    all_n_obs = np.zeros([N_YEARS, 73, len(grid_lats), len(grid_lons)])
 
     for v, var in enumerate(OBS_ORDER):
 
@@ -75,7 +77,6 @@ def calculate_climatology(start_year = 1981, end_year = 2010, period = "all", do
         all_pentads.mask = np.zeros([N_YEARS, 73, len(grid_lats), len(grid_lons)])
         all_pentads.fill_value = mdi
 
-        all_n_obs = np.zeros([N_YEARS, 73, len(grid_lats), len(grid_lons)])
 
         # read in relevant years
         for y, year in enumerate(np.arange(start_year, end_year + 1)): 
@@ -111,7 +112,7 @@ def calculate_climatology(start_year = 1981, end_year = 2010, period = "all", do
 
     # now process number of observations
         
-    all_obs = np.sum(all_n_obs, axis = 0)
+    all_obs = np.ma.sum(all_n_obs, axis = 0)
 
     # set up time array
     times = utils.TimeVar("time", "time since 1/1/{} in days".format(1), "days", "time")
@@ -123,14 +124,14 @@ def calculate_climatology(start_year = 1981, end_year = 2010, period = "all", do
     else:
         out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_climatology_{}.nc".format(period)
 
-    utils.netcdf_write(out_filename, all_clims, n_grids[0], all_obs, OBS_ORDER, grid_lats, grid_lons, times, frequency = "P")
+    utils.netcdf_write(out_filename, all_clims, n_grids, all_obs, OBS_ORDER, grid_lats, grid_lons, times, frequency = "P")
 
     if do3hr:
         out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_stdev_from_3hrly_{}.nc".format(period)
     else:
         out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_stdev_{}.nc".format(period)
 
-    utils.netcdf_write(out_filename, all_stds, n_grids[0], all_obs, OBS_ORDER, grid_lats, grid_lons, times, frequency = "P")
+    utils.netcdf_write(out_filename, all_stds, n_grids, all_obs, OBS_ORDER, grid_lats, grid_lons, times, frequency = "P")
 
     return # calculate_climatology
 
@@ -147,7 +148,7 @@ if __name__=="__main__":
                         help='which year to end run, default = 2010')
     parser.add_argument('--period', dest='period', action='store', default = "all",
                         help='which period to run for (day/night/all), default = "all"')
-    parser.add_argument('--do3hr', dest='do3hr', action='store_true', default = "False",
+    parser.add_argument('--do3hr', dest='do3hr', action='store_true', default = False,
                         help='run on 3hr --> pentad data (rather than daily --> pentad), default = False')
     args = parser.parse_args()
 
