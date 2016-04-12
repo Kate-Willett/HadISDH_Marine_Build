@@ -5,6 +5,55 @@
 #
 #
 #************************************************************************
+'''
+Author: Robert Dunn
+Created: March 2016
+Last update: 12 April 2016
+Location: /project/hadobs2/hadisdh/marine/PROGS/Build
+
+-----------------------
+CODE PURPOSE AND OUTPUT
+-----------------------
+A set of class definitions and routines to help with the gridding of HadISDH Marine
+
+-----------------------
+LIST OF MODULES
+-----------------------
+None
+
+-----------------------
+DATA
+-----------------------
+None
+
+-----------------------
+HOW TO RUN THE CODE
+-----------------------
+All routines to be called from external scripts.
+
+-----------------------
+OUTPUT
+-----------------------
+None
+
+-----------------------
+VERSION/RELEASE NOTES
+-----------------------
+
+Version 1 (release date)
+---------
+ 
+Enhancements
+ 
+Changes
+ 
+Bug fixes
+ 
+
+-----------------------
+OTHER INFORMATION
+-----------------------
+'''
 
 import os
 import datetime as dt
@@ -523,11 +572,11 @@ def grid_1by1_cam(clean_data, raw_qc, hours_since, lat_index, lon_index, grid_ho
     '''
     day_flag_loc, = np.where(QC_FLAGS == 'day')[0]
 
-    # set up the array
+    # set up the arrays
     this_month_grid = np.ma.zeros([len(OBS_ORDER),len(grid_hours),len(grid_lats), len(grid_lons)], fill_value = mdi)
     this_month_grid.mask = np.zeros([len(OBS_ORDER),len(grid_hours),len(grid_lats), len(grid_lons)])
-    this_month_obs = np.zeros([len(grid_hours),len(grid_lats), len(grid_lons)])
-    this_month_time = np.zeros([len(grid_hours),len(grid_lats), len(grid_lons)])
+    this_month_obs = np.zeros([len(grid_hours),len(grid_lats), len(grid_lons)]) # number of raw observations
+    this_month_time = np.zeros([len(grid_hours),len(grid_lats), len(grid_lons)]) # day or night
 
     mesh_lats, mesh_lons = np.meshgrid(grid_lats, grid_lons)
 
@@ -711,5 +760,49 @@ def bn_median(masked_array, axis=None):
     med = bn.nanmedian(data, axis=axis)
     # construct a masked array result, setting the mask from any NaN entries
     return np.ma.array(med, mask=np.isnan(med)) # bn_median
+
+
+#*******************************************************
+def boxes_with_n_obs(outfile, all_obs, data, N_YEARS_PRESENT):
+    """
+    Output text file showing number of grid boxes derived from 1, 2, 3.... raw observations
+    and the actual number in the climatologies passing completeness
+    
+    :param file outfile: the output file
+    :param array all_obs: all n_obs values for each pentad
+    :param array data: data array for each pentad.
+    :param str N_YEARS_PRESENT: number of years required to calculate a climatology
+    """
+
+    outfile.write("Below shows the number of grid boxes in the climatology file which \n would be derived from 1, 2, 3 .. >15 raw hourly obs in the absence of any completeness \n checks.  The second number in each pair shows the number of grid boxes which are \n actually present as a result of the cut on the number of years present ({} years). \n\n To be read into spreadsheet or as a word table.".format(N_YEARS_PRESENT))
+
+    outfile.write("max number of boxes = {}\n\n".format(all_obs.shape[1] * all_obs.shape[2]))
+
+    outfile.write("{}, {},{}, {},{}, {},{}, {},{}, {},{}, {},{}, {},{}, {},{}, {},{}, {},{}, {},{}, {},{}, {},{}, {},{}, {},{}, {},{}\n\n".format("pent", 1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,">15",">15"))
+
+    # spin through each pentad
+    for p in range(all_obs.shape[0]):
+        
+        # get the number of observations
+        t_obs = all_obs[p]
+        
+        outstring = "{}, ".format(p)
+        
+        for value in range(1,16):
+
+            locs = np.ma.where(t_obs == value)
+
+            outstring = "{} {},{},".format(outstring, len(locs[0]), len(data[p][locs].compressed()))
+
+        # and do greater than 15
+        locs = np.ma.where(t_obs > 15)
+        outstring = "{} {},{}\n".format(outstring, len(locs[0]), len(data[p][locs].compressed()))
+        
+        outfile.write(outstring)
+
+    outfile.close()
+
+    return # boxes_with_n_obs
+
 # END
 # ************************************************************************

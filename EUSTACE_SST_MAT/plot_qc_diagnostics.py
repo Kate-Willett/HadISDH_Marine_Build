@@ -5,6 +5,60 @@
 #
 #
 #************************************************************************
+'''
+Author: Robert Dunn
+Created: March 2016
+Last update: 12 April 2016
+Location: /project/hadobs2/hadisdh/marine/PROGS/Build
+
+-----------------------
+CODE PURPOSE AND OUTPUT
+-----------------------
+Small script to plot the observations and show those retained by applying QC flags
+
+-----------------------
+LIST OF MODULES
+-----------------------
+utils.py
+
+-----------------------
+DATA
+-----------------------
+/project/hadobs2/hadisdh/marine/
+
+Called from gridding_cam.py
+
+-----------------------
+HOW TO RUN THE CODE
+-----------------------
+Called from external code.
+
+-----------------------
+OUTPUT
+-----------------------
+/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS2/
+
+Plots to appear in 
+/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/PLOTS2/
+
+-----------------------
+VERSION/RELEASE NOTES
+-----------------------
+
+Version 1 (release date)
+---------
+ 
+Enhancements
+ 
+Changes
+ 
+Bug fixes
+ 
+
+-----------------------
+OTHER INFORMATION
+-----------------------
+'''
 
 import matplotlib.pyplot as plt
 import numpy as np
