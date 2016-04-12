@@ -75,6 +75,8 @@ def base_qc_report(rep):
 # Min: stdev<0.5 are forced to be 0.5 so minimum threshold is 2.25 deg
 # Max: (was previously 10 deg - needs to be large enough to account for diurnal cycle vs pentad mean) stdev>3 forced 
 # to be 3 so max threshold is 13.25
+# KW - NEED TO CHANGE THE MAX/MIN PERMITTED SD AS WE'RE CUTTING OFF ABRUPTLY, ESP IF WE CONTINUE TO USE ERA
+# PROBABLY GO FOR MIN = 1 (4.5 deg) and MAX = 4 (18 deg)? Don't want to let too much rubbish in 
 
 #SST base QC
 # KW Could noval = 0 be a value that is present in IMMA but actually a missing data indicator e.g. -99.9 or 99.9?
@@ -93,12 +95,12 @@ def base_qc_report(rep):
 #    rep.set_qc('AT', 'clim', 
 #               qc.climatology_check(rep.getvar('AT'), rep.getnorm('AT'), 10.0))
     if (qc.value_check(rep.getstdev('AT')) == 0): 
-        if (rep.getstdev('AT') > 3.):
-	    atlimit = 4.5*3	    
-	elif ((rep.getstdev('AT') > 0.5) & (rep.getstdev('AT') < 3)):
+        if (rep.getstdev('AT') > 4.):
+	    atlimit = 4.5*4	    
+	elif ((rep.getstdev('AT') >= 1.) & (rep.getstdev('AT') <= 4.)):
 	    atlimit = 4.5*rep.getstdev('AT')
 	else: 
-	    atlimit = 4.5*0.5
+	    atlimit = 4.5*1.
     else:
         atlimit = 10.
     rep.set_qc('AT', 'clim', 
@@ -113,12 +115,12 @@ def base_qc_report(rep):
 #    rep.set_qc('DPT', 'clim', 
 #               qc.climatology_check(rep.getvar('DPT'), rep.getnorm('DPT'), 10.0))
     if (qc.value_check(rep.getstdev('DPT')) == 0): 
-        if (rep.getstdev('DPT') > 3.):
-	    dptlimit = 4.5*3	    # greater than clim+/-10deg (13.5 deg)
-	elif ((rep.getstdev('DPT') > 0.5) & (rep.getstdev('DPT') < 3)):
+        if (rep.getstdev('DPT') > 4.):
+	    dptlimit = 4.5*4.	    # greater than clim+/-10deg (13.5 deg)
+	elif ((rep.getstdev('DPT') >= 1.) & (rep.getstdev('DPT') <= 4)):
 	    dptlimit = 4.5*rep.getstdev('DPT')
 	else: 
-	    dptlimit = 4.5*0.5 	    # less than clim+/- 10deg (2.25 deg)
+	    dptlimit = 4.5*1. 	    # less than clim+/- 10deg (2.25 deg)
     else:
         dptlimit = 10.
     rep.set_qc('DPT', 'clim', 
@@ -643,9 +645,13 @@ def main(argv):
 #track check the passes one ship at a time
         for one_ship in passes.get_one_ship_at_a_time():
             one_ship.track_check()
-            one_ship.find_repeated_values(threshold=0.7, intype='SST')
+# KW I don't think we need to spend time doing this for SST so have commented out
+#            one_ship.find_repeated_values(threshold=0.7, intype='SST')
+# KW FOr AT and DPT this procedure now also looks at the proportion of obs in a track (>20 obs - same as rep value check) that have .0 precision
+# Where >=50% obs end in .0 the ATround or DPTround flag is set to 1
             one_ship.find_repeated_values(threshold=0.7, intype='AT')
 # KW Added for DPT
+# KW For DPT this QC procedure now also searches for persistant streaks of 100% RH (AT == DPT) and flags repsat
             one_ship.find_repeated_values(threshold=0.7, intype='DPT')
 
             for rep in one_ship.rep_feed():
@@ -658,7 +664,6 @@ def main(argv):
 
         tim3 = time.time()
         print "obs track checked in ", tim3-tim2, len(reps)
-	pdb.set_trace()
 
 #*******************************
 # KW Commented out for now to save time on debug
