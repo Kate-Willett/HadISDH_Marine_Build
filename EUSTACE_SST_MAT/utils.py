@@ -259,7 +259,7 @@ def write_netcdf_variable(outfile, var, v, data, frequency, do_zip = True):
     
     :param obj outfile: output file object
     :param obj var: variable object
-    :param int v: sequency number of variable
+    :param int v: sequence number of variable
     :param array data: data to write
     :param str frequency: frequency of input data
     :param bool do_zip: allow compression?
@@ -375,6 +375,7 @@ def netcdf_write(filename, data, n_grids, n_obs, variables, lats, lons, time, do
     nc_var.missing_value = -1
     nc_var.standard_name = "Number of Observations"
     nc_var[:] = np.ma.masked_where(n_obs <= 0, n_obs)
+
 
     # Global Attributes
     # from file
@@ -671,8 +672,10 @@ def grid_5by5(data, n_obs, grid_lats, grid_lons, doMedian = True, daily = True):
     new_data.mask = np.ones((data.shape[0], len(new_lats), len(new_lons)))
     new_data.fill_value = data.fill_value
     
-    n_grids_array = np.ones((len(new_lats), len(new_lons)))
-    n_obs_array = np.ones((len(new_lats), len(new_lons)))
+    n_grids_array = np.ma.zeros((len(new_lats), len(new_lons)))
+    n_grids_array.mask = np.zeros((len(new_lats), len(new_lons)))
+    n_obs_array = np.ma.zeros((len(new_lats), len(new_lons)))
+    n_obs_array.mask = np.zeros((len(new_lats), len(new_lons)))
 
     for lt, lat in enumerate(np.arange(0, len(grid_lats), DELTA) + DELTA):
         for ln, lon in enumerate(np.arange(0, len(grid_lons), DELTA) + DELTA):
@@ -701,9 +704,9 @@ def grid_5by5(data, n_obs, grid_lats, grid_lons, doMedian = True, daily = True):
                     new_data.mask[var, lt, ln] = True
                  
                 if daily:
-                    n_obs_array[lt, ln] = np.sum(n_obs[:, lat-DELTA:lat, lon-DELTA:lon])
+                    n_obs_array[lt, ln] = np.ma.sum(n_obs[:, lat-DELTA:lat, lon-DELTA:lon])
                 else:
-                    n_obs_array[lt, ln] = np.sum(n_obs[lat-DELTA:lat, lon-DELTA:lon])
+                    n_obs_array[lt, ln] = np.ma.sum(n_obs[lat-DELTA:lat, lon-DELTA:lon])
 
     return new_data, n_grids_array, n_obs_array, new_lats, new_lons # grid_5by5
 
@@ -803,6 +806,24 @@ def boxes_with_n_obs(outfile, all_obs, data, N_YEARS_PRESENT):
     outfile.close()
 
     return # boxes_with_n_obs
+
+#*******************************************************
+def ma_append(orig, extra, axis = 0):
+    '''
+    A replacement for np.ma.array which is only available in v1.9 (we've 1.8.2)
+
+    :param array orig: original data
+    :param array extra: data to be appended
+    :param int axis: axis along which to do the appending
+
+    :returns: new - masked array
+    '''    
+    new = np.append(orig.data, extra.data, axis = axis)
+    new = np.ma.array(new)
+
+    new.mask = np.append(orig.mask, extra.mask, axis = axis) 
+
+    return new # ma_append
 
 # END
 # ************************************************************************

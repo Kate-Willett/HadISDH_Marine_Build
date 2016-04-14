@@ -261,7 +261,7 @@ def do_gridding(suffix = "relax", start_year = START_YEAR, end_year = END_YEAR, 
                     this_month_obs = copy.deepcopy(raw_month_n_obs)
                     
                 # have one month of gridded data.
-                out_filename = OUT_LOCATION + OUTROOT + "_1x1_3hr_{}{:02d}_{}_suffix.nc".format(year, month, period, suffix)              
+                out_filename = OUT_LOCATION + OUTROOT + "_1x1_3hr_{}{:02d}_{}_{}.nc".format(year, month, period, suffix)              
 
                 utils.netcdf_write(out_filename, this_month_grid, np.zeros(this_month_obs.shape), this_month_obs, OBS_ORDER, grid_lats, grid_lons, times, frequency = "H")
 
@@ -281,7 +281,7 @@ def do_gridding(suffix = "relax", start_year = START_YEAR, end_year = END_YEAR, 
 
                 # filter on number of observations/day
                 n_hrs_per_day = np.ma.count(this_month_grid, axis = 2) 
-                n_obs_per_day = np.sum(this_month_obs, axis = 1) 
+                n_obs_per_day = np.ma.sum(this_month_obs, axis = 1) 
 
                 if period == "all":
                     bad_locs = np.where(n_hrs_per_day < N_OBS_DAY) # at least 2 of possible 8 3-hourly values (6hrly data *KW OR AT LEAST 4 3HRLY OBS PRESENT*)
@@ -338,7 +338,7 @@ def do_gridding(suffix = "relax", start_year = START_YEAR, end_year = END_YEAR, 
                 monthly_grid.mask[bad_locs] = True
 
                 # number of raw observations
-                n_obs_per_month = np.sum(n_obs_per_day, axis = 0)
+                n_obs_per_month = np.ma.sum(n_obs_per_day, axis = 0)
 
                 if plots and (year in [1973, 1983, 1993, 2003, 2013]):
                     # plot the distribution of days
@@ -408,6 +408,8 @@ def do_gridding(suffix = "relax", start_year = START_YEAR, end_year = END_YEAR, 
  
                 utils.netcdf_write(out_filename, monthly_5by5, monthly_5by5_n_grids, monthly_5by5_n_obs, OBS_ORDER, grid5_lats, grid5_lons, times, frequency = "M")
 
+                
+
                 if plots and (year in [1973, 1983, 1993, 2003, 2013]):
                     # plot the distribution of days
 
@@ -428,8 +430,6 @@ def do_gridding(suffix = "relax", start_year = START_YEAR, end_year = END_YEAR, 
 
                     plt.savefig(PLOT_LOCATION + "n_grids_5x5_monthly_from_daily_{}{:02d}_{}_{}.png".format(year, month, period, suffix))
 
-
-#                raw_input("stop")
 
                 del daily_grid
                 del monthly_5by5

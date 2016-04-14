@@ -191,13 +191,15 @@ def do_merge(fileroot, suffix = "relax", clims = False):
 
 
 #************************************************************************
-def get_fileroot(climatology = False, do3hr = True, monthly = [], daily = True):
+def get_fileroot(climatology = False, pentads = False, months = True, do3hr = True, time = [], daily = True):
     '''
     Get the filename root depending on switches
 
     :param bool climatology: for pentad climatology files
+    :param bool pentads: for annual pentad files
+    :param bool months: for montly files
     :param bool do3hr: run for pentad climatology files created from 3hrly data
-    :param list monthly: if list not empty then set as [YYYY, MM] to run for 5x5 monthly data
+    :param list monthly: pass in [YYYY] or [YYYY, MM] for pentad or monthly files
     :param bool daily: run for monthly grids created from 1x1 daily
     '''
 
@@ -212,25 +214,32 @@ def get_fileroot(climatology = False, do3hr = True, monthly = [], daily = True):
         else:
             fileroot = DATA_LOCATION + OUTROOT + "_1x1_pentad_climatology"
 
-
-    elif monthly != []:
-        if daily:
-            fileroot = DATA_LOCATION + OUTROOT + "_5x5_monthly_from_daily_{}{:02d}".format(monthly[0], monthly[1])
+    elif pentads:
+        if do3hr:
+            fileroot = DATA_LOCATION + OUTROOT + "_1x1_pentad_from_3hrly_{}".format(time[0])
         else:
-            fileroot = DATA_LOCATION + OUTROOT + "_5x5_monthly_{}{:02d}".format(monthly[0], monthly[1])
+            fileroot = DATA_LOCATION + OUTROOT + "_1x1_pentad_{}".format(time[0])
+
+    elif months != []:
+        if daily:
+            fileroot = DATA_LOCATION + OUTROOT + "_5x5_monthly_from_daily_{}{:02d}".format(time[0], time[1])
+        else:
+            fileroot = DATA_LOCATION + OUTROOT + "_5x5_monthly_{}{:02d}".format(time[0], time[1])
              
+
     return fileroot # get_fileroot
 
 
 
 #************************************************************************
-def set_up_merge(suffix = "relax", clims = False, months = False, start_year = START_YEAR, end_year = END_YEAR, start_month = 1, end_month = 12):
+def set_up_merge(suffix = "relax", clims = False, months = False, pentads = False, start_year = START_YEAR, end_year = END_YEAR, start_month = 1, end_month = 12):
     '''
     Obtain file roots and set processes running
     
     :param str suffix: "relax" or "strict" criteria
     :param bool clims: run the climatologies
     :param bool months: run the climatologies
+    :param bool pentads: run the annual pentads
     :param int start_year: start year to process
     :param int end_year: end year to process
     :param int start_month: start month to process
@@ -247,6 +256,16 @@ def set_up_merge(suffix = "relax", clims = False, months = False, start_year = S
         fileroot = get_fileroot(climatology = True, do3hr = True)
         do_merge(fileroot, suffix, clims = True)
 
+    if pentads:
+        print "Processing Pentads"
+        
+#        fileroot = get_fileroot(pentads = True)
+#        do_merge(fileroot, suffix)
+        
+        for year in np.arange(start_year, end_year + 1): 
+            print year
+            fileroot = get_fileroot(pentads = True, do3hr = True, time = [year])
+            do_merge(fileroot, suffix)
 
     if months:
         print "Processing Monthly Files"
@@ -257,13 +276,15 @@ def set_up_merge(suffix = "relax", clims = False, months = False, start_year = S
         end_month = 12
 
         for year in np.arange(start_year, end_year + 1): 
+            print year
 
             for month in np.arange(start_month, end_month + 1):
+                print "  {}".format(month)
 
-#                fileroot = get_fileroot(monthly = [year, month])
+#                fileroot = get_fileroot(months = True, time = [year, month])
 #                do_merge(fileroot, suffix)
 
-                fileroot = get_fileroot(monthly = [year, month], daily = True)
+                fileroot = get_fileroot(months = True, time = [year, month], daily = True)
                 do_merge(fileroot, suffix)
 
 
@@ -282,6 +303,8 @@ if __name__=="__main__":
                         help='run climatology merge, default = False')
     parser.add_argument('--months', dest='months', action='store_true', default = False,
                         help='run monthly merge, default = False')
+    parser.add_argument('--pentads', dest='pentads', action='store_true', default = False,
+                        help='run pentad merge, default = False')
     parser.add_argument('--start_year', dest='start_year', action='store', default = START_YEAR,
                         help='which year to start run, default = 1973')
     parser.add_argument('--end_year', dest='end_year', action='store', default = END_YEAR,
@@ -293,8 +316,9 @@ if __name__=="__main__":
     args = parser.parse_args()
 
 
-    set_up_merge(suffix = str(args.suffix), clims = args.clims, months = args.months, start_year = int(args.start_year), end_year = int(args.end_year), \
-                    start_month = int(args.start_month), end_month = int(args.end_month))
+    set_up_merge(suffix = str(args.suffix), clims = args.clims, months = args.months, pentads = args.pentads, \
+                     start_year = int(args.start_year), end_year = int(args.end_year), \
+                     start_month = int(args.start_month), end_month = int(args.end_month))
 
 # END
 # ************************************************************************
