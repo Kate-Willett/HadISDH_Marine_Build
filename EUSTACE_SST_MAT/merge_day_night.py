@@ -84,8 +84,8 @@ END_YEAR = dt.datetime.now().year - 1
 # Constants in CAPS
 OUTROOT = "ERAclimNBC"
 
-DATA_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS2/"
-PLOT_LOCATION="/project/hadobs2/hadisdh/marine/PLOTS2/"
+DATA_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS3/"
+PLOT_LOCATION="/project/hadobs2/hadisdh/marine/PLOTS3/"
 
 mdi = -1.e30
 
@@ -191,20 +191,20 @@ def do_merge(fileroot, suffix = "relax", clims = False):
 
 
 #************************************************************************
-def get_fileroot(climatology = False, pentads = False, months = True, do3hr = True, time = [], daily = True):
+def get_fileroot(climatology = False, pentads = False, months = [], do3hr = True, time = [], daily = True):
     '''
     Get the filename root depending on switches
 
     :param bool climatology: for pentad climatology files
     :param bool pentads: for annual pentad files
-    :param bool months: for montly files
+    :param bool months: for monthly files
     :param bool do3hr: run for pentad climatology files created from 3hrly data
     :param list monthly: pass in [YYYY] or [YYYY, MM] for pentad or monthly files
     :param bool daily: run for monthly grids created from 1x1 daily
     '''
 
 
-    if climatology and monthly != []:
+    if climatology and months != []:
         print "Cannot run both for Climatology files and for Monthly files"
         raise RuntimeError
 

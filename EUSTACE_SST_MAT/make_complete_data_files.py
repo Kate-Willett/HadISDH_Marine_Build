@@ -80,8 +80,8 @@ import utils
 #Constants in CAPS
 OUTROOT = "ERAclimNBC"
 
-DATA_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS2/"
-PLOT_LOCATION="/project/hadobs2/hadisdh/marine/PLOTS2/"
+DATA_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS3/"
+PLOT_LOCATION="/project/hadobs2/hadisdh/marine/PLOTS3/"
 
 START_YEAR = 1973
 END_YEAR = dt.datetime.now().year - 1

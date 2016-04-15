@@ -360,7 +360,7 @@ def netcdf_write(filename, data, n_grids, n_obs, variables, lats, lons, time, do
     # write number of observations 
 
 
-    nc_var = outfile.createVariable("n_grids", np.dtype('int16'), ('time','latitude','longitude',), zlib = do_zip, fill_value = -1)
+    nc_var = outfile.createVariable("n_grids", np.dtype('int32'), ('time','latitude','longitude',), zlib = do_zip, fill_value = -1)
 
     nc_var.long_name = "Number of grid boxes/days/hours going into this grid box"
     nc_var.units = "1"
@@ -368,14 +368,13 @@ def netcdf_write(filename, data, n_grids, n_obs, variables, lats, lons, time, do
     nc_var.standard_name = "Number of grid boxes/days/hours"
     nc_var[:] = np.ma.masked_where(n_grids <=0, n_grids)
 
-    nc_var = outfile.createVariable("n_obs", np.dtype('int16'), ('time','latitude','longitude',), zlib = do_zip, fill_value = -1)
+    nc_var = outfile.createVariable("n_obs", np.dtype('int32'), ('time','latitude','longitude',), zlib = do_zip, fill_value = -1)
 
     nc_var.long_name = "Number of raw observations going into this grid box"
     nc_var.units = "1"
     nc_var.missing_value = -1
     nc_var.standard_name = "Number of Observations"
     nc_var[:] = np.ma.masked_where(n_obs <= 0, n_obs)
-
 
     # Global Attributes
     # from file

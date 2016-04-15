@@ -14,7 +14,9 @@ Location: /project/hadobs2/hadisdh/marine/PROGS/Build
 -----------------------
 CODE PURPOSE AND OUTPUT
 -----------------------
-Take monthly merged ("_both") files and output global average timeseries
+Take monthly merged files and output global average timeseries
+
+For actuals and anomalies
 
 -----------------------
 LIST OF MODULES
@@ -32,10 +34,7 @@ Exact folder set by "OUTROOT" - as depends on bias correction.
 -----------------------
 HOW TO RUN THE CODE
 -----------------------
-python2.7 global_average_timeseries.py --suffix relax --period day --start_year YYYY --end_year YYYY --start_month MM --end_month MM
-
-python2.7 global_average_timeseries.py --help 
-will show all options
+python2.7 global_average_timeseries.py 
 
 -----------------------
 OUTPUT
@@ -79,8 +78,8 @@ import utils
 #Constants in CAPS
 OUTROOT = "ERAclimNBC"
 
-DATA_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS2/"
-PLOT_LOCATION="/project/hadobs2/hadisdh/marine/PLOTS2/"
+DATA_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS3/"
+PLOT_LOCATION="/project/hadobs2/hadisdh/marine/PLOTS3/"
 
 mdi = -1.e30
 
@@ -174,104 +173,115 @@ suffix = "relax"
 
 watermarkstring="/".join(os.getcwd().split('/')[4:])+'/'+os.path.basename( __file__ )+"   "+dt.datetime.strftime(dt.datetime.now(), "%d-%b-%Y %H:%M")
 
+# run on the actuals (which include anomalies from ERA) and the anomalies (calculated from obs-actuals, but also include the anomalies from ERA)
+for version in ["", "_anomalies"]:
 
-for period in ["both", "day", "night"]:
+    if version == "":
+        print "5x5 monthly Standard"
+    elif version == "_anomalies":
+        print "5x5 monthly Anomalies"
 
-    filename = "{}/{}_5x5_monthly_from_daily_{}_{}.nc".format(DATA_LOCATION, OUTROOT, period, suffix) 
+    for period in ["both", "day", "night"]:
+        print period
 
-    ncdf_file = ncdf.Dataset(filename,'r', format='NETCDF4')
+        filename = "{}/{}_5x5_monthly{}_from_daily_{}_{}.nc".format(DATA_LOCATION, OUTROOT, version, period, suffix) 
 
-    lat_centres = ncdf_file.variables["latitude"]
-    lon_centres = ncdf_file.variables["longitude"]
+        ncdf_file = ncdf.Dataset(filename,'r', format='NETCDF4')
 
-    n_obs = utils.set_MetVar_attributes("n_obs", "Number of Observations", "Number of Observations", 1, -1, np.dtype("int16"), 0)
-    OBS_ORDER = utils.make_MetVars(mdi, multiplier = False)
-    OBS_ORDER += [n_obs]
+        lat_centres = ncdf_file.variables["latitude"]
+        lon_centres = ncdf_file.variables["longitude"]
 
-
-    for v, var in enumerate(OBS_ORDER):
-        print var.name
+        n_obs = utils.set_MetVar_attributes("n_obs", "Number of Observations", "Number of Observations", 1, -1, np.dtype("int16"), 0)
+        OBS_ORDER = utils.make_MetVars(mdi, multiplier = False)
+        OBS_ORDER += [n_obs]
 
 
-        var.data = ncdf_file.variables[var.name][:]
+        for v, var in enumerate(OBS_ORDER):
+            print var.name
 
-        # make annual and monthly timeseries
 
-        mesh_lon, mesh_lat = np.meshgrid(lon_centres, lat_centres)
-        cosines = np.cos(np.radians(mesh_lat))
+            var.data = ncdf_file.variables[var.name][:]
 
-        full_cosines = mask_and_normalise_weights(cosines, var.data)
-        #masked weights now sum to one for each field
+            # make annual and monthly timeseries
 
-        if var.name == "n_obs":
-            weighted_data = var.data
-        else:
-            weighted_data = var.data * full_cosines
+            mesh_lon, mesh_lat = np.meshgrid(lon_centres, lat_centres)
+            cosines = np.cos(np.radians(mesh_lat))
 
-        plot_values = np.zeros(weighted_data.shape[0])
-        plot_times = []
-        for y in range(weighted_data.shape[0]):
+            full_cosines = mask_and_normalise_weights(cosines, var.data)
+            #masked weights now sum to one for each field
 
-            plot_values[y] = np.ma.sum(weighted_data[y])
+            if var.name == "n_obs":
+                weighted_data = var.data
+            else:
+                weighted_data = var.data * full_cosines
 
-            plot_times += [dt.datetime(START_YEAR+(y/12), 1 + (y%12), 1, 0, 0)]
+            plot_values = np.zeros(weighted_data.shape[0])
+            plot_times = []
+            for y in range(weighted_data.shape[0]):
 
-        # plot the monthly data
-        plt.clf()
-        plt.plot(plot_times, plot_values, "r-", label = "Monthly")
+                plot_values[y] = np.ma.sum(weighted_data[y])
 
-        var.mdata = plot_values
-        monthly_times = plot_times
+                plot_times += [dt.datetime(START_YEAR+(y/12), 1 + (y%12), 1, 0, 0)]
 
-        # and annual
-        plot_values = plot_values.reshape(-1, 12)
-        
-        if var.name != "n_obs":
-            plot_values = np.mean(plot_values, axis = 1)
-        else:
-            plot_values = np.sum(plot_values, axis = 1)
+            # plot the monthly data
+            plt.clf()
+            plt.plot(plot_times, plot_values, "r-", label = "Monthly")
 
-        plot_times = [dt.datetime(START_YEAR+y, 7, 1) for y in range(plot_values.shape[0])]
-        plt.plot(plot_times, plot_values, "b-", label = "Annual")
+            var.mdata = plot_values
+            monthly_times = plot_times
 
-        var.adata = plot_values
-        annual_times = plot_times
+            # and annual
+            plot_values = plot_values.reshape(-1, 12)
 
-        # and prettify the plot
-        plt.title(" ".join([x.capitalize() for x in var.name.split("_")]))
-        plt.ylabel(var.units)
-        plt.legend()
-        plt.figtext(0.01,0.01,watermarkstring,size=6)
+            if var.name != "n_obs":
+                plot_values = np.mean(plot_values, axis = 1)
+            else:
+                plot_values = np.sum(plot_values, axis = 1)
 
-        plt.savefig("{}/{}_5x5_monthly_from_daily_{}_{}_ts.png".format(PLOT_LOCATION, OUTROOT, period, var.name))
+            plot_times = [dt.datetime(START_YEAR+y, 7, 1) for y in range(plot_values.shape[0])]
+            plt.plot(plot_times, plot_values, "b-", label = "Annual")
 
-    # clean up
-    ncdf_file.close()
-    del(weighted_data)
-    del(full_cosines)
-    gc.collect()
+            var.adata = plot_values
+            annual_times = plot_times
 
-    # write output files
-    filename = "{}/{}_5x5_monthly_from_daily_{}_{}_ts_annual.nc".format(DATA_LOCATION, OUTROOT, period, suffix) 
-    if os.path.exists(filename):
-        os.remove(filename)
-    write_ncdf_ts(annual_times, OBS_ORDER, filename, annual = True, do_zip = True)
+            # and prettify the plot
+            plt.title(" ".join([x.capitalize() for x in var.name.split("_")]))
+            plt.ylabel(var.units)
+            plt.legend()
+            plt.figtext(0.01,0.01,watermarkstring,size=6)
 
-    filename = "{}/{}_5x5_monthly_from_daily_{}_{}_ts_monthly.nc".format(DATA_LOCATION, OUTROOT, period, suffix) 
-    if os.path.exists(filename):
-        os.remove(filename)
-    write_ncdf_ts(monthly_times, OBS_ORDER, filename, monthly = True, do_zip = True)
+            plt.savefig("{}/{}_5x5_monthly{}_from_daily_{}_{}_ts.png".format(PLOT_LOCATION, OUTROOT, version, period, var.name))
 
-    # clean up
-    del(plot_values)
-    del(plot_times)
-    del(OBS_ORDER)
-    gc.collect()
+        # clean up
+        ncdf_file.close()
+        del(weighted_data)
+        del(full_cosines)
+        gc.collect()
+
+        # write output files
+        filename = "{}/{}_5x5_monthly{}_from_daily_{}_{}_ts_annual.nc".format(DATA_LOCATION, OUTROOT, version, period, suffix) 
+        if os.path.exists(filename):
+            os.remove(filename)
+        write_ncdf_ts(annual_times, OBS_ORDER, filename, annual = True, do_zip = True)
+
+        filename = "{}/{}_5x5_monthly{}_from_daily_{}_{}_ts_monthly.nc".format(DATA_LOCATION, OUTROOT, version, period, suffix) 
+        if os.path.exists(filename):
+            os.remove(filename)
+        write_ncdf_ts(monthly_times, OBS_ORDER, filename, monthly = True, do_zip = True)
+
+        # clean up
+        del(plot_values)
+        del(plot_times)
+        del(OBS_ORDER)
+        gc.collect()
 
 sys.exit()
+
+
+
+
+
 # pentad -> annual
-
-
 OBS_ORDER = utils.make_MetVars(mdi, multiplier = False)
 
 for v, var in enumerate(OBS_ORDER):
