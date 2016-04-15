@@ -126,6 +126,7 @@ TheDelimiters=(10,8,8,8,8,8,8,8,
 def ReadMDSkate(TheYear,TheMonth,TheType):
 
     InDir = '/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/ERAclimNBC/'
+#    InDir = '/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/beta/'
     InFil = 'new_suite_'+TheYear+TheMonth+'_'+TheType+'.txt'
     
     TheFilee = InDir+InFil
@@ -181,8 +182,8 @@ def ReadMDSkate(TheYear,TheMonth,TheType):
     MDSDict['WBT']=np.array(RawData['f35'])/10.
 #    MDSDict['DI']=np.array(RawData['f36'])
 #    MDSDict['D']=np.array(RawData['f37'])
-#    MDSDict['WI']=np.array(RawData['f38'])
-#    MDSDict['W']=np.array(RawData['f39'])
+    MDSDict['WI']=np.array(RawData['f38'])
+    MDSDict['W']=np.array(RawData['f39'])/10. # Wind speed m/s
 #    MDSDict['VI']=np.array(RawData['f40'])
 #    MDSDict['VV']=np.array(RawData['f41'])
 
@@ -226,6 +227,7 @@ def ReadMDSkate(TheYear,TheMonth,TheType):
 #    MDSDict['ATblank1']=np.array(RawData['f76'])
     MDSDict['ATnoval']=np.array(RawData['f77'])
 #    MDSDict['ATnbud']=np.array(RawData['f78'])
+    MDSDict['ATround']=np.array(RawData['f78']) # round in place of nbud
 #    MDSDict['ATbbud']=np.array(RawData['f79'])
     MDSDict['ATrep']=np.array(RawData['f80'])
 #    MDSDict['ATblank2']=np.array(RawData['f81'])
@@ -236,6 +238,7 @@ def ReadMDSkate(TheYear,TheMonth,TheType):
     MDSDict['DPTssat']=np.array(RawData['f85'])
     MDSDict['DPTnoval']=np.array(RawData['f86'])
 #    MDSDict['DPTnbud']=np.array(RawData['f87'])
+    MDSDict['DPTround']=np.array(RawData['f87']) # round in place of nbud
 #    MDSDict['DPTbbud']=np.array(RawData['f88'])
     MDSDict['DPTrep']=np.array(RawData['f89'])
     MDSDict['DPTrepsat']=np.array(RawData['f90'])
