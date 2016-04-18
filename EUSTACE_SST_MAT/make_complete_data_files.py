@@ -75,19 +75,7 @@ import netCDF4 as ncdf
 import gc
 
 import utils
-
-
-#Constants in CAPS
-OUTROOT = "ERAclimNBC"
-
-DATA_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS3/"
-PLOT_LOCATION="/project/hadobs2/hadisdh/marine/PLOTS3/"
-
-START_YEAR = 1973
-END_YEAR = dt.datetime.now().year - 1
-
-mdi = -1.e30
-
+from set_paths_and_vars import *
 
 # need to merge the pentads (1x1) and the monthlies (5x5)
 

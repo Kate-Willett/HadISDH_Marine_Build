@@ -28,8 +28,10 @@ These later grids are available for day- and night-time periods (any mixtures ar
 LIST OF MODULES
 -----------------------
 utils.py
+set_paths_and_vars.py - set file paths and some universal variables.
 plot_qc_diagnostics.py - to output plots of clean obs vs all
 MDS_basic_KATE.py - for the file format
+
 
 -----------------------
 DATA
@@ -87,12 +89,11 @@ import copy
 import utils
 import plot_qc_diagnostics
 import MDS_basic_KATE as mds
+from set_paths_and_vars import *
 
-plots = True
 doQC = True
 doSST_SLP = False
 
-doMedian = False
 # KW #
 # Use of median vs mean #
 # Essentially we're using the average as a way of smoothing in time and space so ideally it would have influence from all viable values
@@ -112,18 +113,7 @@ doMedian = False
 # For monthly 5x5s I think we should use the mean to make sure the influence of sparse obs are included.
 # There IS an expectation that the values could quite different across a 500km2 area and 1 month (quite possibly, but not necessarily normally distributed)
 
-# Constants in CAPS
-OUTROOT = "ERAclimNBC"
 
-DATA_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/{}/".format(OUTROOT)
-# KW Changed GRIDS to GRIDS2 adn PLOTS to PLOTS2 to make sure I don't write over what has been done already
-OUT_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS2/"
-PLOT_LOCATION="/project/hadobs2/hadisdh/marine/PLOTS2/"
-
-START_YEAR = 1973
-END_YEAR = dt.datetime.now().year - 1
-
-mdi = -1.e30
 OBS_ORDER = utils.make_MetVars(mdi, doSST_SLP = doSST_SLP, multiplier = True) # ensure that convert from raw format at writing stage with multiplier
 
 # what size grid (lat/lon/hour)
@@ -180,7 +170,7 @@ def do_gridding(suffix = "relax", start_year = START_YEAR, end_year = END_YEAR, 
 
             # process the monthly file
             filename = "new_suite_{}{:02d}_{}.txt".format(year, month, OUTROOT)
-            raw_platform_data, raw_obs, raw_meta, raw_qc = utils.read_qc_data(filename, DATA_LOCATION, fields)
+            raw_platform_data, raw_obs, raw_meta, raw_qc = utils.read_qc_data(filename, ICOADS_LOCATION, fields)
 
             # extract observation details
             lats, lons, years, months, days, hours = utils.process_platform_obs(raw_platform_data)
@@ -261,7 +251,7 @@ def do_gridding(suffix = "relax", start_year = START_YEAR, end_year = END_YEAR, 
                     this_month_obs = copy.deepcopy(raw_month_n_obs)
                     
                 # have one month of gridded data.
-                out_filename = OUT_LOCATION + OUTROOT + "_1x1_3hr_{}{:02d}_{}_{}.nc".format(year, month, period, suffix)              
+                out_filename = DATA_LOCATION + OUTROOT + "_1x1_3hr_{}{:02d}_{}_{}.nc".format(year, month, period, suffix)              
 
                 utils.netcdf_write(out_filename, this_month_grid, np.zeros(this_month_obs.shape), this_month_obs, OBS_ORDER, grid_lats, grid_lons, times, frequency = "H")
 
@@ -318,7 +308,7 @@ def do_gridding(suffix = "relax", start_year = START_YEAR, end_year = END_YEAR, 
 
                 # write dailies file
                 times.data = daily_hours[:,0]
-                out_filename = OUT_LOCATION + OUTROOT + "_1x1_daily_{}{:02d}_{}_{}.nc".format(year, month, period, suffix)
+                out_filename = DATA_LOCATION + OUTROOT + "_1x1_daily_{}{:02d}_{}_{}.nc".format(year, month, period, suffix)
 
                 utils.netcdf_write(out_filename, daily_grid, n_hrs_per_day[0], n_obs_per_day, OBS_ORDER, grid_lats, grid_lons, times, frequency = "D")
 
@@ -359,7 +349,7 @@ def do_gridding(suffix = "relax", start_year = START_YEAR, end_year = END_YEAR, 
                     plt.savefig(PLOT_LOCATION + "n_grids_1x1_monthly_{}{:02d}_{}_{}.png".format(year, month, period, suffix))
 
                 # write monthly 1x1 file
-                out_filename = OUT_LOCATION + OUTROOT + "_1x1_monthly_{}{:02d}_{}_{}.nc".format(year, month, period, suffix)
+                out_filename = DATA_LOCATION + OUTROOT + "_1x1_monthly_{}{:02d}_{}_{}.nc".format(year, month, period, suffix)
                 utils.netcdf_write(out_filename, monthly_grid, n_grids_per_month[0], n_obs_per_month, OBS_ORDER, grid_lats, grid_lons, times, frequency = "M")
             
                 # now to re-grid to coarser resolution
@@ -369,7 +359,7 @@ def do_gridding(suffix = "relax", start_year = START_YEAR, end_year = END_YEAR, 
 
                 # go from monthly 1x1 to monthly 5x5 - retained as limited overhead
                 monthly_5by5, monthly_5by5_n_grids, monthly_5by5_n_obs, grid5_lats, grid5_lons = utils.grid_5by5(monthly_grid, n_obs_per_month, grid_lats, grid_lons, doMedian = doMedian, daily = False)
-                out_filename = OUT_LOCATION + OUTROOT + "_5x5_monthly_{}{:02d}_{}_{}.nc".format(year, month, period, suffix)
+                out_filename = DATA_LOCATION + OUTROOT + "_5x5_monthly_{}{:02d}_{}_{}.nc".format(year, month, period, suffix)
 
                 utils.netcdf_write(out_filename, monthly_5by5, monthly_5by5_n_grids, monthly_5by5_n_obs, OBS_ORDER, grid5_lats, grid5_lons, times, frequency = "M")
 
@@ -404,7 +394,7 @@ def do_gridding(suffix = "relax", start_year = START_YEAR, end_year = END_YEAR, 
                 # go direct from daily 1x1 to monthly 5x5
                 monthly_5by5, monthly_5by5_n_grids, monthly_5by5_n_obs, grid5_lats, grid5_lons = utils.grid_5by5(daily_grid, n_obs_per_day, grid_lats, grid_lons, doMedian = doMedian, daily = True)
 
-                out_filename = OUT_LOCATION + OUTROOT + "_5x5_monthly_from_daily_{}{:02d}_{}_{}.nc".format(year, month, period, suffix)
+                out_filename = DATA_LOCATION + OUTROOT + "_5x5_monthly_from_daily_{}{:02d}_{}_{}.nc".format(year, month, period, suffix)
  
                 utils.netcdf_write(out_filename, monthly_5by5, monthly_5by5_n_grids, monthly_5by5_n_obs, OBS_ORDER, grid5_lats, grid5_lons, times, frequency = "M")
 

@@ -74,18 +74,7 @@ import netCDF4 as ncdf
 import copy
 
 import utils
-
-#Constants in CAPS
-OUTROOT = "ERAclimNBC"
-
-DATA_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS3/"
-PLOT_LOCATION="/project/hadobs2/hadisdh/marine/PLOTS3/"
-
-mdi = -1.e30
-
-
-START_YEAR = 1973
-
+from set_paths_and_vars import *
 
 #***************************************
 def mask_and_normalise_weights(cosines, data):

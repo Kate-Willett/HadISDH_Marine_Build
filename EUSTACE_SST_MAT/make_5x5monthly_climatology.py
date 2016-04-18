@@ -79,19 +79,9 @@ import calendar
 import netCDF4 as ncdf
 
 import utils
+from set_paths_and_vars import *
 
 
-doMedian = False
-plots = True
-
-# Constants in CAPS
-OUTROOT = "ERAclimNBC"
-
-# KW Changed to GRIDS2 and PLOTS2 so not to overwrite
-DATA_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS3/"
-PLOT_LOCATION="/project/hadobs2/hadisdh/marine/PLOTS3/"
-
-mdi = -1.e30
 OBS_ORDER = utils.make_MetVars(mdi, multiplier = False) 
 
 # what size grid (lat/lon)

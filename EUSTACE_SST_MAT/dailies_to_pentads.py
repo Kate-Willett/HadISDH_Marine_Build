@@ -75,22 +75,11 @@ import netCDF4 as ncdf
 import gc
 
 import utils
+from set_paths_and_vars import *
 
-doMedian = False
+
 N_OBS = 1 # data on at least one day of the pentad
 
-
-# Constants in CAPS
-OUTROOT = "ERAclimNBC"
-
-# KW made these GRIDS2 adn PLOTS2 to make sure I do not overwrite
-DATA_LOCATION = "/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS/"
-PLOT_LOCATION = "/project/hadobs2/hadisdh/marine/PLOTS/"
-
-START_YEAR = 1973
-END_YEAR = dt.datetime.now().year - 1
-
-mdi = -1.e30
 OBS_ORDER = utils.make_MetVars(mdi, multiplier = False)
 
 # what size grid (lat/lon)
