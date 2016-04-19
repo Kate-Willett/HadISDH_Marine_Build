@@ -1,6 +1,18 @@
 # Written by Kate Willett 6th April 2016
 
 '''
+UpdateUpdateUpdate!
+There appear to be occasions where the iteration does not converge (e.g., ob 2513 from Jan 1973)
+SST = 21.1999999999
+AT = 21.5 (No slr or scn)
+SHU = 13.5, 13.3379
+U = 6.7
+SLP = 1016.1 (ClimP = 1014.725)
+
+So - if I change SST between 21.1999 and 21.19999 it stops working. It starts working at 21.201.
+And - if I keep SST as 21.19999 and change q between 13.336 (ok) 13.337 (not ok) 13.339 (ok)
+NO IDEA WHY - I've ADDED A CLAUSE TO SAY IF WE GET TO 100 iterations - fix L at mean of last 10 and recalculate
+
 Update update!
 
 It seems to be working very close to David Berry's code which is now in this file.
@@ -24,7 +36,7 @@ hK['L'] = 9.34, hK['u_star'] = 0.120
 # LOW WIND SPEED
 adjDB,hDB = hc.run_davidberry_final(10.,15.,8.,3.,20.,18.,18)
 adjK,hK = hc.run_heightcorrection_final(10.,15.,8.,3.,20.,18.,18)
-adjDB['at_10m'] = 10.015, adjDB['shu_10m'] = 7.540 (u_10m = -0.300)
+adjDB['at_10m'] = 10.015, adjDB['shu_10m'] = 7.540 (u_10m = -0.300) NOTE - u=4 ok, u=3 or less = -ve u_10m!
 hDB['L'] = 0.013, hDB['u_star'] = 0.0003
 
 adjK['at_10m'] = 12.802, adjK['shu_10m'] = 7.757 (u_10m = 1.515)
@@ -191,7 +203,7 @@ def run_davidberry_final(sst,at,shu,u,zu,zt,zq,dpt=(-99.9),vap=(-99.9),crh=(-99.
       climp = -99.9 climatological mean sea level pressure for that ob (hPa)
 
     IF SST IS MISSING (test for sst < -60 or > 60) USE AT
-    IF U IS MISSING (test for u < 0 or u > 100) USE 3m/s
+    IF U IS V SMALL OR MISSING (test for u < 0.5 then u = 0.5, if u < 0 or > 100) USE 3m/s
     IF RESULTING ADJ MAKES dpt_10m>at_10m or crh_10m>100%rh:
       at_10m is set to equal dpt_10m
       crh_10m is set to equal 100%rh 
@@ -220,6 +232,16 @@ def run_davidberry_final(sst,at,shu,u,zu,zt,zq,dpt=(-99.9),vap=(-99.9),crh=(-99.
 		        'q_star':q_star,
 		        'z0':z0}
    
+    TESTED!!!
+    adjDB,hDB = hc.run_davidberry_final(10.,15.,8.,6.,20.,18.,18,dpt=10.7,vap=12.9,crh=75.5,cwb=12.6,dpd=4.3,climp=1013.)
+    'dpd_10m': 3.4, 
+    'at_10m': 13.783202726300203, 
+    'cwb_10m': 11.9, 
+    'crh_10m': 80.0, 
+    'dpt_10m': 10.4, 
+    'vap_10m': 12.7, 
+    'shu_10m': 7.842286987739419
+
     '''
 
     # Set up constants
@@ -237,8 +259,11 @@ def run_davidberry_final(sst,at,shu,u,zu,zt,zq,dpt=(-99.9),vap=(-99.9),crh=(-99.
     if ((sst < -60.) | (sst > 60)):
         sst = at
 
-    # Check if u is missing or very small (it could be) - use 3m/s instead (NOT IDEAL!!!! - PROBABLY WANT TO FLAG FOR INCREASED UNCERTAINTY)
-    if ((u < 3.) | (u > 100)):
+    # Check if u is missing or very small (it could be) - use 3m/s or 0.5 instead (NOT IDEAL!!!! - PROBABLY WANT TO FLAG FOR INCREASED UNCERTAINTY)
+    # NOTE THIS RESULTS IN -VE WIND SPEEDS IF ORIG WIND SPEED IS TOO LOW!
+    if (u < 0.5):
+        u = 0.5
+    elif ((u < 0)  | (u > 100)):
         u = 3.
     
     # Iterate to find L
@@ -254,15 +279,15 @@ def run_davidberry_final(sst,at,shu,u,zu,zt,zq,dpt=(-99.9),vap=(-99.9),crh=(-99.
     # Check if all humidity vars and climp are present first
     if ((vap > -99.9) & (crh > -99.9) & (dpt > -99.9) & (cwb > -99.9) & (dpd > -99.9) & (climp > -99.9)):
     # Get vapour pressure from specific humidity
-        vap_10m = ch.vap_from_q(shu_10m,climp)
+        vap_10m = ch.vap_from_sh(shu_10m,climp,roundit=False)
     # Get dew point temperature from vapour pressure (use at too to check for wet bulb <=0)
-        dpt_10m = ch.dpt_from_vap(vap_10m,climp,at_10m)
+        dpt_10m = ch.td_from_vap(vap_10m,climp,at_10m,roundit=False)
     # Get wet bulb temperature from vapour pressure and dew point temperature and air temperature
-        cwb_10m = ch.wb(dpt_10m,at_10m,climp)
+        cwb_10m = ch.wb(dpt_10m,at_10m,climp,roundit=False)
     # Get relative humidity from dew point temperature and temperature
-        crh_10m = ch.rh(dpt_10m,at_10m,climp)
+        crh_10m = ch.rh(dpt_10m,at_10m,climp,roundit=False)
     # Get dew point depression from temperautre and dew point depression
-        dpd_10m = ch.dpd(dpt_10m,at_10m)   
+        dpd_10m = ch.dpd(dpt_10m,at_10m,roundit=False)   
 	
     # Now cross-check at_10m and dpt_10m [and crh_10m and dpd_10m] - no supersaturation allowed!
         if ((at_10m - dpt_10m) < 0.):
@@ -327,11 +352,12 @@ def run_heightcorrection_final(sst,at,shu,u,zu,zt,zq,dpt=(-99.9),vap=(-99.9),crh
       climp = -99.9 climatological mean sea level pressure for that ob (hPa)
 
     IF SST IS MISSING (test for sst < -60 or > 60) USE AT
-    IF U IS MISSING (test for u < 0 or u > 100) USE 3m/s
+    IF U IS V SMALL OR MISSING (test for u < 0.5 then u = 0.5, or u < 0 or > 100 then u=3m/s
     IF RESULTING ADJ MAKES dpt_10m>at_10m or crh_10m>100%rh:
       at_10m is set to equal dpt_10m
       crh_10m is set to equal 100%rh 
       This results in cwb_10m, dpd_10m being recalculated.
+    IF L does not converge - exits with VAR_10m = -99.99 if L is really silly (low and not converging), settling with L of last iteration if abs(L) > 500  
     
     Returns:
       A dictionary of all adjusted values - if vap_10m etc are not calculate then they will be set to -99.9
@@ -374,6 +400,15 @@ def run_heightcorrection_final(sst,at,shu,u,zu,zt,zq,dpt=(-99.9),vap=(-99.9),crh
     AdjDict,_ = run_heightcorrection_final(10.,15.,8.,3.,20.,18.,18.)
     AdjDict['at_10m']
     
+    adjK,hK = hc.run_heightcorrection_final(10.,15.,8.,6.,20.,18.,18,dpt=10.7,vap=12.9,crh=75.5,cwb=12.6,dpd=4.3,climp=1013.)
+    'dpd_10m': 3.4, 
+    'at_10m': 13.750023166125274, 
+    'cwb_10m': 11.9, 
+    'crh_10m': 80.2, 
+    'dpt_10m': 10.4, 
+    'vap_10m': 12.7, 
+    'shu_10m': 7.8606914650250568
+  
     '''
 
     # Set up constants
@@ -382,61 +417,75 @@ def run_heightcorrection_final(sst,at,shu,u,zu,zt,zq,dpt=(-99.9),vap=(-99.9),crh
     k = 0.41
     
     # Check if sst is missing (it could be) - use at instead (NOT IDEAL!!!! - PROBABLY WANT TO FLAG FOR INCREASED UNCERTAINTY)
-    if ((sst < -60.) | (sst > 60)):
+    if ((sst < -60.) | (sst > 60.)):
         sst = at
 
-    # Check if u is missing or very small (it could be) - use 3m/s instead (NOT IDEAL!!!! - PROBABLY WANT TO FLAG FOR INCREASED UNCERTAINTY)
-    if ((u < 3.) | (u > 100)):
+    # Check if u is missing or very small (it could be) - use 3 or 0.5m/s instead (NOT IDEAL!!!! - PROBABLY WANT TO FLAG FOR INCREASED UNCERTAINTY)
+    if (u < 0.5):
+        u = 0.5
+    elif ((u < 0) | (u > 100)):
         u = 3.
     
     # Iterate to find L
     HeightDict = run_iterate_L(sst,at,shu,u,zu,zt,zq)
+    
+    # Check the run_iterate_L output to makesure its not nonsense u_star=9999. (has not converged!)
+    if (HeightDict['u_star'] < 9999.):
 
-    # Get the Surface values
-    u0, t0, q0 = get_surface_values(sst)
-    
-    # Given iterated values get t_star and q_star
-    # David uses a different equation requiring heat and moisture transfer coefficients
-    t_star = get_value_star(k,zt,z0t,HeightDict['Yt'],at,t0)
-    q_star = get_value_star(k,zq,z0q,HeightDict['Yq'],shu,q0)
-    print("t_star, q_star: ",t_star," ",q_star)
-    
-    # Get the height adjustments for t and q (u unnecessary)
-    u_10m = get_heightcorrected(u,HeightDict['u_star'],k,zu,HeightDict['Ym'],HeightDict['L'],HeightDict['Ym10'])
-    print("u10: ",u_10m)
-    at_10m = get_heightcorrected(at,t_star,k,zt,HeightDict['Yt'],HeightDict['L'],HeightDict['Yt10'])
-    shu_10m = get_heightcorrected(shu,q_star,k,zq,HeightDict['Yq'],HeightDict['L'],HeightDict['Yq10'])
-    
-    # Convert t and q height adjustments to adjustments for other humidity variables   
-    # Of course we're using the same P - not a height adjusted one!!! 
-    # Check if all humidity vars and climp are present first
-    if ((vap > -99.9) & (crh > -99.9) & (dpt > -99.9) & (cwb > -99.9) & (dpd > -99.9) & (climp > -99.9)):
-    # Get vapour pressure from specific humidity
-        vap_10m = ch.vap_from_q(shu_10m,climp)
-    # Get dew point temperature from vapour pressure (use at too to check for wet bulb <=0)
-        dpt_10m = ch.dpt_from_vap(vap_10m,climp,at_10m)
-    # Get wet bulb temperature from vapour pressure and dew point temperature and air temperature
-        cwb_10m = ch.wb(dpt_10m,at_10m,climp)
-    # Get relative humidity from dew point temperature and temperature
-        crh_10m = ch.rh(dpt_10m,at_10m,climp)
-    # Get dew point depression from temperautre and dew point depression
-        dpd_10m = ch.dpd(dpt_10m,at_10m)   
+        # Get the Surface values
+        u0, t0, q0 = get_surface_values(sst)
+        
+        # Given iterated values get t_star and q_star
+        # David uses a different equation requiring heat and moisture transfer coefficients
+        t_star = get_value_star(k,zt,z0t,HeightDict['Yt'],at,t0)
+        q_star = get_value_star(k,zq,z0q,HeightDict['Yq'],shu,q0)
+    #    print("t_star, q_star: ",t_star," ",q_star)
+        
+        # Get the height adjustments for t and q (u unnecessary)
+        u_10m = get_heightcorrected(u,HeightDict['u_star'],k,zu,HeightDict['Ym'],HeightDict['L'],HeightDict['Ym10'])
+    #    print("u10: ",u_10m)
+        at_10m = get_heightcorrected(at,t_star,k,zt,HeightDict['Yt'],HeightDict['L'],HeightDict['Yt10'])
+        shu_10m = get_heightcorrected(shu,q_star,k,zq,HeightDict['Yq'],HeightDict['L'],HeightDict['Yq10'])
+        
+        # Convert t and q height adjustments to adjustments for other humidity variables   
+        # Of course we're using the same P - not a height adjusted one!!! 
+        # Check if all humidity vars and climp are present first
+        if ((vap > -99.9) & (crh > -99.9) & (dpt > -99.9) & (cwb > -99.9) & (dpd > -99.9) & (climp > -99.9)):
+            # Get vapour pressure from specific humidity
+            vap_10m = ch.vap_from_sh(shu_10m,climp,roundit=False)
+            # Get dew point temperature from vapour pressure (use at too to check for wet bulb <=0)
+            dpt_10m = ch.td_from_vap(vap_10m,climp,at_10m,roundit=False)
+            # Get wet bulb temperature from vapour pressure and dew point temperature and air temperature
+            cwb_10m = ch.wb(dpt_10m,at_10m,climp,roundit=False)
+            # Get relative humidity from dew point temperature and temperature
+            crh_10m = ch.rh(dpt_10m,at_10m,climp,roundit=False)
+            # Get dew point depression from temperautre and dew point depression
+            dpd_10m = ch.dpd(dpt_10m,at_10m,roundit=False)   
 	
-    # Now cross-check at_10m and dpt_10m [and crh_10m and dpd_10m] - no supersaturation allowed!
-        if ((at_10m - dpt_10m) < 0.):
-	    # force 100% rh limit by adjusting at_10m to dpt_10m, preserving humidity???
-	    at_10m = copy.copy(dpt_10m) 
-	    # recalculate affected variables = which will all be at saturation
-            cwb_10m = copy.copy(at_10m)
-            crh_10m = 100.0
-            dpd_10m = 0.   	    	 
+            # Now cross-check at_10m and dpt_10m [and crh_10m and dpd_10m] - no supersaturation allowed!
+            if ((at_10m - dpt_10m) < 0.):
+	        # force 100% rh limit by adjusting at_10m to dpt_10m, preserving humidity???
+	        at_10m = copy.copy(dpt_10m) 
+	        # recalculate affected variables = which will all be at saturation
+                cwb_10m = copy.copy(at_10m)
+                crh_10m = 100.0
+                dpd_10m = 0.   	    	 
+        else:
+            vap_10m = -99.9
+            dpt_10m = -99.9
+            cwb_10m = -99.9	
+            crh_10m = -99.9
+            dpd_10m = -99.9
+
     else:
+        at_10m = -99.9
+        dpt_10m = -99.9
         vap_10m = -99.9
         dpt_10m = -99.9
-        cwb_10m = -99.9	
+        cwb_10m = -99.9     
         crh_10m = -99.9
         dpd_10m = -99.9
-	
+
     # Create a dictionary of the adjusted values
     AdjDict = {'at_10m':at_10m,
       	       'shu_10m':shu_10m,
@@ -518,6 +567,11 @@ def run_iterate_L(sst,at,shu,u,zu,zt,zq,Lmin = -50, Lmax = 50, Lfix = 999):
      - get the height corrections for resolved L - run_heightcorrect_proxyLz0 with Lfix = Lresolved
 
     NOTES:
+    
+    There is sometimes an issue (noted so far for very large negative L) where certain combinations (within 0.002 deg C or 0.002 g/kg)
+    lead to no convergence of L. I have set a limit for 100 iterations. Hopefully L is very large -ve or very large +ve in these cases = NEUTRAL.
+    I have fixed L to the last iteration and exited if so. If L is small but unstable then there is something up so I've exited with L=9999 and u_star=9999
+    
     Test:
     Larr=[]
     #LresB,LresS = hc.run_iterate_L(10.,15.,8.,3.,20.,18.,18.,)
@@ -555,11 +609,14 @@ def run_iterate_L(sst,at,shu,u,zu,zt,zq,Lmin = -50, Lmax = 50, Lfix = 999):
     '''
 
     # Check if sst is missing (it could be) - use at instead (NOT IDEAL!!!! - PROBABLY WANT TO FLAG FOR INCREASED UNCERTAINTY)
-    if ((sst < -60.) | (sst > 60)):
+    # This will make zero height adjustment to temperature
+    if ((sst < -60.) | (sst > 60.)):
         sst = at
 
-    # Check if u is missing (it could be) - use 3m/s instead (NOT IDEAL!!!! - PROBABLY WANT TO FLAG FOR INCREASED UNCERTAINTY)
-    if ((u < 0.) | (u > 100)):
+    # Check if u is missing or very small (it could be) - use 3 or 0.5m/s instead (NOT IDEAL!!!! - PROBABLY WANT TO FLAG FOR INCREASED UNCERTAINTY)
+    if (u < 0.5):
+        u = 0.5
+    elif ((u < 0) | (u > 100)):
         u = 3.
 
     # get an estimated L to start with based on assumed stability (SST vs AT) or given a fixed L
@@ -587,36 +644,36 @@ def run_iterate_L(sst,at,shu,u,zu,zt,zq,Lmin = -50, Lmax = 50, Lfix = 999):
     
     while (abs((Lres - L)) > 0.1):
         
-	print(counter,L,Lres,abs(Lres-L))
+#	print(counter,L,Lres,abs(Lres-L))
 	
 	# replace L with previous Lres value
 	L = copy.copy(Lres)
 
         # Get the Surface values
         u0, t0, q0 = get_surface_values(sst)
-        print("Surface u, t, q: ",u0," ",t0," ",q0)
+#        print("Surface u, t, q: ",u0," ",t0," ",q0)
 	
         # Calculate the stability parameter little_zetau
 	# also calculate the zt/L (little_zetat) and zq/L (littlezetaq)
         little_zetau,little_zetat,little_zetaq = get_little_zeta(zu,zt,zq,L)
-        print("little_zeta: ",little_zetau," ",little_zetat," ",little_zetaq)
+#        print("little_zeta: ",little_zetau," ",little_zetat," ",little_zetaq)
         
         # Calculate the PHIs for zx/L
         PHIm, PHIt, PHIq = get_phis(little_zetau,little_zetat,little_zetaq)
-        print("PHIm, PHIt, PHIq: ",PHIm," ",PHIt," ",PHIq)
+#        print("PHIm, PHIt, PHIq: ",PHIm," ",PHIt," ",PHIq)
         
         # Calculate the PSIs - we need Ym and Yt(same as Yq anyway) for zx/L
         Ym, Yt, Yq = get_psis(little_zetau,little_zetat,little_zetaq,PHIm,PHIt,PHIq)
-        print("Ym, Yt, Yq: ",Ym," ",Yt," ",Yq)
+#        print("Ym, Yt, Yq: ",Ym," ",Yt," ",Yq)
 
         # Calculate the PHIs for 10/L
 	little_zeta10 = little_zetau*(10/zu)
         PHIm10, PHIt10, PHIq10 = get_phis(little_zeta10,little_zeta10,little_zeta10)
-        print("PHIm10, PHIt10, PHIq10: ",PHIm10," ",PHIt10," ",PHIq10)
+#        print("PHIm10, PHIt10, PHIq10: ",PHIm10," ",PHIt10," ",PHIq10)
         
         # Calculate the PSIs - we need Ym and Yt(same as Yq anyway) for zx/L
         Ym10, Yt10, Yq10 = get_psis(little_zeta10,little_zeta10,little_zeta10,PHIm10,PHIt10,PHIq10)
-        print("Ym10, Yt10, Yq10: ",Ym10," ",Yt10," ",Yq10)
+#        print("Ym10, Yt10, Yq10: ",Ym10," ",Yt10," ",Yq10)
 
         # Estimate the roughness length z0_est from u in first instance
         # Very little difference between u and u10n it seems
@@ -633,26 +690,26 @@ def run_iterate_L(sst,at,shu,u,zu,zt,zq,Lmin = -50, Lmax = 50, Lfix = 999):
         # Assumes neutral conditions so Ym = 0 and L can be anything because it is multiplied by Ym which is 0!
         # u_star doesn't make very much difference to u10n which isn't very different to u
         u10n = get_heightcorrected(u,u_star_est,k,zu,0,1000.,0)
-        print("u10n: ",u10n)
+#        print("u10n: ",u10n)
         
         # Calculate the roughness length z0 from u10n 
         # Very little difference between u and u10n it seems
         z0 = get_roughness_length(u10n)
-        print("z0_est: ",z0_est," z0: ",z0)
+#        print("z0_est: ",z0_est," z0: ",z0)
 
         # Calculate the Coefficient of drag Cd
         Cd = get_coefficient_drag(k,zu,z0,Ym,L)
-        print("Cd_est: ",Cd_est," Cd: ",Cd,)
+#        print("Cd_est: ",Cd_est," Cd: ",Cd,)
 
         # Calculate friction velocity u* from Cd and u
         u_star = get_bretherton_u_star(Cd,u)
         other_u_star = get_value_star(k,zu,z0,Ym,u,u0)
-        print("u_star_est: ",u_star_est," u_star: ",u_star," other_u_star: ",other_u_star) # Ooooh - u_star == other_u_star !!! to at least 8 sig figures!
+#        print("u_star_est: ",u_star_est," u_star: ",u_star," other_u_star: ",other_u_star) # Ooooh - u_star == other_u_star !!! to at least 8 sig figures!
 
         # Calculate the Coefficient of heat Ch
         zt0 = 0.001 # I think the zt in this equation is the zt0 equivalent of z0 - neutral stability heat transfer coeffieient Smith 1988 
         Ch = get_coefficient_heat(k,zu,z0,Ym,L,zt,zt0,Yt) # could use zt or zq here as both should be the same
-        print("Ch: ",Ch)
+#        print("Ch: ",Ch)
         
         # Calculate the virtual temperature and print
         vt = get_vt(at,shu)
@@ -667,19 +724,32 @@ def run_iterate_L(sst,at,shu,u,zu,zt,zq,Lmin = -50, Lmax = 50, Lfix = 999):
         # Not setting z0t = 0.001 # neutral stability heat transfer coeffieient Smith 1988
         vpt0 = get_vpt_surf(t0,q0,0.)
         
-        print("vt, vt0, vpt, vpt0: ",vt," ",vt0," ",vpt," ",vpt0)
+#        print("vt, vt0, vpt, vpt0: ",vt," ",vt0," ",vpt," ",vpt0)
         
         # Calculate the surface buoyancy flux B0
-#        B0 = get_buoyancy_flux(Ch,u,vpt0, vpt)  
+        #B0 = get_buoyancy_flux(Ch,u,vpt0, vpt)  
         B0 = get_buoyancy_flux(Ch,u,vt0,vt)  
-        print("B0: ",B0)
+#        print("B0: ",B0)
         
         # Calculate the Monin-Obukov length
-#        Lres = get_MO_length(u_star,k,B0,vpt)    
+        #Lres = get_MO_length(u_star,k,B0,vpt)    
         Lres = get_MO_length(u_star,k,B0,vt)    
-	print("Lres: ",Lres)
+#	print("Lres: ",Lres)
 	
 	counter = counter + 1
+	
+	# Have a check to make sure this doesn't get stuck in an infinite loop
+	# If abs(L) is VERY LARGE then exit as we are = very large L = very small little_zeta = close to NEUTRAL
+	# If abs(L) is very small then it should have converged around zero anyway but force a fall over
+	if (counter > 100):
+	    if (abs(L) > 500):
+	        break		
+	    else:
+	        # Exit loop and return some nonsense to make sure that the mother program knows somethign is awry
+		L = 9999.
+		u_star = 9999.
+		break
+			 
 	#pdb.set_trace()
 	
     # Return the values required for the height correction
@@ -958,7 +1028,7 @@ def get_surface_values(sst):
     	
     t0 = sst
     
-    q0 = 0.98*(ch.sh(sst,sst,1013.0)) # ideally would use the climslp but annoying to read in and match up and OBS slp not always there
+    q0 = 0.98*(ch.sh(sst,sst,1013.0,roundit=False)) # ideally would use the climslp but annoying to read in and match up and OBS slp not always there
 
     return u0,t0,q0
 

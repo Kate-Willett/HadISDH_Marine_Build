@@ -24,13 +24,17 @@ equation is used.
 ALL NUMBERS ARE RETURNED TO ONE SIGNIFICANT DECIMAL FIGURE.
 
 THIS ROUTINE CANNOT COPE WITH MISSING DATA
+
+THIS ROUTINE HAS a roundit=True/False. The default is True - round to one decimal place.
+Otherwise - set roundit=False
+
 '''
 
 import numpy as np
 import math
 
 #******************************************************************************
-def vap(td,t,p):
+def vap(td,t,p,roundit=True):
     '''
     This function calculates a vapour pressure scalar or array
     from a scalar or array of dew point temperature and returns it.
@@ -79,11 +83,14 @@ def vap(td,t,p):
     if (w <= 0.0):
         f = 1 + (3.*(10**(-4.))) + ((4.18*(10**(-6.)))*p)
         e = 6.1115*f*np.exp(((23.036 - (td/333.7))*td) / (279.82+td))
+	
+    if (roundit == True):
+        e = round(e*10)/10.	
 	     
-    return round(e*10.)/10.
+    return e
 
 #***************************************************************************
-def vap_from_sh(sh,p):
+def vap_from_sh(sh,p,roundit=True):
     '''
     This function calculates a vapour pressure scalar or array
     from a scalar or array of specific humidity and pressure and returns it.
@@ -111,11 +118,14 @@ def vap_from_sh(sh,p):
     e = None
 
     e = ((sh/1000.) * p) / (0.622 + (0.378 * (sh/1000.)))
-	     
-    return round(e*10.)/10.
+
+    if (roundit == True):
+        e = round(e*10.)/10.	 
+	    
+    return e
 
 #****************************************************************************	
-def sh(td,t,p):
+def sh(td,t,p,roundit=True):
     '''
     This function calculates a specific humidity scalar or array
     from a scalar or array of vapour pressure and returns it.
@@ -162,11 +172,50 @@ def sh(td,t,p):
         e = 6.1115*f*np.exp(((23.036 - (td/333.7))*td) / (279.82+td))
 
     q = 1000.*((0.622*e) / (p - ((1 - 0.622)*e)))
+
+    if (roundit == True):
+        q = round(q*10.)/10.
 	
-    return round(q*10.)/10.
+    return q
 
 #*******************************************************************************
-def rh(td,t,p):
+def sh_from_vap(e,p,roundit=True):
+    '''
+    This function calculates a specific humidity scalar or array
+    from a scalar or array of vapour pressure and returns it.
+    It requires a sea (station actually but sea level ok for marine data)
+    level pressure value. This can be a scalar or an array, even if vapour 
+    pressure is an array (CHECK).   
+    
+    Inputs:	
+    e = vapour pressure in hPa (array or scalar)    
+    p = pressure at observation level in hPa (array or scalar - can be scalar even if others are arrays)
+    	GIVES: e = vapour pressure in hPa (array or scalar) - see vap()
+	
+    Outputs:
+    q = specific humidity in g/kg (array or scalar)
+	
+    Ref:
+    Peixoto & Oort, 1996, Ross & Elliott, 1996
+    Peixoto, J. P. and Oort, A. H.: The climatology of relative humidity in the atmosphere, J. 
+    Climate, 9, 3443?3463, 1996.
+
+    TESTED!
+    sh = sh(10.,15.,1013.)
+    sh = 7.6
+
+    '''
+    q = None
+
+    q = 1000.*((0.622*e) / (p - ((1 - 0.622)*e)))
+
+    if (roundit == True):
+        q = round(q*10.)/10.    
+    	
+    return q
+
+#*******************************************************************************
+def rh(td,t,p,roundit=True):
     '''
     This function calculates a relative humidity scalar or array
     from a scalar or array of vapour pressure and temperature and returns 
@@ -235,10 +284,13 @@ def rh(td,t,p):
 	     	
     r = (e / es)*100.
 
-    return round(r*10.)/10.
+    if (roundit == True):
+        r = round(r*10.)/10.
+	
+    return r 
 
 #**************************************************************************	
-def wb(td,t,p):
+def wb(td,t,p,roundit=True):
     '''
     This function calculates a wet bulb temperature scalar or array
     from a scalar or array of vapour pressure and temperature and
@@ -296,10 +348,13 @@ def wb(td,t,p):
 
     w = (((a*t) + (b*td)) / (a + b))
 
-    return round(w*10.)/10.
+    if (roundit == True):
+        w = round(w*10.)/10.
+	
+    return w 
 
 #*********************************************************************
-def dpd(td,t):
+def dpd(td,t,roundit=True):
     '''
     This function calculates a dew point depression scalar or array
     from a scalar or array of temperature and dew point temperature and returns it.
@@ -321,11 +376,14 @@ def dpd(td,t):
     dp = None
 
     dp = t - td
-	
-    return round(dp*10.)/10.
+
+    if (roundit == True):
+        dp = round(dp*10.)/10.
+		
+    return dp 
 
 #*********************************************************************
-def td_from_vap(e,p,t):
+def td_from_vap(e,p,t,roundit=True):
     '''
     This function calculates a dew point depression scalar or array
     from a scalar or array of vapour pressure and pressure and returns it.
@@ -381,5 +439,8 @@ def td_from_vap(e,p,t):
         c = (279.82 * 333.7 * np.log(e / (6.1115 * f)))
 
         td = (-b - np.sqrt(b**2 - (4 * a * c))) / (2 * a)
-    
-    return round(td*10.)/10.
+
+    if (roundit == True):
+        td = round(td*10.)/10.
+	    
+    return td
