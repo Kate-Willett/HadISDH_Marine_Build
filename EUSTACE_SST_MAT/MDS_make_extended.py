@@ -96,7 +96,12 @@
 # All uncertainties are presented as 1sigma
 # Individual uncertainties are assessed on the adjustment applied to the tbc (total bias corrected) value because this is the one we will use/
 # The uncertainties have NOT been assessed for when the adjustment is applied to the original value in isolation of the other adjustments!!!
-#  
+# Just noticed some proper screwy values AT = 99.5 in Jan 1982 ob 44650. These should REALLY be kicked out
+# in the make_and_full_qc.py so I will add a check in that to kick out AT and DPT < -80 > 65. For now though,
+# this needs to be caught - should have failed QC (but will be included in warts and all!
+# I've also added a check for SHU = 0.0 as over ocean this isn't really possible. Even if it is, it totally
+# screws with the corrections as we get /0.0 in some cases. 
+#
 # -----------------------
 # LIST OF MODULES
 # -----------------------
@@ -160,7 +165,6 @@ import math
 from netCDF4 import Dataset
 import pdb # pdb.set_trace() or c 
 
-from LinearTrends import MedianPairwise 
 import HeightCorrect as hc
 import CalcHums as ch
 import MDS_RWtools as mrw
@@ -170,6 +174,186 @@ SLPClimFilee = '/project/hadobs2/hadisdh/marine/otherdata/p2m_pentad_1by1marine_
 #***********************************************************************************
 # FUNCTIONS
 #***********************************************************************************
+# FillABad
+#***********************************************************************************
+def FillABad(ExtDict,UncDict,Counter):
+    ''' 
+    This is some temporary code to catch silly values:
+        AT < -80 or AT > 65
+	DPT < -80 or DPT > 65
+	SHU == 0.0 (actually to be sure I've done int(round(SHU*10)) == 0
+    This fills in 0.0s for all uncertainties and the original value for all others
+    '''
+    
+    # Fill VARslr
+    ExtDict['ATslr'].append(ExtDict['AT'][Counter])
+    ExtDict['ATAslr'].append(ExtDict['ATA'][Counter])
+    ExtDict['DPTslr'].append(ExtDict['DPT'][Counter])
+    ExtDict['DPTAslr'].append(ExtDict['DPTA'][Counter])
+    ExtDict['SHUslr'].append(ExtDict['SHU'][Counter])
+    ExtDict['SHUAslr'].append(ExtDict['SHUA'][Counter])
+    ExtDict['VAPslr'].append(ExtDict['VAP'][Counter])
+    ExtDict['VAPAslr'].append(ExtDict['VAPA'][Counter])
+    ExtDict['CRHslr'].append(ExtDict['CRH'][Counter])
+    ExtDict['CRHAslr'].append(ExtDict['CRHA'][Counter])
+    ExtDict['CWBslr'].append(ExtDict['CWB'][Counter])
+    ExtDict['CWBAslr'].append(ExtDict['CWBA'][Counter])
+    ExtDict['DPDslr'].append(ExtDict['DPD'][Counter])
+    ExtDict['DPDAslr'].append(ExtDict['DPDA'][Counter])
+    
+    # Fill VARscn
+    ExtDict['ATscn'].append(ExtDict['AT'][Counter])
+    ExtDict['ATAscn'].append(ExtDict['ATA'][Counter])
+    ExtDict['DPTscn'].append(ExtDict['DPT'][Counter])
+    ExtDict['DPTAscn'].append(ExtDict['DPTA'][Counter])
+    ExtDict['SHUscn'].append(ExtDict['SHU'][Counter])
+    ExtDict['SHUAscn'].append(ExtDict['SHUA'][Counter])
+    ExtDict['VAPscn'].append(ExtDict['VAP'][Counter])
+    ExtDict['VAPAscn'].append(ExtDict['VAPA'][Counter])
+    ExtDict['CRHscn'].append(ExtDict['CRH'][Counter])
+    ExtDict['CRHAscn'].append(ExtDict['CRHA'][Counter])
+    ExtDict['CWBscn'].append(ExtDict['CWB'][Counter])
+    ExtDict['CWBAscn'].append(ExtDict['CWBA'][Counter])
+    ExtDict['DPDscn'].append(ExtDict['DPD'][Counter])
+    ExtDict['DPDAscn'].append(ExtDict['DPDA'][Counter])
+    
+    # Fill VARhc
+    ExtDict['AThc'].append(ExtDict['AT'][Counter])
+    ExtDict['ATAhc'].append(ExtDict['ATA'][Counter])
+    ExtDict['DPThc'].append(ExtDict['DPT'][Counter])
+    ExtDict['DPTAhc'].append(ExtDict['DPTA'][Counter])
+    ExtDict['SHUhc'].append(ExtDict['SHU'][Counter])
+    ExtDict['SHUAhc'].append(ExtDict['SHUA'][Counter])
+    ExtDict['VAPhc'].append(ExtDict['VAP'][Counter])
+    ExtDict['VAPAhc'].append(ExtDict['VAPA'][Counter])
+    ExtDict['CRHhc'].append(ExtDict['CRH'][Counter])
+    ExtDict['CRHAhc'].append(ExtDict['CRHA'][Counter])
+    ExtDict['CWBhc'].append(ExtDict['CWB'][Counter])
+    ExtDict['CWBAhc'].append(ExtDict['CWBA'][Counter])
+    ExtDict['DPDhc'].append(ExtDict['DPD'][Counter])
+    ExtDict['DPDAhc'].append(ExtDict['DPDA'][Counter])
+    
+    # Fill VARtbc (Unc only, Ext already set)
+    UncDict['ATtbc'].append(ExtDict['AT'][Counter])
+    UncDict['ATAtbc'].append(ExtDict['ATA'][Counter])
+    UncDict['DPTtbc'].append(ExtDict['DPT'][Counter])
+    UncDict['DPTAtbc'].append(ExtDict['DPTA'][Counter])
+    UncDict['SHUtbc'].append(ExtDict['SHU'][Counter])
+    UncDict['SHUAtbc'].append(ExtDict['SHUA'][Counter])
+    UncDict['VAPtbc'].append(ExtDict['VAP'][Counter])
+    UncDict['VAPAtbc'].append(ExtDict['VAPA'][Counter])
+    UncDict['CRHtbc'].append(ExtDict['CRH'][Counter])
+    UncDict['CRHAtbc'].append(ExtDict['CRHA'][Counter])
+    UncDict['CWBtbc'].append(ExtDict['CWB'][Counter])
+    UncDict['CWBAtbc'].append(ExtDict['CWBA'][Counter])
+    UncDict['DPDtbc'].append(ExtDict['DPD'][Counter])
+    UncDict['DPDAtbc'].append(ExtDict['DPDA'][Counter])
+    
+    # Fill VARuncT
+    UncDict['ATuncT'].append(0.0)
+    UncDict['ATAuncT'].append(0.0)
+    UncDict['DPTuncT'].append(0.0)
+    UncDict['DPTAuncT'].append(0.0)
+    UncDict['SHUuncT'].append(0.0)
+    UncDict['SHUAuncT'].append(0.0)
+    UncDict['VAPuncT'].append(0.0)
+    UncDict['VAPAuncT'].append(0.0)
+    UncDict['CRHuncT'].append(0.0)
+    UncDict['CRHAuncT'].append(0.0)
+    UncDict['CWBuncT'].append(0.0)
+    UncDict['CWBAuncT'].append(0.0)
+    UncDict['DPDuncT'].append(0.0)
+    UncDict['DPDAuncT'].append(0.0)
+    	
+    # Fill VARuncSLR
+    UncDict['ATuncSLR'].append(0.0)
+    UncDict['ATAuncSLR'].append(0.0)
+    UncDict['DPTuncSLR'].append(0.0)
+    UncDict['DPTAuncSLR'].append(0.0)
+    UncDict['SHUuncSLR'].append(0.0)
+    UncDict['SHUAuncSLR'].append(0.0)
+    UncDict['VAPuncSLR'].append(0.0)
+    UncDict['VAPAuncSLR'].append(0.0)
+    UncDict['CRHuncSLR'].append(0.0)
+    UncDict['CRHAuncSLR'].append(0.0)
+    UncDict['CWBuncSLR'].append(0.0)
+    UncDict['CWBAuncSLR'].append(0.0)
+    UncDict['DPDuncSLR'].append(0.0)
+    UncDict['DPDAuncSLR'].append(0.0)
+
+    # Fill VARuncSCN
+    UncDict['ATuncSCN'].append(0.0)
+    UncDict['ATAuncSCN'].append(0.0)
+    UncDict['DPTuncSCN'].append(0.0)
+    UncDict['DPTAuncSCN'].append(0.0)
+    UncDict['SHUuncSCN'].append(0.0)
+    UncDict['SHUAuncSCN'].append(0.0)
+    UncDict['VAPuncSCN'].append(0.0)
+    UncDict['VAPAuncSCN'].append(0.0)
+    UncDict['CRHuncSCN'].append(0.0)
+    UncDict['CRHAuncSCN'].append(0.0)
+    UncDict['CWBuncSCN'].append(0.0)
+    UncDict['CWBAuncSCN'].append(0.0)
+    UncDict['DPDuncSCN'].append(0.0)
+    UncDict['DPDAuncSCN'].append(0.0)
+
+    # Fill VARuncHGT
+    UncDict['ATuncHGT'].append(0.0)
+    UncDict['ATAuncHGT'].append(0.0)
+    UncDict['DPTuncHGT'].append(0.0)
+    UncDict['DPTAuncHGT'].append(0.0)
+    UncDict['SHUuncHGT'].append(0.0)
+    UncDict['SHUAuncHGT'].append(0.0)
+    UncDict['VAPuncHGT'].append(0.0)
+    UncDict['VAPAuncHGT'].append(0.0)
+    UncDict['CRHuncHGT'].append(0.0)
+    UncDict['CRHAuncHGT'].append(0.0)
+    UncDict['CWBuncHGT'].append(0.0)
+    UncDict['CWBAuncHGT'].append(0.0)
+    UncDict['DPDuncHGT'].append(0.0)
+    UncDict['DPDAuncHGT'].append(0.0)
+
+    # Fill VARuncM
+    UncDict['ATuncM'].append(0.0)
+    UncDict['ATAuncM'].append(0.0)
+    UncDict['DPTuncM'].append(0.0)
+    UncDict['DPTAuncM'].append(0.0)
+    UncDict['SHUuncM'].append(0.0)
+    UncDict['SHUAuncM'].append(0.0)
+    UncDict['VAPuncM'].append(0.0)
+    UncDict['VAPAuncM'].append(0.0)
+    UncDict['CRHuncM'].append(0.0)
+    UncDict['CRHAuncM'].append(0.0)
+    UncDict['CWBuncM'].append(0.0)
+    UncDict['CWBAuncM'].append(0.0)
+    UncDict['DPDuncM'].append(0.0)
+    UncDict['DPDAuncM'].append(0.0)
+
+    # Fill VARuncR
+    UncDict['ATuncR'].append(0.0)
+    UncDict['ATAuncR'].append(0.0)
+    UncDict['DPTuncR'].append(0.0)
+    UncDict['DPTAuncR'].append(0.0)
+    UncDict['SHUuncR'].append(0.0)
+    UncDict['SHUAuncR'].append(0.0)
+    UncDict['VAPuncR'].append(0.0)
+    UncDict['VAPAuncR'].append(0.0)
+    UncDict['CRHuncR'].append(0.0)
+    UncDict['CRHAuncR'].append(0.0)
+    UncDict['CWBuncR'].append(0.0)
+    UncDict['CWBAuncR'].append(0.0)
+    UncDict['DPDuncR'].append(0.0)
+    UncDict['DPDAuncR'].append(0.0)
+    
+    # Fill ESTE and ESTH (Unc and Ext)
+    ExtDict['ESTE'].append('XXX')
+    UncDict['ESTE'].append('XXX')
+    ExtDict['ESTH'].append(-999.)
+    UncDict['ESTH'].append(-999.)
+
+    return ExtDict,UncDict
+
+#***********************************************************************************	
 # GetClimSLP
 #***********************************************************************************
 def GetClimSLP(SLPField,TheLat,TheLon,TheMonth,TheDay):
@@ -203,6 +387,7 @@ def GetClimSLP(SLPField,TheLat,TheLon,TheMonth,TheDay):
     #leap years.
     if TheMonth == 2 and TheDay == 29:
     # INTERESTING - I USUALLY MAKE FeB 29th FEB 28th but John's MDS Goes Mar 1st instead!!!
+    # Same result though - becomes pentad 11 (12!)
         TheMonth = 3
         TheDay = 1
     pentad = -99	
@@ -216,7 +401,8 @@ def GetClimSLP(SLPField,TheLat,TheLon,TheMonth,TheDay):
 	if (pentad > -99):
 	    break    
 
-    pentad = pentad + 1
+# Actually we want 0 to 72 not 1 to 73!
+#    pentad = pentad + 1
     
     # Extract SLP
     ClimSLP = SLPField[pentad,lat,lon]
@@ -596,10 +782,10 @@ def ApplyHeightAdjUnc(ExtDict,UncDict,Counter,ClimP):
     '''
     
     # Prescribed heights (of thermomenters and anemometers) for buoys and platforms
-    PBuoy = 4
-    PBuoyHOA = 5
-    PPlatform = 20
-    PPlatformHOA = 30
+    PBuoy = 4.
+    PBuoyHOA = 5.
+    PPlatform = 20.
+    PPlatformHOA = 30.
     
     # Parameters (gradients and intercept) for HOA and HOP linear equations
     HOAGradPre2004 = 0.502
@@ -614,7 +800,7 @@ def ApplyHeightAdjUnc(ExtDict,UncDict,Counter,ClimP):
     EdHeight = 24.
     StYr = 1973 # assume January
     EdYr = 2007 # assume December 2006 so 2007 gives correct NYrs and better for testing which year later.
-    MnInc = (EdHeight / StHeight) / (((EdYr) - StYr) * 12) # should be ~0.2
+    MnInc = (EdHeight / StHeight) / (((EdYr) - StYr) * 12.) # should be ~0.2
     
     # FIRST SORT OUT THE HEIGHT (m) OR ESTIMATED HEIGHT
     # We also need to estimate HOA if it doesn't exist
@@ -625,32 +811,34 @@ def ApplyHeightAdjUnc(ExtDict,UncDict,Counter,ClimP):
     actual_height = 0.1 # actual height
     estimated_height =  0.5 # estimated height (ship) or prescribed height (buoy/platform)
 
+    # ENSURE THAT ESTH IS A FLOAT
+
     # Choice 1. If HOB or HOT exists then use this - UNLESS THEY ARE SILLY (< 2m)
     if (ExtDict['HOT'][Counter] > 2.):
         # Fill in (append) the Estimated Height accordingly
-	ExtDict['ESTH'].append(ExtDict['HOT'][Counter])
-	UncDict['ESTH'].append(ExtDict['HOT'][Counter])
+	ExtDict['ESTH'].append(float(ExtDict['HOT'][Counter]))
+	UncDict['ESTH'].append(float(ExtDict['HOT'][Counter]))
 	unc_estimate = actual_height
     # Choice 2. If HOB or HOT exists then use this - UNLESS THEY ARE SILLY (< 2m)
     elif (ExtDict['HOB'][Counter] > 2.):
         # Fill in (append) the Estimated Height accordingly
-	ExtDict['ESTH'].append(ExtDict['HOB'][Counter])
-	UncDict['ESTH'].append(ExtDict['HOB'][Counter])
+	ExtDict['ESTH'].append(float(ExtDict['HOB'][Counter]))
+	UncDict['ESTH'].append(float(ExtDict['HOB'][Counter]))
 	unc_estimate = actual_height
     # Choice 3. If its PT is not a ship (0 to 5) then apply the set height
     elif (ExtDict['PT'][Counter] > 5):
         # If its a buoy apply height of 4m http://www.ndbc.noaa.gov/bht.shtml
 	if ((ExtDict['PT'][Counter] == 6) | (ExtDict['PT'][Counter] == 8)):
             # Fill in (append) the Estimated Height accordingly
-	    ExtDict['ESTH'].append(PBuoy)
-	    UncDict['ESTH'].append(PBuoy)
-	    HOA = PBuoyHOA # http://www.ndbc.noaa.gov/bht.shtml
+	    ExtDict['ESTH'].append(float(PBuoy))
+	    UncDict['ESTH'].append(float(PBuoy))
+	    HOA = float(PBuoyHOA) # http://www.ndbc.noaa.gov/bht.shtml
 	    unc_estimate = estimated_height
 	else:
             # Fill in (append) the Estimated Height accordingly
-	    ExtDict['ESTH'].append(PPlatform)
-	    UncDict['ESTH'].append(PPlatform)
-	    HOA = PPlatformHOA
+	    ExtDict['ESTH'].append(float(PPlatform))
+	    UncDict['ESTH'].append(float(PPlatform))
+	    HOA = float(PPlatformHOA)
 	    unc_estimate = estimated_height
     # Choice 4. If HOA is available then estimate - UNLESS THEY ARE SILLY (< 2m)
     elif (ExtDict['HOA'][Counter] > 2.):
@@ -658,55 +846,55 @@ def ApplyHeightAdjUnc(ExtDict,UncDict,Counter,ClimP):
         # If the year is earlier than 2004
 	if (ExtDict['YR'][Counter] < 2004):
             # Fill in (append) the Estimated Height accordingly
-	    ExtDict['ESTH'].append(HOAGradPre2004 * ExtDict['HOA'][Counter] + HOAIntCPre2004)
-	    UncDict['ESTH'].append(HOAGradPre2004 * ExtDict['HOA'][Counter] + HOAIntCPre2004)
+	    ExtDict['ESTH'].append(float(HOAGradPre2004 * ExtDict['HOA'][Counter] + HOAIntCPre2004))
+	    UncDict['ESTH'].append(float(HOAGradPre2004 * ExtDict['HOA'][Counter] + HOAIntCPre2004))
 	    unc_estimate = estimated_height
 	else:
             # Fill in (append) the Estimated Height accordingly
-	    ExtDict['ESTH'].append(HOAGradPost2004 * ExtDict['HOA'][Counter] + HOAIntCPost2004)
-	    UncDict['ESTH'].append(HOAGradPost2004 * ExtDict['HOA'][Counter] + HOAIntCPost2004)
+	    ExtDict['ESTH'].append(float(HOAGradPost2004 * ExtDict['HOA'][Counter] + HOAIntCPost2004))
+	    UncDict['ESTH'].append(float(HOAGradPost2004 * ExtDict['HOA'][Counter] + HOAIntCPost2004))
 	    unc_estimate = estimated_height   
     # Choice 5. If HOP is available then estimate - UNLESS THEY ARE SILLY (< 2m)
     elif (ExtDict['HOP'][Counter] > 2.):
         # Fill in (append) the Estimated Height accordingly
-	ExtDict['ESTH'].append(HOPGrad * ExtDict['HOP'][Counter] + HOPIntC)
-	UncDict['ESTH'].append(HOPGrad * ExtDict['HOP'][Counter] + HOPIntC)
+	ExtDict['ESTH'].append(float(HOPGrad * ExtDict['HOP'][Counter] + HOPIntC))
+	UncDict['ESTH'].append(float(HOPGrad * ExtDict['HOP'][Counter] + HOPIntC))
 	unc_estimate = estimated_height
 	# In this case HOA will need to be set base on backwards calculations from ESTH
 	if (ExtDict['YR'][Counter] >= 2007):
-	    HOA = EdHeight+10
+	    HOA = float(EdHeight+10.)
         # if YR < 1973 then apply fixed height StHeight
 	elif (ExtDict['YR'][Counter] < 1973): # There aren't any years before this but maybe in the future?    
-	    HOA = StHeight+10
+	    HOA = float(StHeight+10.)
 	# Work out StHeight+MnInc depending on YR and MN
 	else:
 	    NMonths = ((ExtDict['YR'][Counter] - StYr) * 12) + ExtDict['MO'][Counter]
-	    HOA = StHeight + (NMonths * MnInc) + 10	
+	    HOA = float(StHeight + (NMonths * MnInc) + 10.)	
     # Choice 6. Presscirbe a height based on YR and MN (there should only be ships left by now
     else:
         # In this case HOA will also need to be set based on backwards calculations from ESTH
         # if YR >= 2007 then apply fixed height EdHeight
 	if (ExtDict['YR'][Counter] >= 2007):
 	    # Fill in (append) the Estimated Height accordingly
-	    ExtDict['ESTH'].append(EdHeight)
-	    UncDict['ESTH'].append(EdHeight)
+	    ExtDict['ESTH'].append(float(EdHeight))
+	    UncDict['ESTH'].append(float(EdHeight))
 	    unc_estimate = estimated_height
-	    HOA = EdHeight+10
+	    HOA = float(EdHeight+10.)
         # if YR < 1973 then apply fixed height StHeight
 	elif (ExtDict['YR'][Counter] < 1973): # There aren't any years before this but maybe in the future?    
 	    # Fill in (append) the Estimated Height accordingly
-	    ExtDict['ESTH'].append(StHeight)
-	    UncDict['ESTH'].append(StHeight)
+	    ExtDict['ESTH'].append(float(StHeight))
+	    UncDict['ESTH'].append(float(StHeight))
 	    unc_estimate = estimated_height
-	    HOA = StHeight+10
+	    HOA = float(StHeight+10.)
 	# Work out StHeight+MnInc depending on YR and MN
 	else:
 	    NMonths = ((ExtDict['YR'][Counter] - StYr) * 12) + ExtDict['MO'][Counter]
 	    # Fill in (append) the Estimated Height accordingly
-	    ExtDict['ESTH'].append(StHeight + (NMonths * MnInc))
-	    UncDict['ESTH'].append(StHeight + (NMonths * MnInc))
+	    ExtDict['ESTH'].append(float(StHeight + (NMonths * MnInc)))
+	    UncDict['ESTH'].append(float(StHeight + (NMonths * MnInc)))
 	    unc_estimate = estimated_height
-	    HOA = StHeight + (NMonths * MnInc) + 10	
+	    HOA = float(StHeight + (NMonths * MnInc) + 10.)	
 	    
     # NOW obtain the height correction for AT and SHU (USING SST, U, ClimP and ESTH) and also for the other variables
     # Do not need to pull through the HeightDict so use _
@@ -732,6 +920,9 @@ def ApplyHeightAdjUnc(ExtDict,UncDict,Counter,ClimP):
 					      
     # Double check to make sure some sensible values have come out - in some cases there is non-convergence where height cannot be adjusted.
     # In these cases - apply no height correction. Uncertainty should be large but I'm not sure what to set it to - have not set it for now!
+    # In other cases where SHU is VERY small to begin with (most likely screwy!) e.g. Jan 1973 ob 145622 shu = 0.1 this leads to -ve adjusted values
+    # and NaNs. I have added a catch for this in HeightCorrect.py so it now returns -99,9 in those cases.
+    # In other cases where AT is >>40 but SST ~8 (e.g. April 1974 ob 118659) we have at_10m>100! We can't have that!
     if (AdjDict['at_10m'] > -99.):
         # Then append the new adjusted variables, apply to the anomalies - NO uncertainty estimate to hc only!!! only assessing for tbc!!!
         ExtDict['AThc'].append(AdjDict['at_10m'])
@@ -785,6 +976,9 @@ def ApplyHeightAdjUnc(ExtDict,UncDict,Counter,ClimP):
 					      climp=ClimP)
     # Double check to make sure some sensible values have come out - in some cases there is non-convergence where height cannot be adjusted.
     # In these cases - apply no height correction. Uncertainty should be large but I'm not sure what to set it to - have not set it for now!
+    # In other cases where SHU is VERY small to begin with (most likely screwy!) e.g. Jan 1973 ob 145622 shu = 0.1 this leads to -ve adjusted values
+    # and NaNs. I have added a catch for this in HeightCorrect.py so it now returns -99,9 in those cases.
+    # In other cases where AT is >>40 but SST ~8 (e.g. April 1974 ob 118659) we have at_10m>100! We can't have that!
     if (AdjDict['at_10m'] > -99.):					      
         # Now copy the new adjustments to VARtbc, apply to the anomalies, and obtain the uncertainty estimate on the adjustment applied
         # Anomalies need to be sorted out first
@@ -869,10 +1063,10 @@ def ApplyMeasUnc(UncDict,Counter,ClimP):
 
     '''
     # AT bins to guide uncertainty in terms of RH
-    t_bins = [-40,-30,-20,-10,0,10,20,30,40,50,100]	# degrees C
+    t_bins = np.array([-40,-30,-20,-10,0,10,20,30,40,50,100])	# degrees C
     
     # 1 sigma uncertainty in RH corresponding to t_bins
-    rh_unc_bins = [15,15,15,10,5,2.75,1.8,1.35,1.1,0.95,0.8] 
+    rh_unc_bins = np.array([15,15,15,10,5,2.75,1.8,1.35,1.1,0.95,0.8]) 
 
     # 1 sigma uncertainty in AT
     t_unc = 0.2
@@ -1214,13 +1408,27 @@ def main(argv):
 	    
 	    # Set up TheUncDict to fill/append - provide TheExtDict to fill in metadata
 	    TheUncDict = mrw.MakeUncDict(TheExtDict)
-	    pdb.set_trace()
+#	    pdb.set_trace()
 	    
             # BIAS CORRECTIONS
             # Loop through each ob
 	    for oo in range(nobs):
-	    
+	        
+		# FIRST CHECK THE OB IS VALID OR IT WILL SCREW UP THINGS BIG TIME.
+		# THESE BAD OBS SHOULD BE REMOVED DURING QC (AND WILL BE IN FUTURE RUNS!!!)
+		# e.g., Jan 1982 ob 44450 AT =99.5
+		# ALSO some SHU == 0.0 which is highly unlikely over ocean and totally
+		# screws with the adjustments so have also screend for these
+		if ((TheExtDict['AT'][oo] < -80.) | (TheExtDict['AT'][oo] > 65.) | 
+		    (TheExtDict['DPT'][oo] < -80) | (TheExtDict['DPT'][oo] > 65.) |
+		    (int(round(TheExtDict['SHU'][oo]*10.)) == 0)):
+		    # Fill in everything as an empty and then move to next iteration of the loop
+		    TheExtDict,TheUncDict = FillABad(TheExtDict,TheUncDict,oo)
+		    print("Found a Screwy! ",oo,TheExtDict['AT'][oo],TheExtDict['DPT'][oo],TheExtDict['SHU'][oo])
+		    continue
+		
 	        # Pull out the nearest 1x1 pentad climatological SLP for this ob
+		#print(oo,TheExtDict['LAT'][oo],TheExtDict['LON'][oo],TheExtDict['MO'][oo],TheExtDict['DY'][oo])
 		ClimP = GetClimSLP(SLPField,TheExtDict['LAT'][oo],TheExtDict['LON'][oo],TheExtDict['MO'][oo],TheExtDict['DY'][oo])
 		
                 # Pretend to apply a solar corrections - this may be applied later.
@@ -1287,6 +1495,9 @@ def main(argv):
 		TheUncDict['DPDAtbc'].append(TheExtDict['DPDAtbc'][oo])
 		
 		# Measurement Uncertainty - apply as for HadISDH.land---------------------------------------------------------------------------------
+#	        if (oo >= 111300):
+#                    print(oo,TheExtDict['ATtbc'][oo])
+#		    pdb.set_trace()
 		TheUncDict = ApplyMeasUnc(TheUncDict,oo,ClimP)
 #		# TEST
 #		print("Test Output uncM: ",oo)
@@ -1322,7 +1533,8 @@ def main(argv):
 #		print("Test Output uncT: ",oo)
 #		print(TheUncDict['ATuncT'][oo],TheUncDict['DPTuncT'][oo],TheUncDict['SHUuncT'][oo],TheUncDict['VAPuncT'][oo],TheUncDict['CRHuncT'][oo],TheUncDict['CWBuncT'][oo],TheUncDict['DPDuncT'][oo])
 #		print(TheUncDict['ATAuncT'][oo],TheUncDict['DPTAuncT'][oo],TheUncDict['SHUAuncT'][oo],TheUncDict['VAPAuncT'][oo],TheUncDict['CRHAuncT'][oo],TheUncDict['CWBAuncT'][oo],TheUncDict['DPDAuncT'][oo])
-#	        pdb.set_trace()
+#	        if (oo == 145621):
+#		    pdb.set_trace()
 
             # Make sure typee is now BC instead of NBC
 	    newtypee = typee[0:7]+typee[8:]

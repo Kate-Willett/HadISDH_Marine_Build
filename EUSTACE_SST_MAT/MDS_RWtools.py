@@ -673,7 +673,7 @@ def ReadData(FileName,typee,delimee):
     ''' Need to specify format as it is complex '''
     ''' outputs an array of tuples that in turn need to be subscripted by their names defaults f0...f8 '''
 
-    return np.genfromtxt(FileName, dtype=typee,delimiter=delimee) # ReadData
+    return np.genfromtxt(FileName, dtype=typee,delimiter=delimee,comments=False) # ReadData
 
 #************************************************************************
 # WriteMDSstandard
@@ -930,7 +930,7 @@ def WriteMDSextended(TheYear,TheMonth,TheType,MDSDict):
 			"{:5d}".format(MDSDict['HOT'][linee])+\
 			"{:5d}".format(MDSDict['HOB'][linee])+\
 			"{:5d}".format(MDSDict['HOA'][linee])+\
-			"{:5d}".format(MDSDict['ESTH'][linee])+\
+			"{:5d}".format(int(round(MDSDict['ESTH'][linee])))+\
 
 			"{:2d}".format(MDSDict['day'][linee])+\
 			"{:1d}".format(MDSDict['land'][linee])+\
@@ -1112,7 +1112,7 @@ def WriteMDSuncertainty(TheYear,TheMonth,TheType,MDSDict):
 			"{:5d}".format(MDSDict['HOT'][linee])+\
 			"{:5d}".format(MDSDict['HOB'][linee])+\
 			"{:5d}".format(MDSDict['HOA'][linee])+\
-			"{:5d}".format(MDSDict['ESTH'][linee])+\
+			"{:5d}".format(int(round(MDSDict['ESTH'][linee])))+\
 
 			"{:2d}".format(MDSDict['day'][linee])+\
 			"{:1d}".format(MDSDict['land'][linee])+\

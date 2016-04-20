@@ -42,12 +42,15 @@ DONE - testing not buddy check for Td yet though.
 
 Add code to bias correct the humidity data for screened instruments verses hand
 held instruments following methods described in Berry and Kent, 2011.
+DONE
 
 Add code to bias correct the humidity data for ship height (adjust to 10m)
 following methods described in Berry and Kent, 2011. DO AFTER ADJ FOR SCREEN (Berry Thesis 2009 says to do this)
+DONE
 
 Add code to assess uncertainties in the hourly data: rounding, measurement,
 height bias adjustment, instrument type adjustment.
+DONE
 
 Add code to grid the data: THIS IS NOT SO SIMPLE!
 - first grid to closest 3 hourly (00, 03....21) 1by1s (most likely using the anomalies) - could use winsorising or median?
@@ -55,6 +58,7 @@ Add code to grid the data: THIS IS NOT SO SIMPLE!
 - average dailies to pentad 1by1s (at least 2 days present) - mean
 - average dailies to monthly 1by1s (at least 50% of days present) - mean
 - average monthly 1by1s over 5by5 grids (at least one 1by1) - mean
+DONE - ROBERT
 
 Add code to assess climatological uncertainties at the gridbox scale
 
@@ -74,6 +78,198 @@ If iii) displays the bias, Dave Berry may be correct in ascribing it to real cli
 
 ******************************************************************
 Work Done:
+APR 20th
+[KW]
+After MUCHOS bug fixing I have finally output monthyears of extended (bias corrected) and uncertainty (on the hourly ob) data in ERAclimBC.
+Theses can now be read in a gridded.
+
+I have worked through:
+- skipping silly values AT/DPT < -80, > 65, SHU == 0. (COULD BE DONE IN make_and_full_qc.py!!!)
+- made sure the read in doesn't treat # as comments and therefore misread in some obs
+- pulling out the climatological P
+- faking a solar bias correction 
+  - faking a solar bias uncertainty
+- applying a 3.4% reduction in q for all unaspirated/unventilated obs (EOT/EOH = S or SN, PT = Buoy/Platform) or 3.4%*0.3 for all unassigned obs
+  - applying a 0.2 g/kg uncertainty in q to all adjusted obs
+- estimating a height based on HOT/HOB, adjusted HOA (as long as its bigger than 2m), adjusted HOP (as long as its bigger than 2m), 16m*nmonths*increment to
+2007, buoy = 4, platform = 20.. estHOA = height +10.
+    # Parameters (gradients and intercept) for HOA and HOP linear equations
+    HOAGradPre2004 = 0.502
+    HOAIntCPre2004 = 5.44
+    HOAGradPost2004 = 0.753
+    HOAIntCPost2004 = (-2.06)
+    HOPGrad = 1.03
+    HOPIntC = (-0.93)
+    
+    # Increments for estimating height by YR and MN 
+    StHeight = 16.
+    EdHeight = 24.
+    StYr = 1973 # assume January
+    EdYr = 2007 # assume December 2006 so 2007 gives correct NYrs and better for testing which year later.
+    MnInc = (EdHeight / StHeight) / (((EdYr) - StYr) * 12.) # should be ~0.2
+- ensured that all of these heights are floats!!!
+- estimated height adjustments for at adn shu and derived for all other variables
+  - made these zero where adjustment makes shu <0 or at > 100 or where it cannot stabalise sensibly - some silly values are still getting in
+  - esimated height adjustment uncertainty 0.1 for given heights, 0.5% for esimated heights.
+- estimated uncertainty in measurement following HadISDH land and based on marine air temperature derived unc in RH
+    t_bins = np.array([-40,-30,-20,-10,0,10,20,30,40,50,100])	# degrees C
+    # 1 sigma uncertainty in RH corresponding to t_bins
+    rh_unc_bins = np.array([15,15,15,10,5,2.75,1.8,1.35,1.1,0.95,0.8]) 
+    # 1 sigma uncertainty in AT
+    t_unc = 0.2
+    # 1 sigma uncertaint in CWB
+    tw_unc = 0.15
+    rh_unc = rh_unc_bin[np.where(t_bins > ATtbc)[0]][0]
+- estimated uncertainty in roundind by adding 0.5 to AT and or DPT and deriving when the ATround/DPTround flag = 1 (trk > 24 obs has >50% .0s) or
+  where the ob is a zero and is from a deck/year in the AT or DPT lists where DECKS have .0s >2x any other decimal.
+- combined uncetainties in quadrature
+
+These now need gridding and we need to think about how to combine the uncertainties.  
+
+APR 15th
+[KW]
+It seems to be working very close to David Berry's code which is now in this file.
+
+The Test_HeightCorrect.py figures look very different though. 
+BIGGEST (VERY LARGE) adjustments in VERY STABLE conditions.
+Smallest changes in VERY UNSTABLE or neutral conditions (where L is +ve but very large!)
+Changes get bigger towards neutrality as a -VE L gets more -ve (is this neutral?).
+This does seem to make some sense with fig. 9.5 in p377 of Stull 1988.
+
+import HeightCorrect as hc
+
+adjDB,hDB = hc.run_davidberry_final(10.,15.,8.,6.,20.,18.,18)
+adjK,hK = hc.run_heightcorrection_final(10.,15.,8.,6.,20.,18.,18)
+adjDB['at_10m'] = 13.788, adjDB['shu_10m'] = 7.872 (u_10m = 4.262)
+hDB['L'] = 6.654, hDB['u_star'] = 0.085
+
+adjK['at_10m'] = 13.750, adjK['shu_10m'] = 7.861  (u_10m = 4.246)
+hK['L'] = 9.34, hK['u_star'] = 0.120 
+
+# LOW WIND SPEED
+adjDB,hDB = hc.run_davidberry_final(10.,15.,8.,3.,20.,18.,18)
+adjK,hK = hc.run_heightcorrection_final(10.,15.,8.,3.,20.,18.,18)
+adjDB['at_10m'] = 10.015, adjDB['shu_10m'] = 7.540 (u_10m = -0.300)
+hDB['L'] = 0.013, hDB['u_star'] = 0.0003
+
+adjK['at_10m'] = 12.802, adjK['shu_10m'] = 7.757 (u_10m = 1.515)
+hK['L'] = 0.054, hK['u_star'] = 0.0014 
+
+Our t_star and q_star methods are still quite different.
+In this version I now have Yx for zx/L and Yx10 for 10/L. (Y is PSI!!!)
+I have altered the calc_flux from david berry to not include the PSI (I call them Y) parameters when calculating the neutral elements at 10m.
+I have altered the PSI (Y!) calculations in david berry's code to include teh **-1 **-2 and **-1 that appeared to be missing.
+I have changed david berry's GAMMA constant to 5 to match mine. I could make them both 8 instead as in David's original code.
+
+My code differs in that I use the Bretherton iteration method.
+I also have some catch for neutral conditions (where -0.01 < zx/L < 0.01) which forces PHIx = 1 and Y(PSI!!!)=0.
+
+I don't change q (SHU) to q/1000. except for when calculating vpt and vt. This doesn't appear to have a large effect - perhaps because its usage is
+in a relative sense? I should try this though.
+
+I also don't convert AT to Kelvin using the adiabatic lapse rate adjustment and I use 273.15 instead of 273.16.
+
+My calculation for qsat(sst)*0.98 uses a different equation for vapour pressure - see CalcHums.py
+
+
+APR 14th
+[KW]
+I've now coded up run_iterate_L. This didn't work with the Bretherton L equation. It does work using the Stull 1988 L equation with
+the B0 (surface buoyancy flux) from Bretheton. I'm not 100% sure this is correct but it does seem to produce something sensible,
+converging in <10 iterations.
+
+I discovered that there is sensitivity to the estimation of z0 even though this is tiny and only really varies between 0.0001 and
+0.001 over ocean (Stull 1988). The estimation of u_star doesn't vary too much or affect the estimated u10n neutral wind speed at 10m
+and the u10m isn't that different to the actual wind speed at 20m. So I start z0_est with u, estimate the drag coefficent Cd, 
+estimate u_star, recalculate u10n, recalculate z0, Cd, u_star and then get on with it. 
+
+    It is clear that the resulting L is very sensitive to z0. If I vary it from z0=0.001 to 0.0001.
+    z0=0.001 hc.run_iterate_L(10.,15.,8.,3.,20.,18.,18.)
+    LresB=4.606 LresS=136.021 
+    z0=0.0001 hc.run_iterate_L(10.,15.,8.,3.,20.,18.,18.)
+    LresB=3.119 LresS=92.112
+    
+    z0 = (0.61 + (0.063*u10n))/1000.
+    It depends on u10n (neutral wind speed at 10m) 
+    u10n = get_hieghtcorrected(u,u_star,k,zu,Ym,L) where Ym = 0 and L can be anything because it is not effective (multiplied by 0!)
+    u10n = get_hieghtcorrected(1.,0.05 or 0.5,0.41,20.,0.1000.)
+    u10n = 0.915 or 0.155 
+    z0 = 0.0007 or 0.0006 (or at u 0.0007)	
+    u10n = get_hieghtcorrected(5.,0.05 or 0.5,0.41,20.,0.1000.)
+    u10n = 4.915 or 4.155 
+    z0 = 0.0009 or 0.0009 (or at u 0.0009)	
+    u10n = get_hieghtcorrected(10.,0.05 or 0.5,0.41,20.,0.1000.)
+    u10n = 9.915 or 9.155  	
+    z0 = 0.0013 or 0.0012 (or at u 0.0012)
+    So - u10n isn't very much lower than actual wind speed and its not that sensitive to u_star.
+    So - I think from an esimate of u_star we can estimate u10n and z0
+
+I've now created plots of actual and difference adjustments for a range of sst, at, q, u, zu, zt/zq for L -250 to 250, greyed out the
+area where little_zeta is < -1 or > 0.5, overplotted the actual resolved adjustment vs L for each scenario. This is a circle where the
+scenario is reasonably plausible. THis is an x where the scenario is unlikely - e.g. at = -30, sst = 30.
+
+I have now worked through adjustments converted to all other humidity variables. Conceivably an adjustment could result in changes to
+at and shu that are not physically consistent - the most obvious (only obvious?) case would be where the resulting adjustment in
+dpt_10m making dpt_10m>at_10m or crh_10m>100%rh. Our main focus here is humidity so my way to solve this is to adjust the at_10m to
+match the dpt_10m in such cases - making the assumption that 100%rh was reached. Its actually quite likely that we're going to screw
+up the real cases of 100% rh here, quite possibly by making them too low. Not really sure what to do about that.
+
+Annoyingly and predictably, David Berry's code pyflux.py is different from mine and gives quite different results. I can't follow his
+code from the literature. His equation for 0.98qsat(sst) is different. He computes q from 0.98 * saturated vapour pressured (sst) and
+his equation for calculating vapour pressure is different to mine. His falls over when the wind speed is low - I'm not sure why.
+For SST=10., AT=15., SHU=8., U=6., zu = 20., zt = 18., zq = 18
+Kates:
+'at_10m': 14.70403129871521,'shu_10m': 7.9667163746499501
+u10n = 5.5819
+'L': 583.07588400518853,
+'little_zeta': 0.034300836165418985, 
+'z0': 0.00096166329973870399, 
+'u_star': 0.24727442321874857, 
+'PHIm': 1.171504180827095, 
+'PHIt': 1.171504180827095, 
+'PHIq': 1.171504180827095, 
+'Ym': -0.17150418082709495, 
+'Yq': -0.17150418082709495, 
+'Yt': -0.17150418082709495,
+'q_star': 0.023123821340186777, 
+'t_star': 0.20562445643519264
+
+Daves:
+u, u10n, u10 6.0, 0.38645200748, 3.1855396335 - I think the u10n is too low.
+ta, t10n, t10 15.0, 10.3601167406, 12.8379251666
+q, q10n, q10 8.0, 7.56546752324, 7.79367791257
+ts, qsea     10.0, 7.53033711173,
+ustar, tol   0.0182782137428, 7.61230466731
+
+
+I've also looked/plotted decimal frequencies by decade and for 1973-1981 and 1982-1990. This does show a higher proportion of .0s in
+the first period but they are still quite common after too.
+
+APR 13th
+[KW]
+I've worked a lot on the grids to make sure they were doing what they said on the tin after finding poorer coverage than we had before. This has
+now been sorted and unfortunately we just can't increase the coverage enough to provide a climatological average from the data themselves without
+relaxing the selection criteria to silly extents - fewer than 10 hrly obs in a 1x1 pentad climatology! The plan now is to go with 'relax' settings
+to create 5x5 monthly anomalies (>=1 ob in a 1x1 3hr day/night (shoulders pushed to day), >=1 1x1 3hr grid in a 1x1 day/night_daily grid, >=30% of days in month 1x1 day/night_daily 
+grids in a 5x5_day/night_monthly, merge 5x5 monthly day/night) and also pentad climatologies where we can (>=1 ob in a 1x1 3hr day/night (shoulders pushed to day), >=1 1x1 3hr
+day/night in a 1x1 3hrpentad day/night, >=1 1x1 3hrpentad day/night (CHECK) in a 1x1 pentad day/night, >=10/15 1x1 pentad day/nights in a 1x1
+pentad climatology day/night, merge 1x1 pentad climatology day/night). This method tries to prevent any biasing from more obs coming from the day
+or night part of the diurnal cycle by ultimately only averaging between one day and one night component.
+
+I've also been working on the height corrections. I have build HeightCorrect.py which contains all of the algorithms for converting heights based
+on Berry 2009, Smith 1980, 1988 and Bretherton lecture. I've first gone through and tested that plausible values are being pushed out - they are.
+I've then looked at the sensitivity to the Monin Obukhov Lenght (L) using Test_HeightCorrect.py for a range of heights, AT, SST and SHU. This shows
+that the height correction can be quite large (up to 10 deg C or 5 g/kg) in extreme cases. For the most part it would be small but there would be
+some error introduced from making a flat assumption of L (-50 in UNSTABLE, SST>AT conditions / 50 in STABLE, SST<AT conditions). Although in some
+ways we could argue that this makes a more simple adjustment - and we could probably quantify the error.
+
+As expected - the largest changes are in the lowest layers (e.g., 4m to 10m adjustment >> 16m to 10m adjustment).
+
+I'm now going to code up the iteration to resolve L. It will be interesting to see where this fits between using L = -50 or 50.
+DONE
+
+
+
 APR 8th
 [KW]
 I have build PlotDecimalFreq_APR2016.py to look at the frequency of whole numbers verses decimal places throughout the record. I now have a line plot for each year
@@ -91,6 +287,8 @@ heavily sampled in AT. This is not so noticable for DPT. For both DPT and AT the
 record.
 **********
 So I've changed the bins to capture -0.05 to 0.95 which should then work. How annoying!
+
+Now run for each year and also each decade and 73-81, 82-90 to see the differences.
 
 APR 7th
 [KW]
@@ -147,11 +345,12 @@ MO
 DY
 HR
 
-AT   # = original
-ATA 
 SST 
 SSTA
 SLP 
+
+AT   # = original
+ATA 
 DPT 
 DPTA
 SHU 
@@ -195,6 +394,8 @@ CWBAhc
 DPDhc 
 DPDAhc
 
+ATsnc
+ATAsnc
 DPTsnc # snc = screen corrected
 DPTAsnc
 SHUsnc 

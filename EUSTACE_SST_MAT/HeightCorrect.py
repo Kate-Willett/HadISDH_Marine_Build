@@ -186,7 +186,7 @@ def run_davidberry_final(sst,at,shu,u,zu,zt,zq,dpt=(-99.9),vap=(-99.9),crh=(-99.
     and then gets together all of the necessary variables and calls get_heightcorrect
     to get the height adjustment for u, at and shu
     
-    Reads in:
+    Reads in FLOATS MUST ALL BE FLOATS!!! (although I've added a catch for this):
       sst = sea surface temperature (deg C)
       at = air temperature (deg C)
       shu = specific humidity (g/kg)
@@ -255,15 +255,25 @@ def run_davidberry_final(sst,at,shu,u,zu,zt,zq,dpt=(-99.9),vap=(-99.9),crh=(-99.
     #GAMMA             = 8.0 
     #ADIABATIC_LAPSE   = 0.00976 
     
+    # CHECK THAT ALL IMPORTANT THINGS ARE FLOATS
+    sst = float(sst)
+    at = float(at)
+    shu = float(shu)
+    u = float(u)
+    climp = float(climp)
+    zu = float(zu)
+    zt = float(zt)
+    zq = float(zq)
+    
     # Check if sst is missing (it could be) - use at instead (NOT IDEAL!!!! - PROBABLY WANT TO FLAG FOR INCREASED UNCERTAINTY)
-    if ((sst < -60.) | (sst > 60)):
+    if ((sst < -60.) | (sst > 60.)):
         sst = at
 
     # Check if u is missing or very small (it could be) - use 3m/s or 0.5 instead (NOT IDEAL!!!! - PROBABLY WANT TO FLAG FOR INCREASED UNCERTAINTY)
     # NOTE THIS RESULTS IN -VE WIND SPEEDS IF ORIG WIND SPEED IS TOO LOW!
     if (u < 0.5):
         u = 0.5
-    elif ((u < 0)  | (u > 100)):
+    elif (u > 100):
         u = 3.
     
     # Iterate to find L
@@ -335,7 +345,7 @@ def run_heightcorrection_final(sst,at,shu,u,zu,zt,zq,dpt=(-99.9),vap=(-99.9),crh
     and then gets together all of the necessary variables and calls get_heightcorrect
     to get the height adjustment for u, at and shu
     
-    Reads in:
+    Reads in FLOATS!!! MUST BE FLOATS - HAVE ADDED A CHECK:
       sst = sea surface temperature (deg C)
       at = air temperature (deg C)
       shu = specific humidity (g/kg)
@@ -411,6 +421,16 @@ def run_heightcorrection_final(sst,at,shu,u,zu,zt,zq,dpt=(-99.9),vap=(-99.9),crh
   
     '''
 
+    # CHECK THAT ALL IMPORTANT THINGS ARE FLOATS
+    sst = float(sst)
+    at = float(at)
+    shu = float(shu)
+    u = float(u)
+    climp = float(climp)
+    zu = float(zu)
+    zt = float(zt)
+    zq = float(zq)
+
     # Set up constants
     z0t = 0.001
     z0q = 0.0012
@@ -423,7 +443,7 @@ def run_heightcorrection_final(sst,at,shu,u,zu,zt,zq,dpt=(-99.9),vap=(-99.9),crh
     # Check if u is missing or very small (it could be) - use 3 or 0.5m/s instead (NOT IDEAL!!!! - PROBABLY WANT TO FLAG FOR INCREASED UNCERTAINTY)
     if (u < 0.5):
         u = 0.5
-    elif ((u < 0) | (u > 100)):
+    elif (u > 100):
         u = 3.
     
     # Iterate to find L
@@ -447,41 +467,53 @@ def run_heightcorrection_final(sst,at,shu,u,zu,zt,zq,dpt=(-99.9),vap=(-99.9),crh
         at_10m = get_heightcorrected(at,t_star,k,zt,HeightDict['Yt'],HeightDict['L'],HeightDict['Yt10'])
         shu_10m = get_heightcorrected(shu,q_star,k,zq,HeightDict['Yq'],HeightDict['L'],HeightDict['Yq10'])
         
-        # Convert t and q height adjustments to adjustments for other humidity variables   
-        # Of course we're using the same P - not a height adjusted one!!! 
-        # Check if all humidity vars and climp are present first
-        if ((vap > -99.9) & (crh > -99.9) & (dpt > -99.9) & (cwb > -99.9) & (dpd > -99.9) & (climp > -99.9)):
-            # Get vapour pressure from specific humidity
-            vap_10m = ch.vap_from_sh(shu_10m,climp,roundit=False)
-            # Get dew point temperature from vapour pressure (use at too to check for wet bulb <=0)
-            dpt_10m = ch.td_from_vap(vap_10m,climp,at_10m,roundit=False)
-            # Get wet bulb temperature from vapour pressure and dew point temperature and air temperature
-            cwb_10m = ch.wb(dpt_10m,at_10m,climp,roundit=False)
-            # Get relative humidity from dew point temperature and temperature
-            crh_10m = ch.rh(dpt_10m,at_10m,climp,roundit=False)
-            # Get dew point depression from temperautre and dew point depression
-            dpd_10m = ch.dpd(dpt_10m,at_10m,roundit=False)   
+	# Check that shu_10m isn't -ve. This can happen if its very small to start with and leads to NaNs in DPT
+	# If this happens, return as -99.9 for all vars
+	# Also check that at_10m isn't super silly either - cases of starting ATs being 40+ degrees where SST is ~8 (ob 118659 in April 1974!
+	if ((shu_10m > 0.) & (at_10m > -80.) & (at_10m < 65.)):
 	
-            # Now cross-check at_10m and dpt_10m [and crh_10m and dpd_10m] - no supersaturation allowed!
-            if ((at_10m - dpt_10m) < 0.):
-	        # force 100% rh limit by adjusting at_10m to dpt_10m, preserving humidity???
-	        at_10m = copy.copy(dpt_10m) 
-	        # recalculate affected variables = which will all be at saturation
-                cwb_10m = copy.copy(at_10m)
-                crh_10m = 100.0
-                dpd_10m = 0.   	    	 
+            # Convert t and q height adjustments to adjustments for other humidity variables   
+            # Of course we're using the same P - not a height adjusted one!!! 
+            # Check if all humidity vars and climp are present first
+            if ((vap > -99.9) & (crh > -99.9) & (dpt > -99.9) & (cwb > -99.9) & (dpd > -99.9) & (climp > -99.9)):
+                # Get vapour pressure from specific humidity
+                vap_10m = ch.vap_from_sh(shu_10m,climp,roundit=False)
+                # Get dew point temperature from vapour pressure (use at too to check for wet bulb <=0)
+                dpt_10m = ch.td_from_vap(vap_10m,climp,at_10m,roundit=False)
+                # Get wet bulb temperature from vapour pressure and dew point temperature and air temperature
+                cwb_10m = ch.wb(dpt_10m,at_10m,climp,roundit=False)
+                # Get relative humidity from dew point temperature and temperature
+                crh_10m = ch.rh(dpt_10m,at_10m,climp,roundit=False)
+                # Get dew point depression from temperautre and dew point depression
+                dpd_10m = ch.dpd(dpt_10m,at_10m,roundit=False)   
+	
+                # Now cross-check at_10m and dpt_10m [and crh_10m and dpd_10m] - no supersaturation allowed!
+                if ((at_10m - dpt_10m) < 0.):
+	            # force 100% rh limit by adjusting at_10m to dpt_10m, preserving humidity???
+	            at_10m = copy.copy(dpt_10m) 
+	            # recalculate affected variables = which will all be at saturation
+                    cwb_10m = copy.copy(at_10m)
+                    crh_10m = 100.0
+                    dpd_10m = 0.   	    	 
+            else:
+                vap_10m = -99.9
+                dpt_10m = -99.9
+                cwb_10m = -99.9	
+                crh_10m = -99.9
+                dpd_10m = -99.9
         else:
-            vap_10m = -99.9
+            at_10m = -99.9
             dpt_10m = -99.9
-            cwb_10m = -99.9	
+            vap_10m = -99.9
+            shu_10m = -99.9
+            cwb_10m = -99.9     
             crh_10m = -99.9
             dpd_10m = -99.9
-
     else:
         at_10m = -99.9
         dpt_10m = -99.9
         vap_10m = -99.9
-        dpt_10m = -99.9
+        shu_10m = -99.9
         cwb_10m = -99.9     
         crh_10m = -99.9
         dpd_10m = -99.9
@@ -500,11 +532,11 @@ def run_heightcorrection_final(sst,at,shu,u,zu,zt,zq,dpt=(-99.9),vap=(-99.9),crh
     return AdjDict, HeightDict
 
 #********************************************************************************
-def run_iterate_L(sst,at,shu,u,zu,zt,zq,Lmin = -50, Lmax = 50, Lfix = 999): 
+def run_iterate_L(sst,at,shu,u,zu,zt,zq,Lmin = -50., Lmax = 50., Lfix = 999): 
     '''
     Code to produce u,t,q converted to 10m using assumed L and z0 depending on stability
     
-    Reads in:
+    Reads in FLOATS - MUST ALL BE FLOATS - HAVE ADDED CHECK:
       sst = sea surface temperature (deg C)
       at = air temperature (deg C)
       shu = specific humidity (g/kg)
@@ -608,6 +640,15 @@ def run_iterate_L(sst,at,shu,u,zu,zt,zq,Lmin = -50, Lmax = 50, Lfix = 999):
     	
     '''
 
+    # CHECK THAT ALL IMPORTANT THINGS ARE FLOATS
+    sst = float(sst)
+    at = float(at)
+    shu = float(shu)
+    u = float(u)
+    zu = float(zu)
+    zt = float(zt)
+    zq = float(zq)
+
     # Check if sst is missing (it could be) - use at instead (NOT IDEAL!!!! - PROBABLY WANT TO FLAG FOR INCREASED UNCERTAINTY)
     # This will make zero height adjustment to temperature
     if ((sst < -60.) | (sst > 60.)):
@@ -616,7 +657,7 @@ def run_iterate_L(sst,at,shu,u,zu,zt,zq,Lmin = -50, Lmax = 50, Lfix = 999):
     # Check if u is missing or very small (it could be) - use 3 or 0.5m/s instead (NOT IDEAL!!!! - PROBABLY WANT TO FLAG FOR INCREASED UNCERTAINTY)
     if (u < 0.5):
         u = 0.5
-    elif ((u < 0) | (u > 100)):
+    elif (u > 100):
         u = 3.
 
     # get an estimated L to start with based on assumed stability (SST vs AT) or given a fixed L
@@ -629,7 +670,7 @@ def run_iterate_L(sst,at,shu,u,zu,zt,zq,Lmin = -50, Lmax = 50, Lfix = 999):
         elif ((sst-at) < -0.2): # STABLE 
             L = Lmax # default = 50
         else: # NEUTRAL
-            L = 5000 # should be infinity
+            L = 5000. # should be infinity
     else:
         L = Lfix
 	
