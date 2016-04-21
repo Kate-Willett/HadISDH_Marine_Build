@@ -5,6 +5,76 @@
 #
 #
 #************************************************************************
+'''
+Author: Robert Dunn
+Created: March 2016
+Last update: 12 April 2016
+Location: /project/hadobs2/hadisdh/marine/PROGS/Build
+
+-----------------------
+CODE PURPOSE AND OUTPUT
+-----------------------
+Converts raw ASCII hourly observations extracted from IMMA ICOADS format to 3 hrly 1x1 grids.  Then further consolidation to:
+
+1x1 daily
+1x1 monthly
+5x5 monthly
+
+and also 5x5 monthly calculated directly from the 1x1 daily data.  
+
+These later grids are available for day- and night-time periods (any mixtures are assigned to daytime) and also using strict and relaxed completeness criteria.
+
+-----------------------
+LIST OF MODULES
+-----------------------
+utils.py
+set_paths_and_vars.py - set file paths and some universal variables.
+plot_qc_diagnostics.py - to output plots of clean obs vs all
+MDS_basic_KATE.py - for the file format
+
+
+-----------------------
+DATA
+-----------------------
+Input data stored in:
+/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/
+
+Exact folder set by "OUTROOT" - as depends on bias correction.
+
+-----------------------
+HOW TO RUN THE CODE
+-----------------------
+python2.7 gridding_cam.py --suffix relax --period day --start_year YYYY --end_year YYYY --start_month MM --end_month MM
+
+python2.7 gridding_cam.py --help 
+will show all options
+
+-----------------------
+OUTPUT
+-----------------------
+/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS2/
+
+Plots to appear in 
+/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/PLOTS2/
+
+-----------------------
+VERSION/RELEASE NOTES
+-----------------------
+
+Version 1 (release date)
+---------
+ 
+Enhancements
+ 
+Changes
+ 
+Bug fixes
+ 
+
+-----------------------
+OTHER INFORMATION
+-----------------------
+'''
 
 import os
 import datetime as dt
@@ -19,11 +89,11 @@ import copy
 import utils
 import plot_qc_diagnostics
 import MDS_basic_KATE as mds
+from set_paths_and_vars import *
 
-plots = False
 doQC = True
 doSST_SLP = False
-doMedian = False
+
 # KW #
 # Use of median vs mean #
 # Essentially we're using the average as a way of smoothing in time and space so ideally it would have influence from all viable values
@@ -43,23 +113,7 @@ doMedian = False
 # For monthly 5x5s I think we should use the mean to make sure the influence of sparse obs are included.
 # There IS an expectation that the values could quite different across a 500km2 area and 1 month (quite possibly, but not necessarily normally distributed)
 
-doMonthlies = True
-doPentads = False
 
-N_OBS_DAY = 2
-N_OBS_FRAC_MONTH = 0.3
-
-# Constants in CAPS
-OUTROOT = "ERAclimNBC"
-
-DATA_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/{}/".format(OUTROOT)
-OUT_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS/"
-PLOT_LOCATION="/project/hadobs2/hadisdh/marine/PLOTS/"
-
-START_YEAR = 1973
-END_YEAR = dt.datetime.now().year - 1
-
-mdi = -1.e30
 OBS_ORDER = utils.make_MetVars(mdi, doSST_SLP = doSST_SLP, multiplier = True) # ensure that convert from raw format at writing stage with multiplier
 
 # what size grid (lat/lon/hour)
@@ -71,15 +125,15 @@ DELTA_HOUR = 3
 grid_lats = np.arange(-90 + DELTA_LAT, 90 + DELTA_LAT, DELTA_LAT)
 grid_lons = np.arange(-180 + DELTA_LON, 180 + DELTA_LON, DELTA_LON)
 
-
 # RD - adapted MDS_basic_Kate.py to allow this call
 fields = mds.TheDelimiters
 
 #************************************************************************
-def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, end_month = 12, period = "all"):
+def do_gridding(suffix = "relax", start_year = START_YEAR, end_year = END_YEAR, start_month = 1, end_month = 12, period = "all"):
     '''
     Do the gridding, first to 3hrly 1x1, then to daily 1x1 and finally monthly 1x1 and 5x5
 
+    :param str suffix: "relax" or "strict" criteria
     :param int start_year: start year to process
     :param int end_year: end year to process
     :param int start_month: start month to process
@@ -88,6 +142,16 @@ def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, e
 
     :returns:
     '''
+
+    # KW switching between 4 ('_strict') for climatology build and 2 for anomaly buily ('_relax') - added subscripts to files
+    if suffix == "relax":
+        N_OBS_DAY = 2 # KW ok for anomalies but this was meant to be 4 for dailies_all? and 2 for dailies_night/day?
+        N_OBS_FRAC_MONTH = 0.3
+
+    elif suffix == "strict":
+        N_OBS_DAY = 4
+        N_OBS_FRAC_MONTH = 0.3
+
 
     # flags to check on and values to allow through
     these_flags = {"ATbud":0, "ATclim":0,"ATrep":0,"DPTbud":0,"DPTclim":0,"DPTssat":0,"DPTrep":0,"DPTrepsat":0}
@@ -106,7 +170,7 @@ def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, e
 
             # process the monthly file
             filename = "new_suite_{}{:02d}_{}.txt".format(year, month, OUTROOT)
-            raw_platform_data, raw_obs, raw_meta, raw_qc = utils.read_qc_data(filename, DATA_LOCATION, fields)
+            raw_platform_data, raw_obs, raw_meta, raw_qc = utils.read_qc_data(filename, ICOADS_LOCATION, fields)
 
             # extract observation details
             lats, lons, years, months, days, hours = utils.process_platform_obs(raw_platform_data)
@@ -118,7 +182,7 @@ def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, e
             if not utils.check_date(months, month, "months", filename):
                 sys.exit(1)
 
-            if plots:
+            if plots and (year in [1973, 1983, 1993, 2003, 2013]):
                 # plot the distribution of hours
 
                 import matplotlib.pyplot as plt
@@ -128,15 +192,15 @@ def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, e
                 plt.ylabel("Number of observations")
                 plt.xlabel("Hours")
                 plt.xticks(np.arange(-300, 2700, 300))
-                plt.savefig(PLOT_LOCATION + "obs_distribution_{}{:02d}.png".format(year, month))
+                plt.savefig(PLOT_LOCATION + "obs_distribution_{}{:02d}_{}.png".format(year, month, suffix))
 
 
                 # only for a few of the variables
                 for variable in OBS_ORDER:
                     if variable.name in ["dew_point_temperature", "specific_humidity", "relative_humidity", "dew_point_temperature_anomalies", "specific_humidity_anomalies", "relative_humidity_anomalies"]:
 
-                        plot_qc_diagnostics.values_vs_lat(variable, lats, raw_obs[:, variable.column], raw_qc, these_flags, PLOT_LOCATION + "qc_actuals_{}_{}{:02d}.png".format(variable.name, year, month), multiplier = variable.multiplier)
-
+                        plot_qc_diagnostics.values_vs_lat(variable, lats, raw_obs[:, variable.column], raw_qc, these_flags, PLOT_LOCATION + "qc_actuals_{}_{}{:02d}_{}.png".format(variable.name, year, month, suffix), multiplier = variable.multiplier)
+ 
 
             # QC sub-selection
             if doQC:
@@ -187,7 +251,7 @@ def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, e
                     this_month_obs = copy.deepcopy(raw_month_n_obs)
                     
                 # have one month of gridded data.
-                out_filename = OUT_LOCATION + OUTROOT + "_1x1_3hr_{}{:02d}_{}.nc".format(year, month, period)              
+                out_filename = DATA_LOCATION + OUTROOT + "_1x1_3hr_{}{:02d}_{}_{}.nc".format(year, month, period, suffix)              
 
                 utils.netcdf_write(out_filename, this_month_grid, np.zeros(this_month_obs.shape), this_month_obs, OBS_ORDER, grid_lats, grid_lons, times, frequency = "H")
 
@@ -207,7 +271,7 @@ def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, e
 
                 # filter on number of observations/day
                 n_hrs_per_day = np.ma.count(this_month_grid, axis = 2) 
-                n_obs_per_day = np.sum(this_month_obs, axis = 1) 
+                n_obs_per_day = np.ma.sum(this_month_obs, axis = 1) 
 
                 if period == "all":
                     bad_locs = np.where(n_hrs_per_day < N_OBS_DAY) # at least 2 of possible 8 3-hourly values (6hrly data *KW OR AT LEAST 4 3HRLY OBS PRESENT*)
@@ -215,7 +279,7 @@ def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, e
                     bad_locs = np.where(n_hrs_per_day < np.floor(N_OBS_DAY / 2.)) # at least 1 of possible 8 3-hourly values (6hrly data *KW OR AT LEAST 4 3HRLY OBS PRESENT*)              
                 daily_grid.mask[bad_locs] = True
 
-                if plots:
+                if plots and (year in [1973, 1983, 1993, 2003, 2013]):
                     # plot the distribution of hours
 
                     plt.clf()
@@ -228,14 +292,14 @@ def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, e
                     plt.title("Number of 1x1-3hrly in each 1x1-daily grid box")
                     plt.xlabel("Number of 3-hrly observations (max = 8)")
                     plt.ylabel("Frequency (log scale)")
-                    plt.savefig(PLOT_LOCATION + "n_grids_1x1_daily_{}{:02d}_{}.png".format(year, month, period))
+                    plt.savefig(PLOT_LOCATION + "n_grids_1x1_daily_{}{:02d}_{}_{}.png".format(year, month, period, suffix))
 
                     plt.clf()
                     plt.hist(n_obs_per_day.reshape(-1), bins = np.arange(-5,100,5),  log = True, rwidth=0.5)                 
                     plt.title("Total number of raw observations in each 1x1 daily grid box")
                     plt.xlabel("Number of raw observations")
                     plt.ylabel("Frequency (log scale)")
-                    plt.savefig(PLOT_LOCATION + "n_obs_1x1_daily_{}{:02d}_{}.png".format(year, month, period))
+                    plt.savefig(PLOT_LOCATION + "n_obs_1x1_daily_{}{:02d}_{}_{}.png".format(year, month, period, suffix))
 
                 # clear up memory
                 del this_month_grid
@@ -244,7 +308,8 @@ def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, e
 
                 # write dailies file
                 times.data = daily_hours[:,0]
-                out_filename = OUT_LOCATION + OUTROOT + "_1x1_daily_{}{:02d}_{}.nc".format(year, month, period)
+                out_filename = DATA_LOCATION + OUTROOT + "_1x1_daily_{}{:02d}_{}_{}.nc".format(year, month, period, suffix)
+
                 utils.netcdf_write(out_filename, daily_grid, n_hrs_per_day[0], n_obs_per_day, OBS_ORDER, grid_lats, grid_lons, times, frequency = "D")
 
                 # Monthlies
@@ -263,9 +328,9 @@ def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, e
                 monthly_grid.mask[bad_locs] = True
 
                 # number of raw observations
-                n_obs_per_month = np.sum(n_obs_per_day, axis = 0)
+                n_obs_per_month = np.ma.sum(n_obs_per_day, axis = 0)
 
-                if plots:
+                if plots and (year in [1973, 1983, 1993, 2003, 2013]):
                     # plot the distribution of days
 
                     plt.clf()
@@ -273,7 +338,7 @@ def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, e
                     plt.title("Total number of raw observations in each 1x1 monthly grid box")
                     plt.xlabel("Number of raw observations")
                     plt.ylabel("Frequency (log scale)")
-                    plt.savefig(PLOT_LOCATION + "n_obs_1x1_monthly_{}{:02d}_{}.png".format(year, month, period))
+                    plt.savefig(PLOT_LOCATION + "n_obs_1x1_monthly_{}{:02d}_{}_{}.png".format(year, month, period, suffix))
 
                     plt.clf()
                     plt.hist(n_grids_per_month[0].reshape(-1), bins = np.arange(-2,40,2), align = "left",  log = True, rwidth=0.5)
@@ -281,14 +346,12 @@ def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, e
                     plt.title("Total number of 1x1 daily grids in each 1x1 monthly grid")
                     plt.xlabel("Number of 1x1 daily grids")
                     plt.ylabel("Frequency (log scale)")
-                    plt.savefig(PLOT_LOCATION + "n_grids_1x1_monthly_{}{:02d}_{}.png".format(year, month, period))
+                    plt.savefig(PLOT_LOCATION + "n_grids_1x1_monthly_{}{:02d}_{}_{}.png".format(year, month, period, suffix))
 
                 # write monthly 1x1 file
-                out_filename = OUT_LOCATION + OUTROOT + "_1x1_monthly_{}{:02d}_{}.nc".format(year, month, period)
+                out_filename = DATA_LOCATION + OUTROOT + "_1x1_monthly_{}{:02d}_{}_{}.nc".format(year, month, period, suffix)
                 utils.netcdf_write(out_filename, monthly_grid, n_grids_per_month[0], n_obs_per_month, OBS_ORDER, grid_lats, grid_lons, times, frequency = "M")
             
-
-
                 # now to re-grid to coarser resolution
                 # KW # Here we may want to use the mean because its a large area but could be sparsely
                 #             populated with quite different climatologies so we want 
@@ -296,10 +359,11 @@ def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, e
 
                 # go from monthly 1x1 to monthly 5x5 - retained as limited overhead
                 monthly_5by5, monthly_5by5_n_grids, monthly_5by5_n_obs, grid5_lats, grid5_lons = utils.grid_5by5(monthly_grid, n_obs_per_month, grid_lats, grid_lons, doMedian = doMedian, daily = False)
-                out_filename = OUT_LOCATION + OUTROOT + "_5x5_monthly_{}{:02d}_{}.nc".format(year, month, period)
+                out_filename = DATA_LOCATION + OUTROOT + "_5x5_monthly_{}{:02d}_{}_{}.nc".format(year, month, period, suffix)
+
                 utils.netcdf_write(out_filename, monthly_5by5, monthly_5by5_n_grids, monthly_5by5_n_obs, OBS_ORDER, grid5_lats, grid5_lons, times, frequency = "M")
 
-                if plots:
+                if plots and (year in [1973, 1983, 1993, 2003, 2013]):
                     # plot the distribution of days
 
                     plt.clf()
@@ -307,7 +371,7 @@ def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, e
                     plt.title("Total number of raw observations in each 5x5 monthly grid box")
                     plt.xlabel("Number of raw observations")
                     plt.ylabel("Frequency (log scale)")
-                    plt.savefig(PLOT_LOCATION + "n_obs_5x5_monthly_{}{:02d}_{}.png".format(year, month, period))
+                    plt.savefig(PLOT_LOCATION + "n_obs_5x5_monthly_{}{:02d}_{}_{}.png".format(year, month, period, suffix))
 
                     plt.clf()
                     plt.hist(monthly_5by5_n_grids.reshape(-1), bins = np.arange(-2,30,2), align = "left", log = True, rwidth=0.5)
@@ -315,7 +379,7 @@ def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, e
                     plt.title("Total number of 1x1 monthly grids in each 5x5 monthly grid")
                     plt.xlabel("Number of 1x1 monthly grids")
                     plt.ylabel("Frequency (log scale)")
-                    plt.savefig(PLOT_LOCATION + "n_grids_5x5_monthly_{}{:02d}_{}.png".format(year, month, period))
+                    plt.savefig(PLOT_LOCATION + "n_grids_5x5_monthly_{}{:02d}_{}_{}.png".format(year, month, period, suffix))
 
                 # clear up memory
                 del monthly_grid
@@ -330,11 +394,13 @@ def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, e
                 # go direct from daily 1x1 to monthly 5x5
                 monthly_5by5, monthly_5by5_n_grids, monthly_5by5_n_obs, grid5_lats, grid5_lons = utils.grid_5by5(daily_grid, n_obs_per_day, grid_lats, grid_lons, doMedian = doMedian, daily = True)
 
-                out_filename = OUT_LOCATION + OUTROOT + "_5x5_monthly_from_daily_{}{:02d}_{}.nc".format(year, month, period)
-
+                out_filename = DATA_LOCATION + OUTROOT + "_5x5_monthly_from_daily_{}{:02d}_{}_{}.nc".format(year, month, period, suffix)
+ 
                 utils.netcdf_write(out_filename, monthly_5by5, monthly_5by5_n_grids, monthly_5by5_n_obs, OBS_ORDER, grid5_lats, grid5_lons, times, frequency = "M")
 
-                if plots:
+                
+
+                if plots and (year in [1973, 1983, 1993, 2003, 2013]):
                     # plot the distribution of days
 
                     plt.clf()
@@ -342,7 +408,8 @@ def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, e
                     plt.title("Total number of raw observations in each 5x5 monthly grid box")
                     plt.xlabel("Number of raw observations")
                     plt.ylabel("Frequency (log scale)")
-                    plt.savefig(PLOT_LOCATION + "n_obs_5x5_monthly_from_daily_{}{:02d}_{}.png".format(year, month, period))
+                    plt.savefig(PLOT_LOCATION + "n_obs_5x5_monthly_from_daily_{}{:02d}_{}_{}.png".format(year, month, period, suffix))
+
 
                     plt.clf()
                     plt.hist(monthly_5by5_n_grids.reshape(-1), bins = np.arange(-5,100,5), align = "left", log = True, rwidth=0.5)
@@ -350,9 +417,9 @@ def do_gridding(start_year = START_YEAR, end_year = END_YEAR, start_month = 1, e
                     plt.title("Total number of 1x1 daily grids in each 5x5 monthly grid")
                     plt.xlabel("Number of 1x1 daily grids")
                     plt.ylabel("Frequency (log scale)")
-                    plt.savefig(PLOT_LOCATION + "n_grids_5x5_monthly_from_daily_{}{:02d}_{}.png".format(year, month, period))
 
-#                raw_input("stop")
+                    plt.savefig(PLOT_LOCATION + "n_grids_5x5_monthly_from_daily_{}{:02d}_{}_{}.png".format(year, month, period, suffix))
+
 
                 del daily_grid
                 del monthly_5by5
@@ -370,6 +437,8 @@ if __name__=="__main__":
 
     # set up keyword arguments
     parser = argparse.ArgumentParser()
+    parser.add_argument('--suffix', dest='suffix', action='store', default = "relax",
+                        help='"relax" or "strict" completeness, default = relax')
     parser.add_argument('--start_year', dest='start_year', action='store', default = START_YEAR,
                         help='which year to start run, default = 1973')
     parser.add_argument('--end_year', dest='end_year', action='store', default = END_YEAR,
@@ -383,7 +452,7 @@ if __name__=="__main__":
     args = parser.parse_args()
 
 
-    do_gridding(start_year = int(args.start_year), end_year = int(args.end_year), \
+    do_gridding(suffix = str(args.suffix), start_year = int(args.start_year), end_year = int(args.end_year), \
                     start_month = int(args.start_month), end_month = int(args.end_month), period = str(args.period))
 
 # END

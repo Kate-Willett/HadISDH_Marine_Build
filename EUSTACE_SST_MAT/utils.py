@@ -5,6 +5,55 @@
 #
 #
 #************************************************************************
+'''
+Author: Robert Dunn
+Created: March 2016
+Last update: 12 April 2016
+Location: /project/hadobs2/hadisdh/marine/PROGS/Build
+
+-----------------------
+CODE PURPOSE AND OUTPUT
+-----------------------
+A set of class definitions and routines to help with the gridding of HadISDH Marine
+
+-----------------------
+LIST OF MODULES
+-----------------------
+None
+
+-----------------------
+DATA
+-----------------------
+None
+
+-----------------------
+HOW TO RUN THE CODE
+-----------------------
+All routines to be called from external scripts.
+
+-----------------------
+OUTPUT
+-----------------------
+None
+
+-----------------------
+VERSION/RELEASE NOTES
+-----------------------
+
+Version 1 (release date)
+---------
+ 
+Enhancements
+ 
+Changes
+ 
+Bug fixes
+ 
+
+-----------------------
+OTHER INFORMATION
+-----------------------
+'''
 
 import os
 import datetime as dt
@@ -210,7 +259,7 @@ def write_netcdf_variable(outfile, var, v, data, frequency, do_zip = True):
     
     :param obj outfile: output file object
     :param obj var: variable object
-    :param int v: sequency number of variable
+    :param int v: sequence number of variable
     :param array data: data to write
     :param str frequency: frequency of input data
     :param bool do_zip: allow compression?
@@ -311,7 +360,7 @@ def netcdf_write(filename, data, n_grids, n_obs, variables, lats, lons, time, do
     # write number of observations 
 
 
-    nc_var = outfile.createVariable("n_grids", np.dtype('int16'), ('time','latitude','longitude',), zlib = do_zip, fill_value = -1)
+    nc_var = outfile.createVariable("n_grids", np.dtype('int32'), ('time','latitude','longitude',), zlib = do_zip, fill_value = -1)
 
     nc_var.long_name = "Number of grid boxes/days/hours going into this grid box"
     nc_var.units = "1"
@@ -319,7 +368,7 @@ def netcdf_write(filename, data, n_grids, n_obs, variables, lats, lons, time, do
     nc_var.standard_name = "Number of grid boxes/days/hours"
     nc_var[:] = np.ma.masked_where(n_grids <=0, n_grids)
 
-    nc_var = outfile.createVariable("n_obs", np.dtype('int16'), ('time','latitude','longitude',), zlib = do_zip, fill_value = -1)
+    nc_var = outfile.createVariable("n_obs", np.dtype('int32'), ('time','latitude','longitude',), zlib = do_zip, fill_value = -1)
 
     nc_var.long_name = "Number of raw observations going into this grid box"
     nc_var.units = "1"
@@ -523,11 +572,11 @@ def grid_1by1_cam(clean_data, raw_qc, hours_since, lat_index, lon_index, grid_ho
     '''
     day_flag_loc, = np.where(QC_FLAGS == 'day')[0]
 
-    # set up the array
+    # set up the arrays
     this_month_grid = np.ma.zeros([len(OBS_ORDER),len(grid_hours),len(grid_lats), len(grid_lons)], fill_value = mdi)
     this_month_grid.mask = np.zeros([len(OBS_ORDER),len(grid_hours),len(grid_lats), len(grid_lons)])
-    this_month_obs = np.zeros([len(grid_hours),len(grid_lats), len(grid_lons)])
-    this_month_time = np.zeros([len(grid_hours),len(grid_lats), len(grid_lons)])
+    this_month_obs = np.zeros([len(grid_hours),len(grid_lats), len(grid_lons)]) # number of raw observations
+    this_month_time = np.zeros([len(grid_hours),len(grid_lats), len(grid_lons)]) # day or night
 
     mesh_lats, mesh_lons = np.meshgrid(grid_lats, grid_lons)
 
@@ -622,8 +671,10 @@ def grid_5by5(data, n_obs, grid_lats, grid_lons, doMedian = True, daily = True):
     new_data.mask = np.ones((data.shape[0], len(new_lats), len(new_lons)))
     new_data.fill_value = data.fill_value
     
-    n_grids_array = np.ones((len(new_lats), len(new_lons)))
-    n_obs_array = np.ones((len(new_lats), len(new_lons)))
+    n_grids_array = np.ma.zeros((len(new_lats), len(new_lons)))
+    n_grids_array.mask = np.zeros((len(new_lats), len(new_lons)))
+    n_obs_array = np.ma.zeros((len(new_lats), len(new_lons)))
+    n_obs_array.mask = np.zeros((len(new_lats), len(new_lons)))
 
     for lt, lat in enumerate(np.arange(0, len(grid_lats), DELTA) + DELTA):
         for ln, lon in enumerate(np.arange(0, len(grid_lons), DELTA) + DELTA):
@@ -652,9 +703,9 @@ def grid_5by5(data, n_obs, grid_lats, grid_lons, doMedian = True, daily = True):
                     new_data.mask[var, lt, ln] = True
                  
                 if daily:
-                    n_obs_array[lt, ln] = np.sum(n_obs[:, lat-DELTA:lat, lon-DELTA:lon])
+                    n_obs_array[lt, ln] = np.ma.sum(n_obs[:, lat-DELTA:lat, lon-DELTA:lon])
                 else:
-                    n_obs_array[lt, ln] = np.sum(n_obs[lat-DELTA:lat, lon-DELTA:lon])
+                    n_obs_array[lt, ln] = np.ma.sum(n_obs[lat-DELTA:lat, lon-DELTA:lon])
 
     return new_data, n_grids_array, n_obs_array, new_lats, new_lons # grid_5by5
 
@@ -711,5 +762,67 @@ def bn_median(masked_array, axis=None):
     med = bn.nanmedian(data, axis=axis)
     # construct a masked array result, setting the mask from any NaN entries
     return np.ma.array(med, mask=np.isnan(med)) # bn_median
+
+
+#*******************************************************
+def boxes_with_n_obs(outfile, all_obs, data, N_YEARS_PRESENT):
+    """
+    Output text file showing number of grid boxes derived from 1, 2, 3.... raw observations
+    and the actual number in the climatologies passing completeness
+    
+    :param file outfile: the output file
+    :param array all_obs: all n_obs values for each pentad
+    :param array data: data array for each pentad.
+    :param str N_YEARS_PRESENT: number of years required to calculate a climatology
+    """
+
+    outfile.write("Below shows the number of grid boxes in the climatology file which \n would be derived from 1, 2, 3 .. >15 raw hourly obs in the absence of any completeness \n checks.  The second number in each pair shows the number of grid boxes which are \n actually present as a result of the cut on the number of years present ({} years). \n\n To be read into spreadsheet or as a word table.".format(N_YEARS_PRESENT))
+
+    outfile.write("max number of boxes = {}\n\n".format(all_obs.shape[1] * all_obs.shape[2]))
+
+    outfile.write("{}, {},{}, {},{}, {},{}, {},{}, {},{}, {},{}, {},{}, {},{}, {},{}, {},{}, {},{}, {},{}, {},{}, {},{}, {},{}, {},{}\n\n".format("pent", 1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,">15",">15"))
+
+    # spin through each pentad
+    for p in range(all_obs.shape[0]):
+        
+        # get the number of observations
+        t_obs = all_obs[p]
+        
+        outstring = "{}, ".format(p)
+        
+        for value in range(1,16):
+
+            locs = np.ma.where(t_obs == value)
+
+            outstring = "{} {},{},".format(outstring, len(locs[0]), len(data[p][locs].compressed()))
+
+        # and do greater than 15
+        locs = np.ma.where(t_obs > 15)
+        outstring = "{} {},{}\n".format(outstring, len(locs[0]), len(data[p][locs].compressed()))
+        
+        outfile.write(outstring)
+
+    outfile.close()
+
+    return # boxes_with_n_obs
+
+#*******************************************************
+def ma_append(orig, extra, axis = 0):
+    '''
+    A replacement for np.ma.array which is only available in v1.9 (we've 1.8.2)
+
+    :param array orig: original data
+    :param array extra: data to be appended
+    :param int axis: axis along which to do the appending
+
+    :returns: new - masked array
+    '''    
+    new = np.append(orig.data, extra.data, axis = axis)
+    new = np.ma.array(new)
+
+    new.mask = np.append(orig.mask, extra.mask, axis = axis) 
+
+    return new # ma_append
+
 # END
 # ************************************************************************

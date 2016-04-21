@@ -5,6 +5,64 @@
 #
 #
 #************************************************************************
+'''
+Author: Robert Dunn
+Created: March 2016
+Last update: 12 April 2016
+Location: /project/hadobs2/hadisdh/marine/PROGS/Build
+
+-----------------------
+CODE PURPOSE AND OUTPUT
+-----------------------
+Merge outputs from _day and _night to create _both.  An alternative approach to the _all files
+
+
+-----------------------
+LIST OF MODULES
+-----------------------
+utils.py
+
+-----------------------
+DATA
+-----------------------
+Input data stored in:
+/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS2
+
+
+-----------------------
+HOW TO RUN THE CODE
+-----------------------
+python2.7 merge_day_night.py --suffix relax --clims --months --start_year YYYY --end_year YYYY --start_month MM --end_month MM
+
+python2.7 gridding_cam.py --help 
+will show all options
+
+--clims - run for the climatologies
+--months - run for the monthly files (will need years and months)
+
+-----------------------
+OUTPUT
+-----------------------
+/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS2/
+
+-----------------------
+VERSION/RELEASE NOTES
+-----------------------
+
+Version 1 (release date)
+---------
+ 
+Enhancements
+ 
+Changes
+ 
+Bug fixes
+ 
+
+-----------------------
+OTHER INFORMATION
+-----------------------
+'''
 
 import os
 import datetime as dt
@@ -17,25 +75,10 @@ import calendar
 import netCDF4 as ncdf
 
 import utils
-
-doMedian = False
-
-START_YEAR = 1973
-END_YEAR = dt.datetime.now().year - 1
-
-# Constants in CAPS
-OUTROOT = "ERAclimNBC"
-
-DATA_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS/"
-OUT_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS/"
-PLOT_LOCATION="/project/hadobs2/hadisdh/marine/PLOTS/"
-
-mdi = -1.e30
-OBS_ORDER = utils.make_MetVars(mdi, multiplier = False)
-
+from set_paths_and_vars import *
 
 #************************************************************************
-def do_merge(fileroot):
+def do_merge(fileroot, suffix = "relax", clims = False):
     '''
     Merge the _day and _night files
 
@@ -44,7 +87,22 @@ def do_merge(fileroot):
     Output with a _both suffix
 
     :param str fileroot: root for filenames
+    :param str suffix: "relax" or "strict" criteria
+    :param bool clims: if climatologies then don't try and process anomalies.
     '''
+
+    OBS_ORDER = utils.make_MetVars(mdi, multiplier = False)
+
+    if clims:
+        # KW make OBS_ORDER only the actual variables - remove anomalies
+        NEWOBS_ORDER = []
+        for v, var in enumerate(OBS_ORDER):
+            if "anomalies" not in var.name:
+                NEWOBS_ORDER.append(var)
+        del OBS_ORDER
+        OBS_ORDER = np.copy(NEWOBS_ORDER)
+        del NEWOBS_ORDER     
+
 
     # spin through both periods
     for p, period in enumerate(["day", "night"]):
@@ -55,7 +113,7 @@ def do_merge(fileroot):
 
             print "   {}".format(var.name)
 
-            ncdf_file = ncdf.Dataset("{}_{}.nc".format(fileroot, period),'r', format='NETCDF4')
+            ncdf_file = ncdf.Dataset("{}_{}_{}.nc".format(fileroot, period, suffix),'r', format='NETCDF4')
 
             if v == 0 and p == 0:
 
@@ -105,26 +163,35 @@ def do_merge(fileroot):
     # and process the grids and observations (split off here so have incorporated latitude inversion)
     n_grids = np.ma.sum(all_data[:, -2], axis = 0)
     n_obs = np.ma.sum(all_data[:, -1], axis = 0)
+    n_obs.fill_value = -1
+    n_grids.fill_value = -1
 
     # write the output file
-    utils.netcdf_write("{}_{}.nc".format(fileroot, "both"), merged_data, n_grids, n_obs, OBS_ORDER, latitudes, longitudes, times, frequency = "P")
+    utils.netcdf_write("{}_{}_{}.nc".format(fileroot, "both", suffix), merged_data, n_grids, n_obs, OBS_ORDER, latitudes, longitudes, times, frequency = "P")
+
+    # test distribution of obs with grid boxes
+    outfile = file("{}_{}_{}.txt".format(fileroot.split("/")[-1], "both", suffix), "w")
+    utils.boxes_with_n_obs(outfile, n_obs, merged_data[0], "")
+
 
     return # do_merge
 
 
 #************************************************************************
-def get_fileroot(climatology = False, do3hr = False, monthly = [], daily = False):
+def get_fileroot(climatology = False, pentads = False, months = [], do3hr = True, time = [], daily = True):
     '''
     Get the filename root depending on switches
 
     :param bool climatology: for pentad climatology files
+    :param bool pentads: for annual pentad files
+    :param bool months: for monthly files
     :param bool do3hr: run for pentad climatology files created from 3hrly data
-    :param list monthly: if list not empty then set as [YYYY, MM] to run for 5x5 monthly data
+    :param list monthly: pass in [YYYY] or [YYYY, MM] for pentad or monthly files
     :param bool daily: run for monthly grids created from 1x1 daily
     '''
 
 
-    if climatology and monthly != []:
+    if climatology and months != []:
         print "Cannot run both for Climatology files and for Monthly files"
         raise RuntimeError
 
@@ -134,24 +201,32 @@ def get_fileroot(climatology = False, do3hr = False, monthly = [], daily = False
         else:
             fileroot = DATA_LOCATION + OUTROOT + "_1x1_pentad_climatology"
 
-
-    elif monthly != []:
-        if daily:
-            fileroot = DATA_LOCATION + OUTROOT + "_5x5_monthly_from_daily_{}{:02d}".format(monthly[0], monthly[1])
+    elif pentads:
+        if do3hr:
+            fileroot = DATA_LOCATION + OUTROOT + "_1x1_pentad_from_3hrly_{}".format(time[0])
         else:
-            fileroot = DATA_LOCATION + OUTROOT + "_5x5_monthly_{}{:02d}".format(monthly[0], monthly[1])
+            fileroot = DATA_LOCATION + OUTROOT + "_1x1_pentad_{}".format(time[0])
+
+    elif months != []:
+        if daily:
+            fileroot = DATA_LOCATION + OUTROOT + "_5x5_monthly_from_daily_{}{:02d}".format(time[0], time[1])
+        else:
+            fileroot = DATA_LOCATION + OUTROOT + "_5x5_monthly_{}{:02d}".format(time[0], time[1])
              
+
     return fileroot # get_fileroot
 
 
 
 #************************************************************************
-def set_up_merge(clims = False, months = False, start_year = START_YEAR, end_year = END_YEAR, start_month = 1, end_month = 12):
+def set_up_merge(suffix = "relax", clims = False, months = False, pentads = False, start_year = START_YEAR, end_year = END_YEAR, start_month = 1, end_month = 12):
     '''
     Obtain file roots and set processes running
     
+    :param str suffix: "relax" or "strict" criteria
     :param bool clims: run the climatologies
     :param bool months: run the climatologies
+    :param bool pentads: run the annual pentads
     :param int start_year: start year to process
     :param int end_year: end year to process
     :param int start_month: start month to process
@@ -162,12 +237,22 @@ def set_up_merge(clims = False, months = False, start_year = START_YEAR, end_yea
     if clims:
         print "Processing Climatologies"
         
-        fileroot = get_fileroot(climatology = True)
-        do_merge(fileroot)
+#        fileroot = get_fileroot(climatology = True)
+#        do_merge(fileroot, suffix)
         
         fileroot = get_fileroot(climatology = True, do3hr = True)
-        do_merge(fileroot)
+        do_merge(fileroot, suffix, clims = True)
 
+    if pentads:
+        print "Processing Pentads"
+        
+#        fileroot = get_fileroot(pentads = True)
+#        do_merge(fileroot, suffix)
+        
+        for year in np.arange(start_year, end_year + 1): 
+            print year
+            fileroot = get_fileroot(pentads = True, do3hr = True, time = [year])
+            do_merge(fileroot, suffix)
 
     if months:
         print "Processing Monthly Files"
@@ -178,14 +263,16 @@ def set_up_merge(clims = False, months = False, start_year = START_YEAR, end_yea
         end_month = 12
 
         for year in np.arange(start_year, end_year + 1): 
+            print year
 
             for month in np.arange(start_month, end_month + 1):
+                print "  {}".format(month)
 
-                fileroot = get_fileroot(monthly = [year, month])
-                do_merge(fileroot)
+#                fileroot = get_fileroot(months = True, time = [year, month])
+#                do_merge(fileroot, suffix)
 
-                fileroot = get_fileroot(monthly = [year, month], daily = True)
-                do_merge(fileroot)
+                fileroot = get_fileroot(months = True, time = [year, month], daily = True)
+                do_merge(fileroot, suffix)
 
 
     return # set_up_merge
@@ -197,6 +284,14 @@ if __name__=="__main__":
 
     # set up keyword arguments
     parser = argparse.ArgumentParser()
+    parser.add_argument('--suffix', dest='suffix', action='store', default = "relax",
+                        help='"relax" or "strict" completeness, default = relax')
+    parser.add_argument('--clims', dest='clims', action='store_true', default = False,
+                        help='run climatology merge, default = False')
+    parser.add_argument('--months', dest='months', action='store_true', default = False,
+                        help='run monthly merge, default = False')
+    parser.add_argument('--pentads', dest='pentads', action='store_true', default = False,
+                        help='run pentad merge, default = False')
     parser.add_argument('--start_year', dest='start_year', action='store', default = START_YEAR,
                         help='which year to start run, default = 1973')
     parser.add_argument('--end_year', dest='end_year', action='store', default = END_YEAR,
@@ -205,16 +300,12 @@ if __name__=="__main__":
                         help='which month to start run, default = 1')
     parser.add_argument('--end_month', dest='end_month', action='store', default = 12,
                         help='which month to end run, default = 12')
-    parser.add_argument('--clims', dest='clims', action='store_true', default = False,
-                        help='run climatology merge, default = False')
-    parser.add_argument('--months', dest='months', action='store_true', default = False,
-                        help='run monthly merge, default = False')
- 
     args = parser.parse_args()
 
 
-    set_up_merge(clims = args.clims, months = args.months, start_year = int(args.start_year), end_year = int(args.end_year), \
-                    start_month = int(args.start_month), end_month = int(args.end_month))
+    set_up_merge(suffix = str(args.suffix), clims = args.clims, months = args.months, pentads = args.pentads, \
+                     start_year = int(args.start_year), end_year = int(args.end_year), \
+                     start_month = int(args.start_month), end_month = int(args.end_month))
 
 # END
 # ************************************************************************

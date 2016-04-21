@@ -5,7 +5,64 @@
 #
 #
 #************************************************************************
+'''
+Author: Robert Dunn
+Created: March 2016
+Last update: 12 April 2016
+Location: /project/hadobs2/hadisdh/marine/PROGS/Build
 
+-----------------------
+CODE PURPOSE AND OUTPUT
+-----------------------
+Takes daily data and creates pentads.  
+
+-----------------------
+LIST OF MODULES
+-----------------------
+utils.py
+
+-----------------------
+DATA
+-----------------------
+Input data and output data stored in:
+/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS2/
+
+Requires daily grids.
+
+-----------------------
+HOW TO RUN THE CODE
+-----------------------
+python2.7 dailies_to_pentads.py --suffix relax --period day --start_year YYYY --end_year YYYY
+
+python2.7 dailies_to_pentads.py --help 
+will show all options
+
+-----------------------
+OUTPUT
+-----------------------
+/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS2/
+
+Plots to appear in 
+/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/PLOTS2/
+
+-----------------------
+VERSION/RELEASE NOTES
+-----------------------
+
+Version 1 (release date)
+---------
+ 
+Enhancements
+ 
+Changes
+ 
+Bug fixes
+ 
+
+-----------------------
+OTHER INFORMATION
+-----------------------
+'''
 import os
 import datetime as dt
 import numpy as np
@@ -18,21 +75,11 @@ import netCDF4 as ncdf
 import gc
 
 import utils
+from set_paths_and_vars import *
 
-doMedian = False
+
 N_OBS = 1 # data on at least one day of the pentad
 
-
-# Constants in CAPS
-OUTROOT = "ERAclimNBC"
-
-DATA_LOCATION = "/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS/"
-PLOT_LOCATION = "/project/hadobs2/hadisdh/marine/PLOTS/"
-
-START_YEAR = 1973
-END_YEAR = dt.datetime.now().year - 1
-
-mdi = -1.e30
 OBS_ORDER = utils.make_MetVars(mdi, multiplier = False)
 
 # what size grid (lat/lon)
@@ -178,6 +225,10 @@ if __name__=="__main__":
                         help='which period to run for (day/night/all), default = "all"')
     args = parser.parse_args()
 
+
+    print "relax/strict not yet coded up - exiting"
+
+    sys.exit()
 
     do_conversion(start_year = int(args.start_year), end_year = int(args.end_year), period = str(args.period))
 
