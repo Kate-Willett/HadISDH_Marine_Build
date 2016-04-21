@@ -88,11 +88,8 @@ import copy
 
 import utils
 import plot_qc_diagnostics
-import MDS_basic_KATE as mds
+import MDS_RWtools as mds
 from set_paths_and_vars import *
-
-doQC = True
-doSST_SLP = False
 
 # KW #
 # Use of median vs mean #
@@ -113,9 +110,6 @@ doSST_SLP = False
 # For monthly 5x5s I think we should use the mean to make sure the influence of sparse obs are included.
 # There IS an expectation that the values could quite different across a 500km2 area and 1 month (quite possibly, but not necessarily normally distributed)
 
-
-OBS_ORDER = utils.make_MetVars(mdi, doSST_SLP = doSST_SLP, multiplier = True) # ensure that convert from raw format at writing stage with multiplier
-
 # what size grid (lat/lon/hour)
 DELTA_LAT = 1
 DELTA_LON = 1
@@ -125,11 +119,9 @@ DELTA_HOUR = 3
 grid_lats = np.arange(-90 + DELTA_LAT, 90 + DELTA_LAT, DELTA_LAT)
 grid_lons = np.arange(-180 + DELTA_LON, 180 + DELTA_LON, DELTA_LON)
 
-# RD - adapted MDS_basic_Kate.py to allow this call
-fields = mds.TheDelimiters
 
 #************************************************************************
-def do_gridding(suffix = "relax", start_year = START_YEAR, end_year = END_YEAR, start_month = 1, end_month = 12, period = "all"):
+def do_gridding(suffix = "relax", start_year = START_YEAR, end_year = END_YEAR, start_month = 1, end_month = 12, doQC = False, doSST_SLP = False, doBC = False, doUncert = False):
     '''
     Do the gridding, first to 3hrly 1x1, then to daily 1x1 and finally monthly 1x1 and 5x5
 
@@ -138,10 +130,21 @@ def do_gridding(suffix = "relax", start_year = START_YEAR, end_year = END_YEAR, 
     :param int end_year: end year to process
     :param int start_month: start month to process
     :param int end_month: end month to process
-    :param str period: which period to do day/night/all?
+    :param bool doQC: incorporate the QC flags or not
+    :param bool doSST_SLP: process additional variables or not
+    :param bool doBC: work on the bias corrected data
+    :param bool doUncert: work on files with uncertainty information (not currently used)
 
     :returns:
     '''
+    if doBC:
+        fields = mds.TheDelimitersExt # extended (BC)
+    else:
+        fields = mds.TheDelimitersStd # Standard
+
+
+
+    OBS_ORDER = utils.make_MetVars(mdi, doSST_SLP = doSST_SLP, multiplier = True, doBC = doBC) # ensure that convert from raw format at writing stage with multiplier
 
     # KW switching between 4 ('_strict') for climatology build and 2 for anomaly buily ('_relax') - added subscripts to files
     if suffix == "relax":
@@ -169,8 +172,12 @@ def do_gridding(suffix = "relax", start_year = START_YEAR, end_year = END_YEAR, 
             times.data = grid_hours
 
             # process the monthly file
-            filename = "new_suite_{}{:02d}_{}.txt".format(year, month, OUTROOT)
-            raw_platform_data, raw_obs, raw_meta, raw_qc = utils.read_qc_data(filename, ICOADS_LOCATION, fields)
+            if doBC:
+                filename = "new_suite_{}{:02d}_{}_extended.txt".format(year, month, OUTROOT)
+            else:
+                filename = "new_suite_{}{:02d}_{}.txt".format(year, month, OUTROOT)
+
+            raw_platform_data, raw_obs, raw_meta, raw_qc = utils.read_qc_data(filename, ICOADS_LOCATION, fields, doBC = doBC)
 
             # extract observation details
             lats, lons, years, months, days, hours = utils.process_platform_obs(raw_platform_data)
@@ -199,13 +206,13 @@ def do_gridding(suffix = "relax", start_year = START_YEAR, end_year = END_YEAR, 
                 for variable in OBS_ORDER:
                     if variable.name in ["dew_point_temperature", "specific_humidity", "relative_humidity", "dew_point_temperature_anomalies", "specific_humidity_anomalies", "relative_humidity_anomalies"]:
 
-                        plot_qc_diagnostics.values_vs_lat(variable, lats, raw_obs[:, variable.column], raw_qc, these_flags, PLOT_LOCATION + "qc_actuals_{}_{}{:02d}_{}.png".format(variable.name, year, month, suffix), multiplier = variable.multiplier)
+                        plot_qc_diagnostics.values_vs_lat(variable, lats, raw_obs[:, variable.column], raw_qc, these_flags, PLOT_LOCATION + "qc_actuals_{}_{}{:02d}_{}.png".format(variable.name, year, month, suffix), multiplier = variable.multiplier, doBC = doBC)
  
 
             # QC sub-selection
             if doQC:
                 print "Using {} as flags".format(these_flags)
-                mask = utils.process_qc_flags(raw_qc, these_flags)
+                mask = utils.process_qc_flags(raw_qc, these_flags, doBC = doBC)
 
                 complete_mask = np.zeros(raw_obs.shape)
                 for i in range(raw_obs.shape[1]):
@@ -213,6 +220,7 @@ def do_gridding(suffix = "relax", start_year = START_YEAR, end_year = END_YEAR, 
                 clean_data = np.ma.masked_array(raw_obs, mask = complete_mask)
 
             else:
+                print "No QC flags selected"
                 clean_data = np.ma.masked_array(raw_obs, mask = np.zeros(raw_obs.shape))
 
 
@@ -232,7 +240,7 @@ def do_gridding(suffix = "relax", start_year = START_YEAR, end_year = END_YEAR, 
             # NOTE - ALWAYS GIVING TOP-RIGHT OF BOX TO GIVE < HARD LIMIT (as opposed to <=)
             # do the gridding
             # extract the full grid, number of obs, and day/night flag
-            raw_month_grid, raw_month_n_obs, this_month_period = utils.grid_1by1_cam(clean_data, raw_qc, hours_since, lat_index, lon_index, grid_hours, grid_lats, grid_lons, OBS_ORDER, mdi, doMedian = True)
+            raw_month_grid, raw_month_n_obs, this_month_period = utils.grid_1by1_cam(clean_data, raw_qc, hours_since, lat_index, lon_index, grid_hours, grid_lats, grid_lons, OBS_ORDER, mdi, doMedian = True, doBC = doBC)
             print "successfully read data into 1x1 3hrly grids"
 
             # create matching array size
@@ -447,13 +455,16 @@ if __name__=="__main__":
                         help='which month to start run, default = 1')
     parser.add_argument('--end_month', dest='end_month', action='store', default = 12,
                         help='which month to end run, default = 12')
-    parser.add_argument('--period', dest='period', action='store', default = "both",
-                        help='which period to run for (day/night/both), default = "both"')
+    parser.add_argument('--doQC', dest='doQC', action='store_true', default = False,
+                        help='process the QC information, default = False')
+    parser.add_argument('--doBC', dest='doBC', action='store_true', default = False,
+                        help='process the bias corrected data, default = False')
     args = parser.parse_args()
 
 
     do_gridding(suffix = str(args.suffix), start_year = int(args.start_year), end_year = int(args.end_year), \
-                    start_month = int(args.start_month), end_month = int(args.end_month), period = str(args.period))
+                    start_month = int(args.start_month), end_month = int(args.end_month), \
+                    doQC = args.doQC, doBC = args.doBC)
 
 # END
 # ************************************************************************

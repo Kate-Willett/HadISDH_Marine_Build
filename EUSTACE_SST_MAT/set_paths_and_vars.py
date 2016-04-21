@@ -66,13 +66,26 @@ import datetime as dt
 plots = True
 doMedian = False
 
-# Constants in CAPS
-OUTROOT = "ERAclimNBC"
+doBC = True
 
-ICOADS_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/{}/".format(OUTROOT)
-# KW Changed GRIDS to GRIDS2 adn PLOTS to PLOTS2 to make sure I don't write over what has been done already
-DATA_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS3/"
-PLOT_LOCATION="/project/hadobs2/hadisdh/marine/PLOTS3/"
+if doBC:
+    # Constants in CAPS
+    OUTROOT = "ERAclimBC"
+
+    ICOADS_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/{}/".format(OUTROOT)
+    # KW Changed GRIDS to GRIDS2 adn PLOTS to PLOTS2 to make sure I don't write over what has been done already
+    DATA_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS_BC/"
+    PLOT_LOCATION="/project/hadobs2/hadisdh/marine/PLOTS_BC/"
+
+else:
+    # Constants in CAPS
+    OUTROOT = "ERAclimNBC"
+
+    ICOADS_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/{}/".format(OUTROOT)
+    # KW Changed GRIDS to GRIDS2 adn PLOTS to PLOTS2 to make sure I don't write over what has been done already
+    DATA_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS3/"
+    PLOT_LOCATION="/project/hadobs2/hadisdh/marine/PLOTS3/"
+
 
 START_YEAR = 1973
 END_YEAR = dt.datetime.now().year - 1
