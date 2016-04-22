@@ -126,6 +126,12 @@ def set_qc_flag_list(doBC = False, doUncert = False):
 "ATbud","ATclim","ATnonorm","ATnoval","ATround","ATrep",\
 "DPTbud","DPTclim","DPTnonorm","DPTssat","DPTnoval","DPTround","DPTrep","DPTrepsat"]) # set_qc_flag_list
 
+# RD - kept original flag array here just in case MDS_RWtools isn't used before next read
+#np.array(["day","land","trk","date1","date2","pos","blklst","dup","POSblank1",\
+#"SSTbud","SSTclim","SSTnonorm","SSTfreez","SSTnoval","SSTnbud","SSTbbud","SSTrep","SSTblank",\
+#"ATbud","ATclim","ATnonorm","ATblank1","ATnoval","ATnbud","ATbbud","ATrep","ATblank2",\
+#"DPTbud","DPTclim","DPTnonorm","DPTssat","DPTnoval","DPTnbud","DPTbbud","DPTrep","DPTrepsat",\
+#"few","ntrk","DUMblank1","DUMblank2","DUMblank3","DUMblank4","DUMblank5","DUMblank6"])
 
 #*****************************************************
 def read_qc_data(filename, location, fieldwidths, doBC = False):

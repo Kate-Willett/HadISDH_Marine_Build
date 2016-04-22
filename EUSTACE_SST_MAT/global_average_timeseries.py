@@ -180,7 +180,7 @@ for version in ["", "_anomalies"]:
         lat_centres = ncdf_file.variables["latitude"]
         lon_centres = ncdf_file.variables["longitude"]
 
-        n_obs = utils.set_MetVar_attributes("n_obs", "Number of Observations", "Number of Observations", 1, -1, np.dtype("int16"), 0)
+        n_obs = utils.set_MetVar_attributes("n_obs", "Number of Observations", "Number of Observations", 1, -1, np.dtype("int64"), 0)
         OBS_ORDER = utils.make_MetVars(mdi, multiplier = False)
         OBS_ORDER += [n_obs]
 
