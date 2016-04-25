@@ -75,12 +75,13 @@ import netCDF4 as ncdf
 import gc
 
 import utils
-from set_paths_and_vars import *
+import set_paths_and_vars
+defaults = set_paths_and_vars.set()
 
 # need to merge the pentads (1x1) and the monthlies (5x5)
 
 #************************************************************************
-def combine_files(suffix = "relax", pentads = False, do3hr = False, months = False, daily = False, start_year = START_YEAR, end_year = END_YEAR, start_month = 1, end_month = 12, period = "both"):
+def combine_files(suffix = "relax", pentads = False, do3hr = False, months = False, daily = False, start_year = defaults.START_YEAR, defaults.end_year = END_YEAR, start_month = 1, end_month = 12, period = "both", doQC = False, doBC = False):
     '''
     Combine the files, first the pentads 1x1, then the monthlies 5x5
 
@@ -94,14 +95,17 @@ def combine_files(suffix = "relax", pentads = False, do3hr = False, months = Fal
     :param int start_month: start month to process
     :param int end_month: end month to process
     :param str period: which period to do day/night/both?
+    :param bool doQC: incorporate the QC flags or not
+    :param bool doBC: work on the bias corrected data
 
     :returns:
     '''
+    settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC)
 
     # pentads
     if pentads:
 
-        OBS_ORDER = utils.make_MetVars(mdi, multiplier = False)
+        OBS_ORDER = utils.make_MetVars(settings.mdi, multiplier = False)
         # KW make OBS_ORDER only the actual variables - remove anomalies
         NEWOBS_ORDER = []
         for v, var in enumerate(OBS_ORDER):
@@ -125,7 +129,7 @@ def combine_files(suffix = "relax", pentads = False, do3hr = False, months = Fal
 
             all_pentads = np.ma.zeros((1, Nyears, 73, len(grid_lats), len(grid_lons)))
             all_pentads.mask = np.ones((1, Nyears, 73, len(grid_lats), len(grid_lons)))
-            all_pentads.fill_value = mdi
+            all_pentads.fill_value = settings.mdi
 
             n_obs = np.zeros((Nyears, 73, len(grid_lats), len(grid_lons)))
             n_grids = np.zeros((Nyears, 73, len(grid_lats), len(grid_lons)))
@@ -134,9 +138,9 @@ def combine_files(suffix = "relax", pentads = False, do3hr = False, months = Fal
             for y, year in enumerate(np.arange(start_year, end_year + 1)):
 
                 if do3hr:
-                    filename = DATA_LOCATION + "{}_1x1_pentad_from_3hrly_{}_{}_{}.nc".format(OUTROOT, year, period, suffix)
+                    filename = settings.DATA_LOCATION + "{}_1x1_pentad_from_3hrly_{}_{}_{}.nc".format(settings.OUTROOT, year, period, suffix)
                 else:
-                    filename = DATA_LOCATION + "{}_1x1_pentad_{}_{}_{}.nc".format(OUTROOT, year, period, suffix)
+                    filename = settings.DATA_LOCATION + "{}_1x1_pentad_{}_{}_{}.nc".format(settings.OUTROOT, year, period, suffix)
 
                 ncdf_file = ncdf.Dataset(filename,'r', format='NETCDF4')
 
@@ -175,9 +179,9 @@ def combine_files(suffix = "relax", pentads = False, do3hr = False, months = Fal
 
             # and write file
             if do3hr:
-                out_filename = DATA_LOCATION + "{}_1x1_pentads_from_3hrly_{}_{}_{}.nc".format(OUTROOT, var.name, period, suffix)
+                out_filename = settings.DATA_LOCATION + "{}_1x1_pentads_from_3hrly_{}_{}_{}.nc".format(settings.OUTROOT, var.name, period, suffix)
             else:
-                out_filename = DATA_LOCATION + "{}_1x1_pentads_{}_{}_{}.nc".format(OUTROOT, var.name, period, suffix)
+                out_filename = settings.DATA_LOCATION + "{}_1x1_pentads_{}_{}_{}.nc".format(settings.OUTROOT, var.name, period, suffix)
 
             if period == "both":
                 utils.netcdf_write(out_filename, all_pentads, n_grids, n_obs, OBS_ORDER, latitudes, longitudes, times, frequency = "P", single = var)
@@ -192,7 +196,7 @@ def combine_files(suffix = "relax", pentads = False, do3hr = False, months = Fal
 
     if months:
 
-        OBS_ORDER = utils.make_MetVars(mdi, multiplier = False)
+        OBS_ORDER = utils.make_MetVars(settings.mdi, multiplier = False)
 
         #*****************************
         # monthlies
@@ -203,9 +207,9 @@ def combine_files(suffix = "relax", pentads = False, do3hr = False, months = Fal
                 print "   {}".format(month)
 
                 if daily:
-                    filename = DATA_LOCATION + "{}_5x5_monthly_from_daily_{}{:02d}_{}_{}.nc".format(OUTROOT, year, month, period, suffix)
+                    filename = settings.DATA_LOCATION + "{}_5x5_monthly_from_daily_{}{:02d}_{}_{}.nc".format(settings.OUTROOT, year, month, period, suffix)
                 else:
-                    filename = DATA_LOCATION + "{}_5x5_monthly_{}{:02d}_{}_{}.nc".format(OUTROOT, year, month, period, suffix)
+                    filename = settings.DATA_LOCATION + "{}_5x5_monthly_{}{:02d}_{}_{}.nc".format(settings.OUTROOT, year, month, period, suffix)
 
                 ncdf_file = ncdf.Dataset(filename,'r', format='NETCDF4')
 
@@ -267,9 +271,9 @@ def combine_files(suffix = "relax", pentads = False, do3hr = False, months = Fal
 
         # and write file
         if daily:
-            out_filename = DATA_LOCATION + OUTROOT + "_5x5_monthly_from_daily_{}_{}.nc".format(period, suffix)
+            out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_5x5_monthly_from_daily_{}_{}.nc".format(period, suffix)
         else:
-            out_filename = DATA_LOCATION + OUTROOT + "_5x5_monthly_{}_{}.nc".format(period, suffix)
+            out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_5x5_monthly_{}_{}.nc".format(period, suffix)
 
         if period == "both":
             utils.netcdf_write(out_filename, all_data, n_grids, n_obs, OBS_ORDER, latitudes, longitudes, times, frequency = "Y")
@@ -297,9 +301,9 @@ if __name__=="__main__":
                         help='run 5x5 monthly data, default = False')
     parser.add_argument('--daily', dest='daily', action='store_true', default = False,
                         help='run on daily --> monthly data (rather than 1x1 monthly --> 5x5 monthly), default = False')
-    parser.add_argument('--start_year', dest='start_year', action='store', default = START_YEAR,
+    parser.add_argument('--start_year', dest='start_year', action='store', default = defaults.START_YEAR,
                         help='which year to start run, default = 1973')
-    parser.add_argument('--end_year', dest='end_year', action='store', default = END_YEAR,
+    parser.add_argument('--end_year', dest='end_year', action='store', default = defaults.END_YEAR,
                         help='which year to end run, default = present')
     parser.add_argument('--start_month', dest='start_month', action='store', default = 1,
                         help='which month to start run, default = 1')
@@ -307,9 +311,14 @@ if __name__=="__main__":
                         help='which month to end run, default = 12')
     parser.add_argument('--period', dest='period', action='store', default = "both",
                         help='which period to run for (day/night/both), default = "both"')
+    parser.add_argument('--doQC', dest='doQC', action='store_true', default = False,
+                        help='process the QC information, default = False')
+    parser.add_argument('--doBC', dest='doBC', action='store_true', default = False,
+                        help='process the bias corrected data, default = False')
     args = parser.parse_args()
 
 
     combine_files(suffix = str(args.suffix), months = args.months, daily = args.daily, pentads = args.pentads, do3hr = args.do3hr, \
                       start_year = int(args.start_year), end_year = int(args.end_year), \
-                      start_month = int(args.start_month), end_month = int(args.end_month), period = str(args.period))
+                      start_month = int(args.start_month), end_month = int(args.end_month), period = str(args.period),\
+                      doQC = args.doQC, doBC = args.doBC)

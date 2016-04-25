@@ -79,10 +79,11 @@ import calendar
 import netCDF4 as ncdf
 
 import utils
-from set_paths_and_vars import *
+import set_paths_and_vars
+defaults = set_paths_and_vars.set()
 
 
-OBS_ORDER = utils.make_MetVars(mdi, multiplier = False) 
+OBS_ORDER = utils.make_MetVars(defaults.mdi, multiplier = False) 
 
 # what size grid (lat/lon)
 DELTA_LAT = 5
@@ -94,7 +95,7 @@ grid_lons = np.arange(-180 + DELTA_LAT, 180 + DELTA_LON, DELTA_LON)
 
 # subroutine start
 #*********************************************
-def calculate_climatology(suffix = "relax", start_year = 1981, end_year = 2010, period = "both", daily = False):
+def calculate_climatology(suffix = "relax", start_year = 1981, end_year = 2010, period = "both", daily = False, doQC = False, doBC = False):
     '''
     Make 5x5 monthly climatology
 
@@ -103,9 +104,14 @@ def calculate_climatology(suffix = "relax", start_year = 1981, end_year = 2010, 
     :param int end_year: end year to process
     :param str period: which period to do day/night/both?
     :param bool daily: run in 1x1 daily --> 5x5 monthly data
+    :param bool doQC: incorporate the QC flags or not
+    :param bool doBC: work on the bias corrected data
 
     :returns:
     '''
+    settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC)
+
+
     if suffix == "relax":
         N_YEARS_PRESENT = 10 # number of years present to calculate climatology
     elif suffix == "strict":
@@ -131,10 +137,10 @@ def calculate_climatology(suffix = "relax", start_year = 1981, end_year = 2010, 
     all_n_obs.fill_value = -1
     
     if daily:
-        filename = DATA_LOCATION + "{}_5x5_monthly_from_daily_{}_{}.nc".format(OUTROOT, period, suffix)
+        filename = settings.DATA_LOCATION + "{}_5x5_monthly_from_daily_{}_{}.nc".format(settings.OUTROOT, period, suffix)
             
     else:
-        filename = DATA_LOCATION + "{}_5x5_monthly_{}_{}.nc".format(OUTROOT, period, suffix)
+        filename = settings.DATA_LOCATION + "{}_5x5_monthly_{}_{}.nc".format(settings.OUTROOT, period, suffix)
 
     ncdf_file = ncdf.Dataset(filename,'r', format='NETCDF4')
 
@@ -151,7 +157,7 @@ def calculate_climatology(suffix = "relax", start_year = 1981, end_year = 2010, 
         all_months = np.ma.zeros([N_YEARS * 12, len(grid_lats), len(grid_lons)])
 	# sets up a mask of 'False' = not masked!
         all_months.mask = np.zeros([N_YEARS * 12, len(grid_lats), len(grid_lons)])
-        all_months.fill_value = mdi
+        all_months.fill_value = settings.mdi
 
         all_months[:, :, :] = ncdf_file.variables[var.name][clim_offset:clim_offset + (30*12)]
 
@@ -162,7 +168,7 @@ def calculate_climatology(suffix = "relax", start_year = 1981, end_year = 2010, 
         n_grids = np.ma.count(all_months, axis = 0)
 
         # collapse down the years
-        if doMedian:
+        if settings.doMedian:
             all_clims[v, :, :, :] = utils.bn_median(all_months, axis = 0)
         else:
             all_clims[v, :, :, :] = np.ma.mean(all_months, axis = 0)
@@ -175,7 +181,7 @@ def calculate_climatology(suffix = "relax", start_year = 1981, end_year = 2010, 
         # KW should probably mask stdev too - although unmasked it does show the potential coverage
         all_stds[v, :, :, :].mask[locs] = True
 
-        if plots and v == 0:
+        if settings.plots and v == 0:
             import matplotlib.pyplot as plt
             plt.clf()
             plt.hist(n_grids.reshape(-1), bins = np.arange(-1,32), align = "left", log = True, rwidth=0.5)
@@ -183,7 +189,7 @@ def calculate_climatology(suffix = "relax", start_year = 1981, end_year = 2010, 
             plt.title("Number of years present in each pentad")
             plt.xlabel("Number of years (max = 30)")
             plt.ylabel("Frequency (log scale)")
-            plt.savefig(PLOT_LOCATION + "monthly_5x5_clims_n_years_{}_{}.png".format(period, suffix))
+            plt.savefig(settings.PLOT_LOCATION + "monthly_5x5_clims_n_years_{}_{}.png".format(period, suffix))
 
             
     # now process number of observations (KW all_n_obs wasn't a masked array - so have set it up as one - BUT not really convinced this 
@@ -199,9 +205,9 @@ def calculate_climatology(suffix = "relax", start_year = 1981, end_year = 2010, 
 
     # write files
     if daily:
-        out_filename = DATA_LOCATION + OUTROOT + "_5x5_monthly_climatology_from_daily_{}_{}.nc".format(period, suffix)
+        out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_5x5_monthly_climatology_from_daily_{}_{}.nc".format(period, suffix)
     else:
-        out_filename = DATA_LOCATION + OUTROOT + "_5x5_monthly_climatology_{}_{}.nc".format(period, suffix)
+        out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_5x5_monthly_climatology_{}_{}.nc".format(period, suffix)
 
     if period == "both":
         utils.netcdf_write(out_filename, all_clims, n_grids, all_obs, OBS_ORDER, grid_lats[::-1], grid_lons, times, frequency = "Y")
@@ -209,9 +215,9 @@ def calculate_climatology(suffix = "relax", start_year = 1981, end_year = 2010, 
         utils.netcdf_write(out_filename, all_clims, n_grids, all_obs, OBS_ORDER, grid_lats, grid_lons, times, frequency = "Y")
 
     if daily:
-        out_filename = DATA_LOCATION + OUTROOT + "_5x5_monthly_stdev_from_daily_{}_{}.nc".format(period, suffix)
+        out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_5x5_monthly_stdev_from_daily_{}_{}.nc".format(period, suffix)
     else:
-        out_filename = DATA_LOCATION + OUTROOT + "_5x5_monthly_stdev_{}_{}.nc".format(period, suffix)
+        out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_5x5_monthly_stdev_{}_{}.nc".format(period, suffix)
 
     if period == "both":
         utils.netcdf_write(out_filename, all_stds, n_grids, all_obs, OBS_ORDER, grid_lats[::-1], grid_lons, times, frequency = "Y")
@@ -220,9 +226,9 @@ def calculate_climatology(suffix = "relax", start_year = 1981, end_year = 2010, 
 
     # test distribution of obs with grid boxes
     if daily:
-        outfile = file(OUTROOT + "_5x5_monthly_climatology_from_daily_{}_{}.txt".format(period, suffix), "w")
+        outfile = file(settings.OUTROOT + "_5x5_monthly_climatology_from_daily_{}_{}.txt".format(period, suffix), "w")
     else:
-        outfile = file(OUTROOT + "_5x5_monthly_climatology_{}_{}.txt".format(period, suffix), "w")
+        outfile = file(settings.OUTROOT + "_5x5_monthly_climatology_{}_{}.txt".format(period, suffix), "w")
         
     utils.boxes_with_n_obs(outfile, all_obs, all_clims[0], N_YEARS_PRESENT)
 
@@ -245,10 +251,14 @@ if __name__=="__main__":
                         help='which period to run for (day/night/all), default = "both"')
     parser.add_argument('--daily', dest='daily', action='store_true', default = False,
                         help='run on 1x1 daily --> 5x5 monthly data (rather than 1x1 monthly --> 5x5 monthly), default = False')
+    parser.add_argument('--doQC', dest='doQC', action='store_true', default = False,
+                        help='process the QC information, default = False')
+    parser.add_argument('--doBC', dest='doBC', action='store_true', default = False,
+                        help='process the bias corrected data, default = False')
     args = parser.parse_args()
 
 
-    calculate_climatology(suffix = str(args.suffix), start_year = int(args.start_year), end_year = int(args.end_year), period = str(args.period), daily = args.daily)
+    calculate_climatology(suffix = str(args.suffix), start_year = int(args.start_year), end_year = int(args.end_year), period = str(args.period), daily = args.daily, doQC = args.doQC, doBC = args.doBC)
 
 # END
 # ************************************************************************

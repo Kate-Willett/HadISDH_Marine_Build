@@ -108,26 +108,43 @@ def do_plot(data, title, outname):
     plt.clf()
     ax = plt.axes()
 
-    texty = 0.85
+    if data[0].name == "n_obs":
+        ax1 = ax
+        ax2 = ax1.twinx()
+
+
+    texty = 0.95
     for d in data:
         if d.label == "":
             # if no label (e.g. monthly)
-            plt.plot(d.t, d.y.data, c = d.c, zorder = d.z, lw = d.lw)
+
+            if d.name == "n_obs":
+                ax1.plot(d.t, d.y.data/10000., c = d.c, zorder = d.z, lw = d.lw)
+            else:
+                plt.plot(d.t, d.y.data, c = d.c, zorder = d.z, lw = d.lw)
+
                
         else:
-            plt.plot(d.t, d.y.data, label = d.label, c = d.c, zorder = d.z, lw = d.lw)
+            if d.name == "n_obs":
+                ax2.plot(d.t, d.y.data/10000., label = d.label, c = d.c, zorder = d.z, lw = d.lw)
+            else:               
+                plt.plot(d.t, d.y.data, label = d.label, c = d.c, zorder = d.z, lw = d.lw)
 
-            # annual - also want MPW slope
-            slope, lower, upper = median_pairwise_slopes(d.t, d.y.data, d.y.mdi, sigma = 1.)
-            slope_error = np.mean([(upper-slope), (slope-lower)])
+                # annual - also want MPW slope
+                slope, lower, upper = median_pairwise_slopes(d.t, d.y.data, d.y.mdi, sigma = 1.)
+                slope_error = np.mean([(upper-slope), (slope-lower)])
 
-            slope_years, slope_values = mpw_plot_points(slope, d.t, d.y.data)
-            plt.plot(slope_years, slope_values, c = d.c, lw = 1)
+                slope_years, slope_values = mpw_plot_points(slope, d.t, d.y.data)
+                plt.plot(slope_years, slope_values, c = d.c, lw = 1)
 
-            plt.text(0.03, texty, "{:6.2f} +/- {:6.3f} {} 10 yr".format(10.*slope, 10.*slope_error, d.y.units)+r'$^{-1}$', transform = ax.transAxes, color = d.c)
-            texty -= 0.05
+                plt.text(0.03, texty, "{:6.3f} +/- {:6.4f} {} 10 yr".format(10.*slope, 10.*slope_error, d.y.units)+r'$^{-1}$', transform = ax.transAxes, color = d.c)
+                texty -= 0.05
 
-    plt.ylabel(d.y.units)
+    if d.name != "n_obs":
+        plt.ylabel(d.y.units)
+    else:
+        ax1.set_ylabel("Monthly/10000")
+        ax2.set_ylabel("Annual/10000")
 
     plt.title(title)
     plt.legend()
@@ -270,6 +287,10 @@ def mpw_plot_points(slope, years, values):
 
 mdi = -1.e30
 OBS_ORDER = utils.make_MetVars(mdi, multiplier = False)
+
+n_obs = utils.set_MetVar_attributes("n_obs", "Number of Observations", "Number of Observations", 1, -1, np.dtype("int64"), 0)
+OBS_ORDER += [n_obs]
+
 GRID_LOCATION = {"NBC" : "GRIDS3", "BC" : "GRIDS_BC", "QC" : "GRIDS3", "noQC" : "GRIDS_noQC"}
 PLOT_LOCATION = "/project/hadobs2/hadisdh/marine/PLOTS_compare/"
 
@@ -284,8 +305,8 @@ DATA_LOCATION = "/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/"
 correction = "NBC"
 
 for v, var in enumerate(OBS_ORDER):
-    if "anomalies" not in var.name:
-        continue
+#    if "anomalies" not in var.name:
+#        continue
 
     to_plot = []
 
@@ -312,9 +333,9 @@ for v, var in enumerate(OBS_ORDER):
             label = "{}".format(period)
 
             if time_res == "annual":
-                to_plot += [PlotData("", y, t, label, color, zorder, lw)]
+                to_plot += [PlotData(var.name, y, t, label, color, zorder, lw)]
             else:
-                to_plot += [PlotData("", y, t, "", color, zorder, lw)]
+                to_plot += [PlotData(var.name, y, t, "", color, zorder, lw)]
                 
     title = "{} - {}".format(" ".join([s.capitalize() for s in var.name.split("_")]), correction)
 
@@ -361,9 +382,9 @@ for v, var in enumerate(OBS_ORDER):
                     color = "k"
                     
                 if time_res == "annual":
-                    to_plot += [PlotData("", y, t, label, color, zorder, lw)]
+                    to_plot += [PlotData(var.name, y, t, label, color, zorder, lw)]
                 else:
-                    to_plot += [PlotData("", y, t, "", color, zorder, lw)]
+                    to_plot += [PlotData(var.name, y, t, "", color, zorder, lw)]
 
         
         title = "{} - {} - {}".format(" ".join([s.capitalize() for s in var.name.split("_")]), correction, period)
@@ -381,8 +402,8 @@ version = "_anomalies"
 DATA_LOCATION = "/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/"
 
 for v, var in enumerate(OBS_ORDER):
-    if "anomalies" not in var.name:
-        continue
+#    if "anomalies" not in var.name:
+#        continue
 
     # separate plots for both/day/night
     for period in ["both", "day", "night"]:
@@ -412,9 +433,9 @@ for v, var in enumerate(OBS_ORDER):
                     color = "k"
                     
                 if time_res == "annual":
-                    to_plot += [PlotData("", y, t, label, color, zorder, lw)]
+                    to_plot += [PlotData(var.name, y, t, label, color, zorder, lw)]
                 else:
-                    to_plot += [PlotData("", y, t, "", color, zorder, lw)]
+                    to_plot += [PlotData(var.name, y, t, "", color, zorder, lw)]
 
         
         title = "{} - {} - {}".format(" ".join([s.capitalize() for s in var.name.split("_")]), period, "QC")

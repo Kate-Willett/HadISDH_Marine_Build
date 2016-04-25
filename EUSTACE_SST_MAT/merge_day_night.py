@@ -75,10 +75,11 @@ import calendar
 import netCDF4 as ncdf
 
 import utils
-from set_paths_and_vars import *
+import set_paths_and_vars
+defaults = set_paths_and_vars.set()
 
 #************************************************************************
-def do_merge(fileroot, suffix = "relax", clims = False):
+def do_merge(fileroot, mdi, suffix = "relax", clims = False, doMedian = False):
     '''
     Merge the _day and _night files
 
@@ -87,6 +88,7 @@ def do_merge(fileroot, suffix = "relax", clims = False):
     Output with a _both suffix
 
     :param str fileroot: root for filenames
+    :param flt mdi: missing data indicator
     :param str suffix: "relax" or "strict" criteria
     :param bool clims: if climatologies then don't try and process anomalies.
     '''
@@ -178,10 +180,11 @@ def do_merge(fileroot, suffix = "relax", clims = False):
 
 
 #************************************************************************
-def get_fileroot(climatology = False, pentads = False, months = [], do3hr = True, time = [], daily = True):
+def get_fileroot(settings, climatology = False, pentads = False, months = [], do3hr = True, time = [], daily = True):
     '''
     Get the filename root depending on switches
 
+    :param Settings settings: settings object for paths
     :param bool climatology: for pentad climatology files
     :param bool pentads: for annual pentad files
     :param bool months: for monthly files
@@ -197,21 +200,21 @@ def get_fileroot(climatology = False, pentads = False, months = [], do3hr = True
 
     if climatology:
         if do3hr:
-            fileroot = DATA_LOCATION + OUTROOT + "_1x1_pentad_climatology_from_3hrly"
+            fileroot = settings.DATA_LOCATION + settings.OUTROOT + "_1x1_pentad_climatology_from_3hrly"
         else:
-            fileroot = DATA_LOCATION + OUTROOT + "_1x1_pentad_climatology"
+            fileroot = settings.DATA_LOCATION + settings.OUTROOT + "_1x1_pentad_climatology"
 
     elif pentads:
         if do3hr:
-            fileroot = DATA_LOCATION + OUTROOT + "_1x1_pentad_from_3hrly_{}".format(time[0])
+            fileroot = settings.DATA_LOCATION + settings.OUTROOT + "_1x1_pentad_from_3hrly_{}".format(time[0])
         else:
-            fileroot = DATA_LOCATION + OUTROOT + "_1x1_pentad_{}".format(time[0])
+            fileroot = settings.DATA_LOCATION + settings.OUTROOT + "_1x1_pentad_{}".format(time[0])
 
     elif months != []:
         if daily:
-            fileroot = DATA_LOCATION + OUTROOT + "_5x5_monthly_from_daily_{}{:02d}".format(time[0], time[1])
+            fileroot = settings.DATA_LOCATION + settings.OUTROOT + "_5x5_monthly_from_daily_{}{:02d}".format(time[0], time[1])
         else:
-            fileroot = DATA_LOCATION + OUTROOT + "_5x5_monthly_{}{:02d}".format(time[0], time[1])
+            fileroot = settings.DATA_LOCATION + settings.OUTROOT + "_5x5_monthly_{}{:02d}".format(time[0], time[1])
              
 
     return fileroot # get_fileroot
@@ -219,7 +222,7 @@ def get_fileroot(climatology = False, pentads = False, months = [], do3hr = True
 
 
 #************************************************************************
-def set_up_merge(suffix = "relax", clims = False, months = False, pentads = False, start_year = START_YEAR, end_year = END_YEAR, start_month = 1, end_month = 12):
+def set_up_merge(suffix = "relax", clims = False, months = False, pentads = False, start_year = START_YEAR, end_year = END_YEAR, start_month = 1, end_month = 12, doQC = False, doBC = False):
     '''
     Obtain file roots and set processes running
     
@@ -231,28 +234,31 @@ def set_up_merge(suffix = "relax", clims = False, months = False, pentads = Fals
     :param int end_year: end year to process
     :param int start_month: start month to process
     :param int end_month: end month to process
+    :param bool doQC: incorporate the QC flags or not
+    :param bool doBC: work on the bias corrected data
     '''
     
+    settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC)
 
     if clims:
         print "Processing Climatologies"
         
-#        fileroot = get_fileroot(climatology = True)
-#        do_merge(fileroot, suffix)
+#        fileroot = get_fileroot(settings, climatology = True)
+#        do_merge(fileroot, settings.mdi, suffix, doMedian = settings.doMedian)
         
-        fileroot = get_fileroot(climatology = True, do3hr = True)
-        do_merge(fileroot, suffix, clims = True)
+        fileroot = get_fileroot(settings, climatology = True, do3hr = True)
+        do_merge(fileroot, settings.mdi, suffix, clims = True, doMedian = settings.doMedian)
 
     if pentads:
         print "Processing Pentads"
         
-#        fileroot = get_fileroot(pentads = True)
-#        do_merge(fileroot, suffix)
+#        fileroot = get_fileroot(settings, pentads = True)
+#        do_merge(fileroot, settings.mdi, suffix, doMedian = settings.doMedian)
         
         for year in np.arange(start_year, end_year + 1): 
             print year
-            fileroot = get_fileroot(pentads = True, do3hr = True, time = [year])
-            do_merge(fileroot, suffix)
+            fileroot = get_fileroot(settings, pentads = True, do3hr = True, time = [year])
+            do_merge(fileroot, settings.mdi, suffix, doMedian = settings.doMedian)
 
     if months:
         print "Processing Monthly Files"
@@ -268,11 +274,11 @@ def set_up_merge(suffix = "relax", clims = False, months = False, pentads = Fals
             for month in np.arange(start_month, end_month + 1):
                 print "  {}".format(month)
 
-#                fileroot = get_fileroot(months = True, time = [year, month])
-#                do_merge(fileroot, suffix)
+#                fileroot = get_fileroot(settings, months = True, time = [year, month])
+#                do_merge(fileroot, settings.mdi, suffix, doMedian = settings.doMedian)
 
-                fileroot = get_fileroot(months = True, time = [year, month], daily = True)
-                do_merge(fileroot, suffix)
+                fileroot = get_fileroot(settings, months = True, time = [year, month], daily = True)
+                do_merge(fileroot, settings.mdi, suffix, doMedian = settings.doMedian)
 
 
     return # set_up_merge
@@ -292,20 +298,24 @@ if __name__=="__main__":
                         help='run monthly merge, default = False')
     parser.add_argument('--pentads', dest='pentads', action='store_true', default = False,
                         help='run pentad merge, default = False')
-    parser.add_argument('--start_year', dest='start_year', action='store', default = START_YEAR,
+    parser.add_argument('--start_year', dest='start_year', action='store', default = defaults.START_YEAR,
                         help='which year to start run, default = 1973')
-    parser.add_argument('--end_year', dest='end_year', action='store', default = END_YEAR,
+    parser.add_argument('--end_year', dest='end_year', action='store', default = defaults.END_YEAR,
                         help='which year to end run, default = present')
     parser.add_argument('--start_month', dest='start_month', action='store', default = 1,
                         help='which month to start run, default = 1')
     parser.add_argument('--end_month', dest='end_month', action='store', default = 12,
                         help='which month to end run, default = 12')
+    parser.add_argument('--doQC', dest='doQC', action='store_true', default = False,
+                        help='process the QC information, default = False')
+    parser.add_argument('--doBC', dest='doBC', action='store_true', default = False,
+                        help='process the bias corrected data, default = False')
     args = parser.parse_args()
 
 
     set_up_merge(suffix = str(args.suffix), clims = args.clims, months = args.months, pentads = args.pentads, \
                      start_year = int(args.start_year), end_year = int(args.end_year), \
-                     start_month = int(args.start_month), end_month = int(args.end_month))
+                     start_month = int(args.start_month), end_month = int(args.end_month), doQC = args.doQC, doBC = args.doBC)
 
 # END
 # ************************************************************************
