@@ -179,7 +179,7 @@ def process_february(var_3hrlys, doMask = True):
 
 
 #************************************************************************
-def do_conversion(suffix = "relax", start_year = START_YEAR, end_year = END_YEAR, period = "all", doQC = False, doBC = False):
+def do_conversion(suffix = "relax", start_year = defaults.START_YEAR, end_year = defaults.END_YEAR, period = "all", doQC = False, doBC = False):
     '''
     Convert 3 hrlies to pentads 1x1
 

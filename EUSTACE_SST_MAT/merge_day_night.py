@@ -180,7 +180,7 @@ def do_merge(fileroot, mdi, suffix = "relax", clims = False, doMedian = False):
 
 
 #************************************************************************
-def get_fileroot(settings, climatology = False, pentads = False, months = [], do3hr = True, time = [], daily = True):
+def get_fileroot(settings, climatology = False, pentads = False, months = [], do3hr = True, time = [], daily = True, stdev = False):
     '''
     Get the filename root depending on switches
 
@@ -191,6 +191,7 @@ def get_fileroot(settings, climatology = False, pentads = False, months = [], do
     :param bool do3hr: run for pentad climatology files created from 3hrly data
     :param list monthly: pass in [YYYY] or [YYYY, MM] for pentad or monthly files
     :param bool daily: run for monthly grids created from 1x1 daily
+    :param bool stdev: run on the standard deviation files from climatology
     '''
 
 
@@ -200,9 +201,15 @@ def get_fileroot(settings, climatology = False, pentads = False, months = [], do
 
     if climatology:
         if do3hr:
-            fileroot = settings.DATA_LOCATION + settings.OUTROOT + "_1x1_pentad_climatology_from_3hrly"
+            if stdev:
+                fileroot = settings.DATA_LOCATION + settings.OUTROOT + "_1x1_pentad_stdev_from_3hrly"
+            else:
+                fileroot = settings.DATA_LOCATION + settings.OUTROOT + "_1x1_pentad_climatology_from_3hrly"
         else:
-            fileroot = settings.DATA_LOCATION + settings.OUTROOT + "_1x1_pentad_climatology"
+            if stdev:
+                fileroot = settings.DATA_LOCATION + settings.OUTROOT + "_1x1_pentad_stdev"
+            else:
+                fileroot = settings.DATA_LOCATION + settings.OUTROOT + "_1x1_pentad_climatology"
 
     elif pentads:
         if do3hr:
@@ -222,7 +229,7 @@ def get_fileroot(settings, climatology = False, pentads = False, months = [], do
 
 
 #************************************************************************
-def set_up_merge(suffix = "relax", clims = False, months = False, pentads = False, start_year = START_YEAR, end_year = END_YEAR, start_month = 1, end_month = 12, doQC = False, doBC = False):
+def set_up_merge(suffix = "relax", clims = False, months = False, pentads = False, start_year = defaults.START_YEAR, end_year = defaults.END_YEAR, start_month = 1, end_month = 12, doQC = False, doBC = False):
     '''
     Obtain file roots and set processes running
     
@@ -248,6 +255,13 @@ def set_up_merge(suffix = "relax", clims = False, months = False, pentads = Fals
         
         fileroot = get_fileroot(settings, climatology = True, do3hr = True)
         do_merge(fileroot, settings.mdi, suffix, clims = True, doMedian = settings.doMedian)
+
+        # and stdev
+        print "Processing Standard Deviations"
+
+        fileroot = get_fileroot(settings, climatology = True, do3hr = True, stdev = True)
+        do_merge(fileroot, settings.mdi, suffix, clims = True, doMedian = settings.doMedian)
+
 
     if pentads:
         print "Processing Pentads"

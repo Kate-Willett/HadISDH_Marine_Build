@@ -81,7 +81,7 @@ defaults = set_paths_and_vars.set()
 # need to merge the pentads (1x1) and the monthlies (5x5)
 
 #************************************************************************
-def combine_files(suffix = "relax", pentads = False, do3hr = False, months = False, daily = False, start_year = defaults.START_YEAR, defaults.end_year = END_YEAR, start_month = 1, end_month = 12, period = "both", doQC = False, doBC = False):
+def combine_files(suffix = "relax", pentads = False, do3hr = False, months = False, daily = False, start_year = defaults.START_YEAR, end_year = defaults.END_YEAR, start_month = 1, end_month = 12, period = "both", doQC = False, doBC = False):
     '''
     Combine the files, first the pentads 1x1, then the monthlies 5x5
 
