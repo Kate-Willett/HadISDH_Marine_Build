@@ -118,8 +118,8 @@
 #************************************************************************
 import datetime as dt
 # Folling two lines should be uncommented if using with SPICE or screen
-## import matplotlib
-## matplotlib.use('Agg')
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.dates import date2num,num2date
@@ -133,7 +133,7 @@ from math import sqrt,pi
 import struct
 import pdb # pdb.set_trace() or c 
 
-from LinearTrends import MedianPairwise 
+#from LinearTrends import MedianPairwise 
 import MDS_basic_KATE as MDStool
 
 #************************************************************************
@@ -141,6 +141,9 @@ import MDS_basic_KATE as MDStool
 #************************************************************************
 
 def main(argv):
+    # TextOn = 1 means output stats to text file, 0 means plots only
+    TextOn = 0
+    
     # INPUT PARAMETERS AS STRINGS!!!!
     year1 = '2000' 
     year2 = '2000'
@@ -205,7 +208,8 @@ def main(argv):
     #INFIL = 'new_suite_'
     #INEXT = '_'+typee+'.txt'
 
-    OUTDIR = '/data/local/hadkw/HADCRUH2/MARINE/'
+    #OUTDIR = '/data/local/hadkw/HADCRUH2/MARINE/'
+    OUTDIR = ''
     OutRoundsPltAT = 'IMAGES/DecimalFreqDiagsAT_'+switch+'_'+typee+'_'+year1+year2+month1+month2+'_APR2016'
     OutRoundsTxtAT = 'LISTS/DecimalFreqStatsAT_'+switch+'_'+typee+'_APR2016.txt'
     OutRoundsPltDPT = 'IMAGES/DecimalFreqDiagsDPT_'+switch+'_'+typee+'_'+year1+year2+month1+month2+'_APR2016'
@@ -305,12 +309,10 @@ def main(argv):
 
     #  - plots, EOT/EOH by latitude where 1 = none, 2 = aspirated/ventilated (A/VS), 3 = whirled (SG/SL/W), 4 = screen not aspirated (S/SN), 5 = unscreend (US)
     #  - prints, number and % of obs with EOT and EOH present, and in the categories
-    # BE REALLY VAREFUL WITH HISTOGRAMS - PYTHON DOESN'T SEEM TO WORK IN FLOATS TO ONE DECIMAL PLACE (EVEN IF ROUNDED)
-    # NEED TO HAVE BINS THAT ACCOUNT FOR THIS e.g. count 0.1s needs 0.05 to 0.15 bin
     histeeALL = np.histogram(DPTbun-np.floor(DPTbun),np.arange(-0.05,1.05,0.1)) # or np.linspace(-0.05,0.95,11)
 
     UniqDecks = np.unique(DCKbun)
-    gap= 0.04
+    gap= 0.03
     cols = ['red','orange','gold','green','blue','indigo','violet','red','orange','gold','green','blue','indigo','violet','red','orange','gold','green','blue','indigo','violet','red','orange','gold','green','blue','indigo','violet',]
     lins = ['-','-','-','-','-','-','-','--','--','--','--','--','--','--',':',':',':',':',':',':',':','-.','-.','-.','-.','-.','-.','-.']
     linstext = ['solid','solid','solid','solid','solid','solid','solid','dashed','dashed','dashed','dashed','dashed','dashed','dashed','dotted','dotted','dotted','dotted','dotted','dotted','dotted','dotdash','dotdash','dotdash','dotdash','dotdash','dotdash','dotdash']
@@ -322,12 +324,12 @@ def main(argv):
     ax1.set_ylabel('No. of Obs (ALL)', color='black')
     ax2 = ax1.twinx()
     for i,dck in enumerate(UniqDecks):
-        histee = np.histogram(DPTbun[np.where(DCKbun == dck)[0]]-np.floor(DPTbun[np.where(DCKbun == dck)[0]]),np.arange(0,1.1,0.1))
+        histee = np.histogram(DPTbun[np.where(DCKbun == dck)[0]]-np.floor(DPTbun[np.where(DCKbun == dck)[0]]),np.arange(-0.05,1.05,0.1)) # or np.linspace(-0.05,0.95,11)
         ax2.plot(histee[1][0:10]+0.05,histee[0],c=cols[i],linestyle=lins[i],linewidth=2)
         PctRounds = 0.
         if (len(np.where((DCKbun == dck) & (DPTRbun == 1))[0]) > 0):
             PctRounds = (float(len(np.where((DCKbun == dck) & (DPTRbun == 1))[0]))/float(len(np.where(DCKbun == dck)[0])))*100.
-        ax2.annotate("{:3d}".format(dck)+' '+linstext[i]+"{:6.2f}".format(PctRounds)+'%',xy=(0.65,0.94-(i*gap)),xycoords='axes fraction',size=12,color=cols[i])
+        ax2.annotate("{:3d}".format(dck)+' '+linstext[i]+"{:6.2f}".format(PctRounds)+'%',xy=(0.65,0.96-(i*gap)),xycoords='axes fraction',size=10,color=cols[i])
 
     ax2.set_ylabel('No. of Obs (DECKS)', color='black')
     plt.tight_layout()
@@ -335,55 +337,54 @@ def main(argv):
 #    plt.savefig(OUTDIR+OutRoundsPltDPT+".eps")
     plt.savefig(OUTDIR+OutRoundsPltDPT+".png")
 
-    # Write out stats to file (append!)
-    filee=open(OUTDIR+OutRoundsTxtDPT,'a+')
-    Pct0s = 0.
-    Pct1s = 0.
-    Pct2s = 0.
-    Pct3s = 0.
-    Pct4s = 0.
-    Pct5s = 0.
-    Pct6s = 0.
-    Pct7s = 0.
-    Pct8s = 0.
-    Pct9s = 0.
-    if (histeeALL[0][0] > 0):
-            Pct0s = (float(histeeALL[0][0])/float(nobs))*100.
-    if (histeeALL[0][1] > 0):
-            Pct1s = (float(histeeALL[0][1])/float(nobs))*100.
-    if (histeeALL[0][2] > 0):
-            Pct2s = (float(histeeALL[0][2])/float(nobs))*100.
-    if (histeeALL[0][3] > 0):
-            Pct3s = (float(histeeALL[0][3])/float(nobs))*100.
-    if (histeeALL[0][4] > 0):
-            Pct4s = (float(histeeALL[0][4])/float(nobs))*100.
-    if (histeeALL[0][5] > 0):
-            Pct5s = (float(histeeALL[0][5])/float(nobs))*100.
-    if (histeeALL[0][6] > 0):
-            Pct6s = (float(histeeALL[0][6])/float(nobs))*100.
-    if (histeeALL[0][7] > 0):
-            Pct7s = (float(histeeALL[0][7])/float(nobs))*100.
-    if (histeeALL[0][8] > 0):
-            Pct8s = (float(histeeALL[0][8])/float(nobs))*100.
-    if (histeeALL[0][9] > 0):
-            Pct9s = (float(histeeALL[0][9])/float(nobs))*100.
-    
-    filee.write(str(year1+' '+year2+' '+month1+' '+month2+' NOBS: '+'{:8d}'.format(nobs)+\
-                                                          ' 0s '+'{:8d}'.format(histeeALL[0][0])+' ('+"{:6.2f}".format(Pct0s)+\
-                                                          '%) 1s: '+'{:8d}'.format(histeeALL[0][1])+' ('+"{:6.2f}".format(Pct1s)+\
-                                                          '%) 2s: '+'{:8d}'.format(histeeALL[0][2])+' ('+"{:6.2f}".format(Pct2s)+\
-                                                          '%) 3s: '+'{:8d}'.format(histeeALL[0][3])+' ('+"{:6.2f}".format(Pct3s)+\
-                                                          '%) 4s: '+'{:8d}'.format(histeeALL[0][4])+' ('+"{:6.2f}".format(Pct4s)+\
-                                                          '%) 5s: '+'{:8d}'.format(histeeALL[0][5])+' ('+"{:6.2f}".format(Pct5s)+\
-                                                          '%) 6s: '+'{:8d}'.format(histeeALL[0][6])+' ('+"{:6.2f}".format(Pct6s)+\
-                                                          '%) 7s: '+'{:8d}'.format(histeeALL[0][7])+' ('+"{:6.2f}".format(Pct7s)+\
-                                                          '%) 8s: '+'{:8d}'.format(histeeALL[0][8])+' ('+"{:6.2f}".format(Pct8s)+\
-                                                          '%) 9s: '+'{:8d}'.format(histeeALL[0][9])+' ('+"{:6.2f}".format(Pct9s)+\
-							  '%)\n'))
-    filee.close()
-    
-    # BE REALLY VAREFUL WITH HISTOGRAMS - PYTHON DOESN'T SEEM TO WORK IN FLOATS TO ONE DECIMAL PLACE (EVEN IF ROUNDED)
-    # NEED TO HAVE BINS THAT ACCOUNT FOR THIS e.g. count 0.1s needs 0.05 to 0.15 bin
+    if (TextOn == 1):
+        # Write out stats to file (append!)
+        filee=open(OUTDIR+OutRoundsTxtDPT,'a+')
+        Pct0s = 0.
+        Pct1s = 0.
+        Pct2s = 0.
+        Pct3s = 0.
+        Pct4s = 0.
+        Pct5s = 0.
+        Pct6s = 0.
+        Pct7s = 0.
+        Pct8s = 0.
+        Pct9s = 0.
+        if (histeeALL[0][0] > 0):
+	    Pct0s = (float(histeeALL[0][0])/float(nobs))*100.
+        if (histeeALL[0][1] > 0):
+	    Pct1s = (float(histeeALL[0][1])/float(nobs))*100.
+        if (histeeALL[0][2] > 0):
+	    Pct2s = (float(histeeALL[0][2])/float(nobs))*100.
+        if (histeeALL[0][3] > 0):
+	    Pct3s = (float(histeeALL[0][3])/float(nobs))*100.
+        if (histeeALL[0][4] > 0):
+	    Pct4s = (float(histeeALL[0][4])/float(nobs))*100.
+        if (histeeALL[0][5] > 0):
+	    Pct5s = (float(histeeALL[0][5])/float(nobs))*100.
+        if (histeeALL[0][6] > 0):
+	    Pct6s = (float(histeeALL[0][6])/float(nobs))*100.
+        if (histeeALL[0][7] > 0):
+	    Pct7s = (float(histeeALL[0][7])/float(nobs))*100.
+        if (histeeALL[0][8] > 0):
+	    Pct8s = (float(histeeALL[0][8])/float(nobs))*100.
+        if (histeeALL[0][9] > 0):
+	    Pct9s = (float(histeeALL[0][9])/float(nobs))*100.
+        
+        filee.write(str(year1+' '+year2+' '+month1+' '+month2+' NOBS: '+'{:8d}'.format(nobs)+\
+							  ' 0s '+'{:8d}'.format(histeeALL[0][0])+' ('+"{:6.2f}".format(Pct0s)+\
+							  '%) 1s: '+'{:8d}'.format(histeeALL[0][1])+' ('+"{:6.2f}".format(Pct1s)+\
+							  '%) 2s: '+'{:8d}'.format(histeeALL[0][2])+' ('+"{:6.2f}".format(Pct2s)+\
+							  '%) 3s: '+'{:8d}'.format(histeeALL[0][3])+' ('+"{:6.2f}".format(Pct3s)+\
+							  '%) 4s: '+'{:8d}'.format(histeeALL[0][4])+' ('+"{:6.2f}".format(Pct4s)+\
+							  '%) 5s: '+'{:8d}'.format(histeeALL[0][5])+' ('+"{:6.2f}".format(Pct5s)+\
+							  '%) 6s: '+'{:8d}'.format(histeeALL[0][6])+' ('+"{:6.2f}".format(Pct6s)+\
+							  '%) 7s: '+'{:8d}'.format(histeeALL[0][7])+' ('+"{:6.2f}".format(Pct7s)+\
+							  '%) 8s: '+'{:8d}'.format(histeeALL[0][8])+' ('+"{:6.2f}".format(Pct8s)+\
+							  '%) 9s: '+'{:8d}'.format(histeeALL[0][9])+' ('+"{:6.2f}".format(Pct9s)+\
+							 '%)\n'))
+        filee.close()
+
     histeeALL = np.histogram(ATbun-np.floor(ATbun),np.arange(-0.05,1.05,0.1)) # or np.linspace(-0.05,0.95,11)
 
     plt.clf()
@@ -393,85 +394,87 @@ def main(argv):
     ax1.set_ylabel('No. of Obs (ALL)', color='black')
     ax2 = ax1.twinx()
     for i,dck in enumerate(UniqDecks):
-        histee = np.histogram(ATbun[np.where(DCKbun == dck)[0]]-np.floor(ATbun[np.where(DCKbun == dck)[0]]),np.arange(0,1.1,0.1))
+        histee = np.histogram(ATbun[np.where(DCKbun == dck)[0]]-np.floor(ATbun[np.where(DCKbun == dck)[0]]),np.arange(-0.05,1.05,0.1)) # or np.linspace(-0.05,0.95,11)
         ax2.plot(histee[1][0:10]+0.05,histee[0],c=cols[i],linestyle=lins[i],linewidth=2)
         PctRounds = 0.
         if (len(np.where((DCKbun == dck) & (ATRbun == 1))[0]) > 0):
             PctRounds = (float(len(np.where((DCKbun == dck) & (ATRbun == 1))[0]))/float(len(np.where(DCKbun == dck)[0])))*100.
-        ax2.annotate("{:3d}".format(dck)+' '+linstext[i]+"{:6.2f}".format(PctRounds)+'%',xy=(0.65,0.94-(i*gap)),xycoords='axes fraction',size=12,color=cols[i])
+        ax2.annotate("{:3d}".format(dck)+' '+linstext[i]+"{:6.2f}".format(PctRounds)+'%',xy=(0.65,0.96-(i*gap)),xycoords='axes fraction',size=10,color=cols[i])
 
     ax2.set_ylabel('No. of Obs (DECKS)', color='black')
+    plt.tight_layout()
 
 #    plt.savefig(OUTDIR+OutRoundsPltAT+".eps")
     plt.savefig(OUTDIR+OutRoundsPltAT+".png")
-    plt.tight_layout()
 
-    # Write out stats to file (append!)
-    filee=open(OUTDIR+OutRoundsTxtAT,'a+')
-    Pct0s = 0.
-    Pct1s = 0.
-    Pct2s = 0.
-    Pct3s = 0.
-    Pct4s = 0.
-    Pct5s = 0.
-    Pct6s = 0.
-    Pct7s = 0.
-    Pct8s = 0.
-    Pct9s = 0.
-    if (histeeALL[0][0] > 0):
-            Pct0s = (float(histeeALL[0][0])/float(nobs))*100.
-    if (histeeALL[0][1] > 0):
-            Pct1s = (float(histeeALL[0][1])/float(nobs))*100.
-    if (histeeALL[0][2] > 0):
-            Pct2s = (float(histeeALL[0][2])/float(nobs))*100.
-    if (histeeALL[0][3] > 0):
-            Pct3s = (float(histeeALL[0][3])/float(nobs))*100.
-    if (histeeALL[0][4] > 0):
-            Pct4s = (float(histeeALL[0][4])/float(nobs))*100.
-    if (histeeALL[0][5] > 0):
-            Pct5s = (float(histeeALL[0][5])/float(nobs))*100.
-    if (histeeALL[0][6] > 0):
-            Pct6s = (float(histeeALL[0][6])/float(nobs))*100.
-    if (histeeALL[0][7] > 0):
-            Pct7s = (float(histeeALL[0][7])/float(nobs))*100.
-    if (histeeALL[0][8] > 0):
-            Pct8s = (float(histeeALL[0][8])/float(nobs))*100.
-    if (histeeALL[0][9] > 0):
-            Pct9s = (float(histeeALL[0][9])/float(nobs))*100.
-    
-    filee.write(str(year1+' '+year2+' '+month1+' '+month2+' NOBS: '+'{:8d}'.format(nobs)+\
-                                                          ' 0s '+'{:8d}'.format(histeeALL[0][0])+' ('+"{:6.2f}".format(Pct0s)+\
-                                                          '%) 1s: '+'{:8d}'.format(histeeALL[0][1])+' ('+"{:6.2f}".format(Pct1s)+\
-                                                          '%) 2s: '+'{:8d}'.format(histeeALL[0][2])+' ('+"{:6.2f}".format(Pct2s)+\
-                                                          '%) 3s: '+'{:8d}'.format(histeeALL[0][3])+' ('+"{:6.2f}".format(Pct3s)+\
-                                                          '%) 4s: '+'{:8d}'.format(histeeALL[0][4])+' ('+"{:6.2f}".format(Pct4s)+\
-                                                          '%) 5s: '+'{:8d}'.format(histeeALL[0][5])+' ('+"{:6.2f}".format(Pct5s)+\
-                                                          '%) 6s: '+'{:8d}'.format(histeeALL[0][6])+' ('+"{:6.2f}".format(Pct6s)+\
-                                                          '%) 7s: '+'{:8d}'.format(histeeALL[0][7])+' ('+"{:6.2f}".format(Pct7s)+\
-                                                          '%) 8s: '+'{:8d}'.format(histeeALL[0][8])+' ('+"{:6.2f}".format(Pct8s)+\
-                                                          '%) 9s: '+'{:8d}'.format(histeeALL[0][9])+' ('+"{:6.2f}".format(Pct9s)+\
-							  '%)\n'))
-    filee.close()
+    if (TextOn == 1):
+        # Write out stats to file (append!)
+        filee=open(OUTDIR+OutRoundsTxtAT,'a+')
+        Pct0s = 0.
+        Pct1s = 0.
+        Pct2s = 0.
+        Pct3s = 0.
+        Pct4s = 0.
+        Pct5s = 0.
+        Pct6s = 0.
+        Pct7s = 0.
+        Pct8s = 0.
+        Pct9s = 0.
+        if (histeeALL[0][0] > 0):
+	    Pct0s = (float(histeeALL[0][0])/float(nobs))*100.
+        if (histeeALL[0][1] > 0):
+	    Pct1s = (float(histeeALL[0][1])/float(nobs))*100.
+        if (histeeALL[0][2] > 0):
+	    Pct2s = (float(histeeALL[0][2])/float(nobs))*100.
+        if (histeeALL[0][3] > 0):
+	    Pct3s = (float(histeeALL[0][3])/float(nobs))*100.
+        if (histeeALL[0][4] > 0):
+	    Pct4s = (float(histeeALL[0][4])/float(nobs))*100.
+        if (histeeALL[0][5] > 0):
+	    Pct5s = (float(histeeALL[0][5])/float(nobs))*100.
+        if (histeeALL[0][6] > 0):
+	    Pct6s = (float(histeeALL[0][6])/float(nobs))*100.
+        if (histeeALL[0][7] > 0):
+	    Pct7s = (float(histeeALL[0][7])/float(nobs))*100.
+        if (histeeALL[0][8] > 0):
+	    Pct8s = (float(histeeALL[0][8])/float(nobs))*100.
+        if (histeeALL[0][9] > 0):
+	    Pct9s = (float(histeeALL[0][9])/float(nobs))*100.
+        
+        filee.write(str(year1+' '+year2+' '+month1+' '+month2+' NOBS: '+'{:8d}'.format(nobs)+\
+							  ' 0s '+'{:8d}'.format(histeeALL[0][0])+' ('+"{:6.2f}".format(Pct0s)+\
+							  '%) 1s: '+'{:8d}'.format(histeeALL[0][1])+' ('+"{:6.2f}".format(Pct1s)+\
+							  '%) 2s: '+'{:8d}'.format(histeeALL[0][2])+' ('+"{:6.2f}".format(Pct2s)+\
+							  '%) 3s: '+'{:8d}'.format(histeeALL[0][3])+' ('+"{:6.2f}".format(Pct3s)+\
+							  '%) 4s: '+'{:8d}'.format(histeeALL[0][4])+' ('+"{:6.2f}".format(Pct4s)+\
+							  '%) 5s: '+'{:8d}'.format(histeeALL[0][5])+' ('+"{:6.2f}".format(Pct5s)+\
+							  '%) 6s: '+'{:8d}'.format(histeeALL[0][6])+' ('+"{:6.2f}".format(Pct6s)+\
+							  '%) 7s: '+'{:8d}'.format(histeeALL[0][7])+' ('+"{:6.2f}".format(Pct7s)+\
+							  '%) 8s: '+'{:8d}'.format(histeeALL[0][8])+' ('+"{:6.2f}".format(Pct8s)+\
+							  '%) 9s: '+'{:8d}'.format(histeeALL[0][9])+' ('+"{:6.2f}".format(Pct9s)+\
+							 '%)\n'))
+        filee.close()
 
     AllDcks = [' -1','128','144','223','224','229','233','234','239','254',
                '255','555','666','700','732','735','740','749','780','792',
 	       '793','794','849','850','874','876','877','878','883','888',
 	       '889','892','893','896','898','900','926','927','928','992',
 	       '993','994','995']
-    filee=open(OUTDIR+OutDecksTxt,'a+')
-    output=''
-    for i,dck in enumerate(AllDcks):
-        TotDck = 0
-	PctDck = 0.
-	if (dck in UniqDecks):
-            TotDck = len(np.where(DCKbun == dck)[0])
-	    PctDck = (float(TotDck)/float(nobs))*100.
-	output = output+' '+"{:3d}".format(dck)+': '+"{:8d}".format(TotDck)+' ('+"{:6.2f}".format(PctDck)+'%)'
+    if (TextOn == 1):
+        filee=open(OUTDIR+OutDecksTxt,'a+')
+        output=''
+        for i,dck in enumerate(AllDcks):
+            TotDck = 0
+	    PctDck = 0.
+	    if (int(dck) in UniqDecks):
+                TotDck = len(np.where(DCKbun == int(dck))[0])
+	        PctDck = (float(TotDck)/float(nobs))*100.
+	    output = output+' '+"{:3d}".format(int(dck))+': '+"{:8d}".format(TotDck)+' ('+"{:6.2f}".format(PctDck)+'%)'
 
-    filee.write(str(year1+' '+year2+' '+month1+' '+month2+' NOBS: '+'{:8d}'.format(nobs)+\
-                                                         output+\
-							  '\n'))
-    filee.close()
+            filee.write(str(year1+' '+year2+' '+month1+' '+month2+' NOBS: '+'{:8d}'.format(nobs)+\
+                                                             output+\
+							     '\n'))
+        filee.close()
 
     #pdb.set_trace()
 

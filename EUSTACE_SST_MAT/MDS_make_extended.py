@@ -788,19 +788,21 @@ def ApplyHeightAdjUnc(ExtDict,UncDict,Counter,ClimP):
     PPlatformHOA = 30.
     
     # Parameters (gradients and intercept) for HOA and HOP linear equations
-    HOAGradPre2004 = 0.502
-    HOAIntCPre2004 = 5.44
-    HOAGradPost2004 = 0.753
-    HOAIntCPost2004 = (-2.06)
-    HOPGrad = 1.03
-    HOPIntC = (-0.93)
+    # These were previously assessed as the mean of all equations for each year but I have
+    # redone over the 1995-2003 and 2004-2007 periods so change for next run.
+    HOAGradPre2004 = 0.502    # change to 0.50
+    HOAIntCPre2004 = 5.44     # change to 5.52
+    HOAGradPost2004 = 0.753   # change to 0.75
+    HOAIntCPost2004 = (-2.06) # change to -1.89
+    HOPGrad = 1.03            # change to 1.02
+    HOPIntC = (-0.93)         # change to -0.43
     
     # Increments for estimating height by YR and MN 
     StHeight = 16.
     EdHeight = 24.
     StYr = 1973 # assume January
     EdYr = 2007 # assume December 2006 so 2007 gives correct NYrs and better for testing which year later.
-    MnInc = (EdHeight / StHeight) / (((EdYr) - StYr) * 12.) # should be ~0.2
+    MnInc = (EdHeight / StHeight) / (((EdYr) - StYr) * 12.) # should be ~0.02
     
     # FIRST SORT OUT THE HEIGHT (m) OR ESTIMATED HEIGHT
     # We also need to estimate HOA if it doesn't exist

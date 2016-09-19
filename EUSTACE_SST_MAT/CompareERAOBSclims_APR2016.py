@@ -144,39 +144,41 @@ def main(argv):
     InERAclimCRH = 'otherdata/rh2m_pentad_1by1marine_ERA-Interim_data_19792015.nc'
     InERAclimCWB = 'otherdata/tw2m_pentad_1by1marine_ERA-Interim_data_19792015.nc'
     InERAclimDPD = 'otherdata/dpd2m_pentad_1by1marine_ERA-Interim_data_19792015.nc'
-    InOBSclim = 'ICOADS.2.5.1/GRIDS/ERAclimNBC_1x1_pentad_climatology_from_3hrly.nc'
-    InOBSsd = 'ICOADS.2.5.1/GRIDS/ERAclimNBC_1x1_pentad_stdev_from_3hrly.nc'
+#    InOBSclim = 'ICOADS.2.5.1/GRIDS/ERAclimNBC_1x1_pentad_climatology_from_3hrly.nc'
+#    InOBSsd = 'ICOADS.2.5.1/GRIDS/ERAclimNBC_1x1_pentad_stdev_from_3hrly.nc'
+    InOBSclim = 'ICOADS.2.5.1/GRIDS3/ERAclimNBC_1x1_pentad_climatology_from_3hrly_both_relax.nc'
+    InOBSsd = 'ICOADS.2.5.1/GRIDS3/ERAclimNBC_1x1_pentad_stdev_from_3hrly_both_relax.nc'
     
     OUTDIR = '/data/local/hadkw/HADCRUH2/MARINE/'
-    OutLatsFilAT = 'IMAGES/ERAOBSclimdiffs_latdiffs_AT_'+typee+'_APR2016'
-    OutMapsFilAT = 'IMAGES/ERAOBSclimdiffs_mapdiffs_AT_'+typee+'_APR2016'
-    OutLatsFilDPT = 'IMAGES/ERAOBSclimdiffs_latdiffs_DPT_'+typee+'_APR2016'
-    OutMapsFilDPT = 'IMAGES/ERAOBSclimdiffs_mapdiffs_DPT_'+typee+'_APR2016'
-    OutLatsFilSHU = 'IMAGES/ERAOBSclimdiffs_latdiffs_SHU_'+typee+'_APR2016'
-    OutMapsFilSHU = 'IMAGES/ERAOBSclimdiffs_mapdiffs_SHU_'+typee+'_APR2016'
-    OutLatsFilVAP = 'IMAGES/ERAOBSclimdiffs_latdiffs_VAP_'+typee+'_APR2016'
-    OutMapsFilVAP = 'IMAGES/ERAOBSclimdiffs_mapdiffs_VAP_'+typee+'_APR2016'
-    OutLatsFilCRH = 'IMAGES/ERAOBSclimdiffs_latdiffs_CRH_'+typee+'_APR2016'
-    OutMapsFilCRH = 'IMAGES/ERAOBSclimdiffs_mapdiffs_CRH_'+typee+'_APR2016'
-    OutLatsFilCWB = 'IMAGES/ERAOBSclimdiffs_latdiffs_CWB_'+typee+'_APR2016'
-    OutMapsFilCWB = 'IMAGES/ERAOBSclimdiffs_mapdiffs_CWB_'+typee+'_APR2016'
-    OutLatsFilDPD = 'IMAGES/ERAOBSclimdiffs_latdiffs_DPD_'+typee+'_APR2016'
-    OutMapsFilDPD = 'IMAGES/ERAOBSclimdiffs_mapdiffs_DPD_'+typee+'_APR2016'
+    OutLatsFilAT = 'IMAGES/ERAOBS3climdiffs_latdiffs_AT_'+typee+'_APR2016'
+    OutMapsFilAT = 'IMAGES/ERAOBS3climdiffs_mapdiffs_AT_'+typee+'_APR2016'
+    OutLatsFilDPT = 'IMAGES/ERAOBS3climdiffs_latdiffs_DPT_'+typee+'_APR2016'
+    OutMapsFilDPT = 'IMAGES/ERAOBS3climdiffs_mapdiffs_DPT_'+typee+'_APR2016'
+    OutLatsFilSHU = 'IMAGES/ERAOBS3climdiffs_latdiffs_SHU_'+typee+'_APR2016'
+    OutMapsFilSHU = 'IMAGES/ERAOBS3climdiffs_mapdiffs_SHU_'+typee+'_APR2016'
+    OutLatsFilVAP = 'IMAGES/ERAOBS3climdiffs_latdiffs_VAP_'+typee+'_APR2016'
+    OutMapsFilVAP = 'IMAGES/ERAOBS3climdiffs_mapdiffs_VAP_'+typee+'_APR2016'
+    OutLatsFilCRH = 'IMAGES/ERAOBS3climdiffs_latdiffs_CRH_'+typee+'_APR2016'
+    OutMapsFilCRH = 'IMAGES/ERAOBS3climdiffs_mapdiffs_CRH_'+typee+'_APR2016'
+    OutLatsFilCWB = 'IMAGES/ERAOBS3climdiffs_latdiffs_CWB_'+typee+'_APR2016'
+    OutMapsFilCWB = 'IMAGES/ERAOBS3climdiffs_mapdiffs_CWB_'+typee+'_APR2016'
+    OutLatsFilDPD = 'IMAGES/ERAOBS3climdiffs_latdiffs_DPD_'+typee+'_APR2016'
+    OutMapsFilDPD = 'IMAGES/ERAOBS3climdiffs_mapdiffs_DPD_'+typee+'_APR2016'
 
-    OutSDLatsFilAT = 'IMAGES/ERAOBSclimSDdiffs_latdiffs_AT_'+typee+'_APR2016'
-    OutSDMapsFilAT = 'IMAGES/ERAOBSclimSDdiffs_mapdiffs_AT_'+typee+'_APR2016'
-    OutSDLatsFilDPT = 'IMAGES/ERAOBSclimSDdiffs_latdiffs_DPT_'+typee+'_APR2016'
-    OutSDMapsFilDPT = 'IMAGES/ERAOBSclimSDdiffs_mapdiffs_DPT_'+typee+'_APR2016'
-    OutSDLatsFilSHU = 'IMAGES/ERAOBSclimSDdiffs_latdiffs_SHU_'+typee+'_APR2016'
-    OutSDMapsFilSHU = 'IMAGES/ERAOBSclimSDdiffs_mapdiffs_SHU_'+typee+'_APR2016'
-    OutSDLatsFilVAP = 'IMAGES/ERAOBSclimSDdiffs_latdiffs_VAP_'+typee+'_APR2016'
-    OutSDMapsFilVAP = 'IMAGES/ERAOBSclimSDdiffs_mapdiffs_VAP_'+typee+'_APR2016'
-    OutSDLatsFilCRH = 'IMAGES/ERAOBSclimSDdiffs_latdiffs_CRH_'+typee+'_APR2016'
-    OutSDMapsFilCRH = 'IMAGES/ERAOBSclimSDdiffs_mapdiffs_CRH_'+typee+'_APR2016'
-    OutSDLatsFilCWB = 'IMAGES/ERAOBSclimSDdiffs_latdiffs_CWB_'+typee+'_APR2016'
-    OutSDMapsFilCWB = 'IMAGES/ERAOBSclimSDdiffs_mapdiffs_CWB_'+typee+'_APR2016'
-    OutSDLatsFilDPD = 'IMAGES/ERAOBSclimSDdiffs_latdiffs_DPD_'+typee+'_APR2016'
-    OutSDMapsFilDPD = 'IMAGES/ERAOBSclimSDdiffs_mapdiffs_DPD_'+typee+'_APR2016'
+    OutSDLatsFilAT = 'IMAGES/ERAOBS3climSDdiffs_latdiffs_AT_'+typee+'_APR2016'
+    OutSDMapsFilAT = 'IMAGES/ERAOBS3climSDdiffs_mapdiffs_AT_'+typee+'_APR2016'
+    OutSDLatsFilDPT = 'IMAGES/ERAOBS3climSDdiffs_latdiffs_DPT_'+typee+'_APR2016'
+    OutSDMapsFilDPT = 'IMAGES/ERAOBS3climSDdiffs_mapdiffs_DPT_'+typee+'_APR2016'
+    OutSDLatsFilSHU = 'IMAGES/ERAOBS3climSDdiffs_latdiffs_SHU_'+typee+'_APR2016'
+    OutSDMapsFilSHU = 'IMAGES/ERAOBS3climSDdiffs_mapdiffs_SHU_'+typee+'_APR2016'
+    OutSDLatsFilVAP = 'IMAGES/ERAOBS3climSDdiffs_latdiffs_VAP_'+typee+'_APR2016'
+    OutSDMapsFilVAP = 'IMAGES/ERAOBS3climSDdiffs_mapdiffs_VAP_'+typee+'_APR2016'
+    OutSDLatsFilCRH = 'IMAGES/ERAOBS3climSDdiffs_latdiffs_CRH_'+typee+'_APR2016'
+    OutSDMapsFilCRH = 'IMAGES/ERAOBS3climSDdiffs_mapdiffs_CRH_'+typee+'_APR2016'
+    OutSDLatsFilCWB = 'IMAGES/ERAOBS3climSDdiffs_latdiffs_CWB_'+typee+'_APR2016'
+    OutSDMapsFilCWB = 'IMAGES/ERAOBS3climSDdiffs_mapdiffs_CWB_'+typee+'_APR2016'
+    OutSDLatsFilDPD = 'IMAGES/ERAOBS3climSDdiffs_latdiffs_DPD_'+typee+'_APR2016'
+    OutSDMapsFilDPD = 'IMAGES/ERAOBS3climSDdiffs_mapdiffs_DPD_'+typee+'_APR2016'
     
     # create empty arrays for lats
     lats = np.arange(180,0,-1)-90.5
@@ -216,13 +218,13 @@ def main(argv):
     OBSCRH = np.array(clim.variables['relative_humidity'][:])
     OBSCWB = np.array(clim.variables['wet_bulb_temperature'][:])
     OBSDPD = np.array(clim.variables['dew_point_depression'][:])
-    OBSAT = OBSAT[:,::-1,:] # flips the rows (lats)
-    OBSDPT = OBSDPT[:,::-1,:]
-    OBSSHU = OBSSHU[:,::-1,:]
-    OBSVAP = OBSVAP[:,::-1,:]
-    OBSCRH = OBSCRH[:,::-1,:]
-    OBSCWB = OBSCWB[:,::-1,:]
-    OBSDPD = OBSDPD[:,::-1,:]
+#    OBSAT = OBSAT[:,::-1,:] # flips the rows (lats)
+#    OBSDPT = OBSDPT[:,::-1,:]
+#    OBSSHU = OBSSHU[:,::-1,:]
+#    OBSVAP = OBSVAP[:,::-1,:]
+#    OBSCRH = OBSCRH[:,::-1,:]
+#    OBSCWB = OBSCWB[:,::-1,:]
+#    OBSDPD = OBSDPD[:,::-1,:]
 
     clim = Dataset(INDIR+InOBSsd)
     OBSATsd = np.array(clim.variables['marine_air_temperature'][:])
@@ -232,13 +234,13 @@ def main(argv):
     OBSCRHsd = np.array(clim.variables['relative_humidity'][:])
     OBSCWBsd = np.array(clim.variables['wet_bulb_temperature'][:])
     OBSDPDsd = np.array(clim.variables['dew_point_depression'][:])
-    OBSATsd = OBSATsd[:,::-1,:] # flips the rows (lats)
-    OBSDPTsd = OBSDPTsd[:,::-1,:]
-    OBSSHUsd = OBSSHUsd[:,::-1,:]
-    OBSVAPsd = OBSVAPsd[:,::-1,:]
-    OBSCRHsd = OBSCRHsd[:,::-1,:]
-    OBSCWBsd = OBSCWBsd[:,::-1,:]
-    OBSDPDsd = OBSDPDsd[:,::-1,:]
+#    OBSATsd = OBSATsd[:,::-1,:] # flips the rows (lats)
+#    OBSDPTsd = OBSDPTsd[:,::-1,:]
+#    OBSSHUsd = OBSSHUsd[:,::-1,:]
+#    OBSVAPsd = OBSVAPsd[:,::-1,:]
+#    OBSCRHsd = OBSCRHsd[:,::-1,:]
+#    OBSCWBsd = OBSCWBsd[:,::-1,:]
+#    OBSDPDsd = OBSDPDsd[:,::-1,:]
     
     del clim
     
@@ -576,7 +578,7 @@ def main(argv):
     plt.savefig(OUTDIR+OutLatsFilDPD+".png")
 
 
-    # set up colour scheme
+    # set up colour scheme red blue
     cmap=plt.get_cmap('RdYlBu') # PiYG
         
     cmaplist=[cmap(i) for i in range(cmap.N)]
@@ -630,6 +632,24 @@ def main(argv):
 #    plt.savefig(OUTDIR+OutMapsFilAT+".eps")
     plt.savefig(OUTDIR+OutMapsFilAT+".png")
 
+    # set up colour scheme red blue
+    cmap=plt.get_cmap('BrBG') # PiYG
+        
+    cmaplist=[cmap(i) for i in range(cmap.N)]
+    for loo in range((cmap.N/2)-30,(cmap.N/2)+30):
+        cmaplist.remove(cmaplist[(cmap.N/2)-30]) # remove the very pale colours in the middle
+    #cmaplist.remove(cmaplist[(cmap.N/2)-10:(cmap.N/2)+10]) # remove the very pale colours in the middle
+
+# remove the darkest and lightest (white and black) - and reverse
+#    for loo in range(40):
+#        cmaplist.remove(cmaplist[loo])
+#    cmaplist.reverse()
+#    for loo in range(10):
+#        cmaplist.remove(cmaplist[loo])
+#    cmaplist.reverse()
+
+    cmap=cmap.from_list('this_cmap',cmaplist,cmap.N)
+
     plt.clf()
     plt.close()
     
@@ -654,6 +674,7 @@ def main(argv):
      # save plots as eps and png
 #    plt.savefig(OUTDIR+OutMapsFilDPT+".eps")
     plt.savefig(OUTDIR+OutMapsFilDPT+".png")
+
 
     plt.clf()
     plt.close()
@@ -757,6 +778,24 @@ def main(argv):
 
     plt.clf()
     plt.close()
+
+    # set up colour scheme red blue
+    cmap=plt.get_cmap('BrBG') # PiYG
+        
+    cmaplist=[cmap(i) for i in range(cmap.N)]
+    for loo in range((cmap.N/2)-30,(cmap.N/2)+30):
+        cmaplist.remove(cmaplist[(cmap.N/2)-30]) # remove the very pale colours in the middle
+    #cmaplist.remove(cmaplist[(cmap.N/2)-10:(cmap.N/2)+10]) # remove the very pale colours in the middle
+
+# remove the darkest and lightest (white and black) - and reverse
+#    for loo in range(40):
+#        cmaplist.remove(cmaplist[loo])
+    cmaplist.reverse()
+#    for loo in range(10):
+#        cmaplist.remove(cmaplist[loo])
+#    cmaplist.reverse()
+
+    cmap=cmap.from_list('this_cmap',cmaplist,cmap.N)
     
     f,axarr=plt.subplots(6,figsize=(10,12),sharex=False)	    #6,18
 
@@ -1155,6 +1194,24 @@ def main(argv):
 #    plt.savefig(OUTDIR+OutSDMapsFilAT+".eps")
     plt.savefig(OUTDIR+OutSDMapsFilAT+".png")
 
+    # set up colour scheme red blue
+    cmap=plt.get_cmap('BrBG') # PiYG
+        
+    cmaplist=[cmap(i) for i in range(cmap.N)]
+    for loo in range((cmap.N/2)-30,(cmap.N/2)+30):
+        cmaplist.remove(cmaplist[(cmap.N/2)-30]) # remove the very pale colours in the middle
+    #cmaplist.remove(cmaplist[(cmap.N/2)-10:(cmap.N/2)+10]) # remove the very pale colours in the middle
+
+# remove the darkest and lightest (white and black) - and reverse
+#    for loo in range(40):
+#        cmaplist.remove(cmaplist[loo])
+#    cmaplist.reverse()
+#    for loo in range(10):
+#        cmaplist.remove(cmaplist[loo])
+#    cmaplist.reverse()
+
+    cmap=cmap.from_list('this_cmap',cmaplist,cmap.N)
+
     plt.clf()
     f,axarr=plt.subplots(6,figsize=(10,12),sharex=False)	    #6,18
 
@@ -1269,6 +1326,24 @@ def main(argv):
      # save plots as eps and png
 #    plt.savefig(OUTDIR+OutSDMapsFilCWB+".eps")
     plt.savefig(OUTDIR+OutSDMapsFilCWB+".png")
+
+    # set up colour scheme red blue
+    cmap=plt.get_cmap('BrBG') # PiYG
+        
+    cmaplist=[cmap(i) for i in range(cmap.N)]
+    for loo in range((cmap.N/2)-30,(cmap.N/2)+30):
+        cmaplist.remove(cmaplist[(cmap.N/2)-30]) # remove the very pale colours in the middle
+    #cmaplist.remove(cmaplist[(cmap.N/2)-10:(cmap.N/2)+10]) # remove the very pale colours in the middle
+
+# remove the darkest and lightest (white and black) - and reverse
+#    for loo in range(40):
+#        cmaplist.remove(cmaplist[loo])
+    cmaplist.reverse()
+#    for loo in range(10):
+#        cmaplist.remove(cmaplist[loo])
+#    cmaplist.reverse()
+
+    cmap=cmap.from_list('this_cmap',cmaplist,cmap.N)
 
     plt.clf()
     f,axarr=plt.subplots(6,figsize=(10,12),sharex=False)	    #6,18

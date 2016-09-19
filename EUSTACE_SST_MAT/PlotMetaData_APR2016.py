@@ -49,9 +49,6 @@
 # -----------------------
 # inbuilt:
 # import datetime as dt
-## Folling two lines should be uncommented if using with SPICE or screen
-## import matplotlib
-## matplotlib.use('Agg')
 # import matplotlib.pyplot as plt
 # import numpy as np
 # from matplotlib.dates import date2num,num2date
@@ -116,24 +113,24 @@
 #************************************************************************
 #                                 START
 #************************************************************************
-import datetime as dt
-# Folling two lines should be uncommented if using with SPICE or screen
-## import matplotlib
-## matplotlib.use('Agg')
+#import datetime as dt
+import matplotlib
+# use the Agg environment to generate an image rather than outputting to screen
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.dates import date2num,num2date
+#from matplotlib.dates import date2num,num2date
 import sys, os
 import sys, getopt
-from scipy.optimize import curve_fit,fsolve,leastsq
-from scipy import pi,sqrt,exp
-from scipy.special import erf
-import scipy.stats
-from math import sqrt,pi
-import struct
+#from scipy.optimize import curve_fit,fsolve,leastsq
+#from scipy import pi,sqrt,exp
+#from scipy.special import erf
+#import scipy.stats
+#from math import sqrt,pi
+#import struct
 import pdb # pdb.set_trace() or c 
 
-from LinearTrends import MedianPairwise 
+#from LinearTrends import MedianPairwise 
 import MDS_basic_KATE as MDStool
 
 #************************************************************************
@@ -160,7 +157,7 @@ def main(argv):
 	                           ["year1=","year2=","month1=","month2=","typee=","switch="])
     except getopt.GetoptError:
         print 'Usage (as strings) PlotMetaData_APR2016.py --year1 <1973> --year2 <1973> '+\
-	      '--month1 <01> --month2 <12> --typee <ERAclimNBC> --switch <ships>'
+	      '--month1 <01> --month2 <12>'
 	sys.exit(2)
 
     for opt, arg in opts:
@@ -205,9 +202,12 @@ def main(argv):
     #INFIL = 'new_suite_'
     #INEXT = '_'+typee+'.txt'
 
-    OUTDIR = '/data/local/hadkw/HADCRUH2/MARINE/'
+#    OUTDIR = '/data/local/hadkw/HADCRUH2/MARINE/'
+    OUTDIR = ''
+    OutTypeFil = 'IMAGES/InstrTypeMetaDataDiags_'+switch+'_'+typee+'_'+year1+year2+month1+month2+'_APR2016'
     OutInstrFil = 'IMAGES/InstrumentMetaDataDiags_'+switch+'_'+typee+'_'+year1+year2+month1+month2+'_APR2016'
     OutHeightFil = 'IMAGES/HeightMetaDataDiags_'+switch+'_'+typee+'_'+year1+year2+month1+month2+'_APR2016'
+    OutTypeText = 'LISTS/InstrTypeMetaDataStats_'+switch+'_'+typee+'_APR2016.txt'
     OutInstrumentText = 'LISTS/InstrumentMetaDataStats_'+switch+'_'+typee+'_APR2016.txt'
     OutHeightText = 'LISTS/HeightMetaDataStats_'+switch+'_'+typee+'_APR2016.txt'
     
@@ -215,6 +215,7 @@ def main(argv):
     nobs=0 # we're looking at all obs, not just those with 'good' data
     LATbun = []
     EOTbun = []
+    TOHbun = []
     EOHbun = []
     LOVbun = []
     HOTbun = []
@@ -233,6 +234,7 @@ def main(argv):
 	        if (switch == 'all'):
 	            LATbun = MDSdict['LAT']
 	            EOTbun = MDSdict['EOT']
+	            TOHbun = MDSdict['TOH']
 	            EOHbun = MDSdict['EOH']
 	            LOVbun = MDSdict['LOV']
 	            HOTbun = MDSdict['HOT']
@@ -261,6 +263,7 @@ def main(argv):
 		        pointers = np.where(MDSdict['PT'] >= 9)[0] # ok because only 9, 10 or 15 should be present	
 	            LATbun = MDSdict['LAT'][pointers]
 	            EOTbun = MDSdict['EOT'][pointers]
+	            TOHbun = MDSdict['TOH'][pointers]
 	            EOHbun = MDSdict['EOH'][pointers]
 	            LOVbun = MDSdict['LOV'][pointers]
 	            HOTbun = MDSdict['HOT'][pointers]
@@ -271,6 +274,7 @@ def main(argv):
 	        if (switch == 'all'):
 	            LATbun = np.append(LATbun,MDSdict['LAT'])
 	            EOTbun = np.append(EOTbun,MDSdict['EOT'])
+	            TOHbun = np.append(TOHbun,MDSdict['TOH'])
 	            EOHbun = np.append(EOHbun,MDSdict['EOH'])
 	            LOVbun = np.append(LOVbun,MDSdict['LOV'])
 	            HOTbun = np.append(HOTbun,MDSdict['HOT'])
@@ -299,6 +303,7 @@ def main(argv):
 		        pointers = np.where(MDSdict['PT'] >= 9)[0] # ok because only 9, 10 or 15 should be present	
 	            LATbun = np.append(LATbun,MDSdict['LAT'][pointers])
 	            EOTbun = np.append(EOTbun,MDSdict['EOT'][pointers])
+	            TOHbun = np.append(TOHbun,MDSdict['TOH'][pointers])
 	            EOHbun = np.append(EOHbun,MDSdict['EOH'][pointers])
 	            LOVbun = np.append(LOVbun,MDSdict['LOV'][pointers])
 	            HOTbun = np.append(HOTbun,MDSdict['HOT'][pointers])
@@ -315,7 +320,101 @@ def main(argv):
 	
     # set up generall plotting stuff
     # set up dimensions and plot - this is a 2 by 2 plot
+    #  - plots, TOH by latitude where 1 = hygristor, 2 = chilled mirror, 3 = other, C = capacitance, E = electric, H = hair hygrometer, P = psychrometer, T = torsion
+    #  - prints, number and % of obs with TOH present, and in the categories
+    plt.clf()
+    fig=plt.figure(figsize=(6,8)) 
+    ax=plt.axes([0.1,0.1,0.85,0.7])
+    plt.xlim(0,9)
+    plt.ylim(-91,91)
+    plt.xlabel('Instrument Type Category')
+    plt.ylabel('Latitude')
+    locs = ax.get_xticks().tolist()
+    labels=[x.get_text() for x in ax.get_xticklabels()]
+    labels[1] = '1'
+    labels[2] = '2'
+    labels[3] = '3'
+    labels[4] = 'C'
+    labels[5] = 'E'
+    labels[6] = 'H'
+    labels[7] = 'P'
+    labels[8] = 'T'
+    ax.set_xticks(locs)
+    ax.set_xticklabels(labels)
+    gotTOHs = np.where(TOHbun != 'No')[0]
+    Hgot1s = np.where(np.char.strip(TOHbun) == '1')[0]
+    Hgot2s = np.where(np.char.strip(TOHbun) == '2')[0]
+    Hgot3s = np.where(np.char.strip(TOHbun) == '3')[0]
+    HgotCs = np.where(np.char.strip(TOHbun) == 'C')[0]
+    HgotEs = np.where(np.char.strip(TOHbun) == 'E')[0]
+    HgotHs = np.where(np.char.strip(TOHbun) == 'H')[0]
+    HgotPs = np.where(np.char.strip(TOHbun) == 'P')[0]
+    HgotTs = np.where(np.char.strip(TOHbun) == 'T')[0]
+    Hgot1spct = 0.
+    Hgot2spct = 0.
+    Hgot3spct = 0.
+    HgotCspct = 0.
+    HgotEspct = 0.
+    HgotHspct = 0.
+    HgotPspct = 0.
+    HgotTspct = 0.
+    Hgotspct = 0.
+    if (nobs > 0):
+        Hgotspct = (len(gotTOHs)/float(nobs))*100
+    if (len(Hgot1s) > 0):
+        Hgot1spct = (len(Hgot1s)/float(len(gotTOHs)))*100
+        plt.scatter(np.repeat(1,len(Hgot1s)),LATbun[Hgot1s],c='grey',marker='o',linewidth=0.,s=12)
+    if (len(Hgot2s) > 0):
+        Hgot2spct = (len(Hgot2s)/float(len(gotTOHs)))*100
+        plt.scatter(np.repeat(2,len(Hgot2s)),LATbun[Hgot2s],c='red',marker='o',linewidth=0.,s=12)
+    if (len(Hgot3s) > 0):
+        Hgot3spct = (len(Hgot3s)/float(len(gotTOHs)))*100
+        plt.scatter(np.repeat(3,len(Hgot3s)),LATbun[Hgot3s],c='orange',marker='o',linewidth=0.,s=12)
+    if (len(HgotCs) > 0):
+        HgotCspct = (len(HgotCs)/float(len(gotTOHs)))*100
+        plt.scatter(np.repeat(4,len(HgotCs)),LATbun[HgotCs],c='gold',marker='o',linewidth=0.,s=12)
+    if (len(HgotEs) > 0):
+        HgotEspct = (len(HgotEs)/float(len(gotTOHs)))*100
+        plt.scatter(np.repeat(5,len(HgotEs)),LATbun[HgotEs],c='green',marker='o',linewidth=0.,s=12)
+    if (len(HgotHs) > 0):
+        HgotHspct = (len(HgotHs)/float(len(gotTOHs)))*100
+        plt.scatter(np.repeat(6,len(HgotHs)),LATbun[HgotHs],c='blue',marker='o',linewidth=0.,s=12)
+    if (len(HgotPs) > 0):
+        HgotPspct = (len(HgotPs)/float(len(gotTOHs)))*100
+        plt.scatter(np.repeat(7,len(HgotPs)),LATbun[HgotPs],c='indigo',marker='o',linewidth=0.,s=12)
+    if (len(HgotTs) > 0):
+        HgotTspct = (len(HgotTs)/float(len(gotTOHs)))*100
+        plt.scatter(np.repeat(8,len(HgotTs)),LATbun[HgotTs],c='violet',marker='o',linewidth=0.,s=12)
+    plt.annotate('TOH: '+str(len(gotTOHs))+' ('+"{:5.2f}".format(Hgotspct)+'%)',xy=(0.05,1.21),xycoords='axes fraction',size=12,color='black')
+    plt.annotate('1: '+str(len(Hgot1s))+' ('+"{:5.2f}".format(Hgot1spct)+'%)',xy=(0.05,1.16),xycoords='axes fraction',size=12,color='grey')
+    plt.annotate('2: '+str(len(Hgot2s))+' ('+"{:5.2f}".format(Hgot2spct)+'%)',xy=(0.05,1.11),xycoords='axes fraction',size=12,color='red')
+    plt.annotate('3: '+str(len(Hgot3s))+' ('+"{:5.2f}".format(Hgot3spct)+'%)',xy=(0.05,1.06),xycoords='axes fraction',size=12,color='orange')
+    plt.annotate('C: '+str(len(HgotCs))+' ('+"{:5.2f}".format(HgotCspct)+'%)',xy=(0.05,1.01),xycoords='axes fraction',size=12,color='gold')
+    plt.annotate('E: '+str(len(HgotEs))+' ('+"{:5.2f}".format(HgotEspct)+'%)',xy=(0.55,1.16),xycoords='axes fraction',size=12,color='green')
+    plt.annotate('H: '+str(len(HgotHs))+' ('+"{:5.2f}".format(HgotHspct)+'%)',xy=(0.55,1.11),xycoords='axes fraction',size=12,color='blue')
+    plt.annotate('P: '+str(len(HgotPs))+' ('+"{:5.2f}".format(HgotPspct)+'%)',xy=(0.55,1.06),xycoords='axes fraction',size=12,color='indigo')
+    plt.annotate('T: '+str(len(HgotTs))+' ('+"{:5.2f}".format(HgotTspct)+'%)',xy=(0.55,1.01),xycoords='axes fraction',size=12,color='violet')
+    #plt.tight_layout()
+    
+#    plt.savefig(OUTDIR+OutTypeFil+".eps")
+    plt.savefig(OUTDIR+OutTypeFil+".png")
 
+    # Write out stats to file (append!)
+    filee=open(OUTDIR+OutTypeText,'a+')
+    filee.write(str(year1+' '+year2+' '+month1+' '+month2+' NOBS: '+'{:8d}'.format(nobs)+\
+                                                          ' TOH: '+'{:8d}'.format(len(gotTOHs))+' ('+"{:5.2f}".format(Hgotspct)+\
+                                                          '%) 1: '+'{:8d}'.format(len(Hgot1s))+' ('+"{:5.2f}".format(Hgot1spct)+\
+							  '%) 2: '+'{:8d}'.format(len(Hgot2s))+' ('+"{:5.2f}".format(Hgot2spct)+\
+							  '%) 3: '+'{:8d}'.format(len(Hgot3s))+' ('+"{:5.2f}".format(Hgot3spct)+\
+							  '%) C: '+'{:8d}'.format(len(HgotCs))+' ('+"{:5.2f}".format(HgotCspct)+\
+							  '%) E: '+'{:8d}'.format(len(HgotEs))+' ('+"{:5.2f}".format(HgotEspct)+\
+                                                          '%) H: '+'{:8d}'.format(len(HgotHs))+' ('+"{:5.2f}".format(HgotHspct)+\
+							  '%) P: '+'{:8d}'.format(len(HgotPs))+' ('+"{:5.2f}".format(HgotPspct)+\
+							  '%) T: '+'{:8d}'.format(len(HgotTs))+' ('+"{:5.2f}".format(HgotTspct)+\
+							  '%)\n'))
+    filee.close()
+    pdb.set_trace()
+    
     #  - plots, EOT/EOH by latitude where 1 = none, 2 = aspirated/ventilated (A/VS), 3 = whirled (SG/SL/W), 4 = screen not aspirated (S/SN), 5 = unscreend (US)
     #  - prints, number and % of obs with EOT and EOH present, and in the categories
     plt.clf()
@@ -424,10 +523,10 @@ def main(argv):
     ytall=[0.28,0.28,0.28,0.28,0.28,0.28]
 
     plt.clf()
-    f,axarr=plt.subplots(6,figsize=(10,12),sharex=False)	    #6,18
+    f,axarr=plt.subplots(6,figsize=(10,12),sharex=False)	   #6,18
 
-    #  - plots, HOB, HOT, HOA, HOP, LOV (second axis?) by latitude
-    #  - prints, number and % of obs with HOB, HOT, HOA, HOP and LOV
+   #  - plots, HOB, HOT, HOA, HOP, LOV (second axis?) by latitude
+   #  - prints, number and % of obs with HOB, HOT, HOA, HOP and LOV
     axarr[0].set_position([xpos[0],ypos[0],xfat[0],ytall[0]])
     axarr[0].set_xlim(0,60)
     axarr[0].set_ylim(-91,91)
@@ -459,11 +558,16 @@ def main(argv):
         axarr[0].scatter((LOVbun[gotLOVs]/10.)+0.4,LATbun[gotLOVs],c='violet',marker='o',linewidth=0.,s=1)
         pctLOVs = (len(gotLOVs)/float(nobs))*100
     axarr[0].annotate('a)',xy=(0.03,0.94),xycoords='axes fraction',size=12)
-    axarr[0].annotate('HOB: '+str(len(gotHOBs))+' ('+"{:5.2f}".format(pctHOBs)+'%)',xy=(0.5,0.18),xycoords='axes fraction',size=10,color='grey')
-    axarr[0].annotate('HOT: '+str(len(gotHOTs))+' ('+"{:5.2f}".format(pctHOTs)+'%)',xy=(0.5,0.14),xycoords='axes fraction',size=10,color='red')
-    axarr[0].annotate('HOA: '+str(len(gotHOAs))+' ('+"{:5.2f}".format(pctHOAs)+'%)',xy=(0.5,0.1),xycoords='axes fraction',size=10,color='orange')
-    axarr[0].annotate('HOP: '+str(len(gotHOPs))+' ('+"{:5.2f}".format(pctHOPs)+'%)',xy=(0.5,0.06),xycoords='axes fraction',size=10,color='blue')
-    axarr[0].annotate('LOV: '+str(len(gotLOVs))+' ('+"{:5.2f}".format(pctLOVs)+'%)',xy=(0.5,0.02),xycoords='axes fraction',size=10,color='violet')
+    #axarr[0].annotate('HOB: '+str(len(gotHOBs))+' ('+"{:5.2f}".format(pctHOBs)+'%)',xy=(0.5,0.18),xycoords='axes fraction',size=10,color='grey')
+    #axarr[0].annotate('HOT: '+str(len(gotHOTs))+' ('+"{:5.2f}".format(pctHOTs)+'%)',xy=(0.5,0.14),xycoords='axes fraction',size=10,color='red')
+    #axarr[0].annotate('HOA: '+str(len(gotHOAs))+' ('+"{:5.2f}".format(pctHOAs)+'%)',xy=(0.5,0.1),xycoords='axes fraction',size=10,color='orange')
+    #axarr[0].annotate('HOP: '+str(len(gotHOPs))+' ('+"{:5.2f}".format(pctHOPs)+'%)',xy=(0.5,0.06),xycoords='axes fraction',size=10,color='blue')
+    #axarr[0].annotate('LOV: '+str(len(gotLOVs))+' ('+"{:5.2f}".format(pctLOVs)+'%)',xy=(0.5,0.02),xycoords='axes fraction',size=10,color='violet')
+    axarr[0].annotate('HOB: '+"{:5.2f}".format(pctHOBs)+'%',xy=(0.6,0.18),xycoords='axes fraction',size=10,color='grey')
+    axarr[0].annotate('HOT: '+"{:5.2f}".format(pctHOTs)+'%',xy=(0.6,0.14),xycoords='axes fraction',size=10,color='red')
+    axarr[0].annotate('HOA: '+"{:5.2f}".format(pctHOAs)+'%',xy=(0.6,0.1),xycoords='axes fraction',size=10,color='orange')
+    axarr[0].annotate('HOP: '+"{:5.2f}".format(pctHOPs)+'%',xy=(0.6,0.06),xycoords='axes fraction',size=10,color='blue')
+    axarr[0].annotate('LOV: '+"{:5.2f}".format(pctLOVs)+'%',xy=(0.6,0.02),xycoords='axes fraction',size=10,color='violet')
 
     #  - plots histogram HOB, HOT, HOA, HOP, LOV (second axis?
     #  - prints, mean and sd of HOB, HOT, HOA, HOP and LOV
@@ -488,31 +592,31 @@ def main(argv):
         axarr[1].plot(HOBhist[1][0:60]+0.5,HOBhist[0],c='grey')
 	meanHOBs = np.mean(HOBbun[gotHOBs])
 	sdHOBs = np.std(HOBbun[gotHOBs])
-        axarr[1].annotate('HOB: '+"{:5.1f}".format(meanHOBs)+', '+"{:5.1f}".format(sdHOBs),xy=(0.55,0.94),xycoords='axes fraction',size=10,color='grey')
+        axarr[1].annotate('HOB: '+"{:5.1f}".format(meanHOBs)+', '+"{:5.1f}".format(sdHOBs),xy=(0.6,0.94),xycoords='axes fraction',size=10,color='grey')
     if (len(gotHOTs) > 0):
         HOThist = np.histogram(HOTbun[gotHOTs],binsies) # produces a two D array, second dim as 401 points, first has 400
         axarr[1].plot(HOThist[1][0:60]+0.5,HOThist[0],c='red')
 	meanHOTs = np.mean(HOTbun[gotHOTs])
 	sdHOTs = np.std(HOTbun[gotHOTs])
-        axarr[1].annotate('HOT: '+"{:5.1f}".format(meanHOTs)+', '+"{:5.1f}".format(sdHOTs),xy=(0.55,0.90),xycoords='axes fraction',size=10,color='red')
+        axarr[1].annotate('HOT: '+"{:5.1f}".format(meanHOTs)+', '+"{:5.1f}".format(sdHOTs),xy=(0.6,0.90),xycoords='axes fraction',size=10,color='red')
     if (len(gotHOAs) > 0):
         HOAhist = np.histogram(HOAbun[gotHOAs],binsies) # produces a two D array, second dim as 401 points, first has 400
         axarr[1].plot(HOAhist[1][0:60]+0.5,HOAhist[0],c='orange')
 	meanHOAs = np.mean(HOAbun[gotHOAs])
 	sdHOAs = np.std(HOAbun[gotHOAs])
-        axarr[1].annotate('HOA: '+"{:5.1f}".format(meanHOAs)+', '+"{:5.1f}".format(sdHOAs),xy=(0.55,0.86),xycoords='axes fraction',size=10,color='orange') 
+        axarr[1].annotate('HOA: '+"{:5.1f}".format(meanHOAs)+', '+"{:5.1f}".format(sdHOAs),xy=(0.6,0.86),xycoords='axes fraction',size=10,color='orange') 
     if (len(gotHOPs) > 0):
         HOPhist = np.histogram(HOPbun[gotHOPs],binsies) # produces a two D array, second dim as 401 points, first has 400
         axarr[1].plot(HOPhist[1][0:60]+0.5,HOPhist[0],c='blue')
 	meanHOPs = np.mean(HOPbun[gotHOPs])
 	sdHOPs = np.std(HOPbun[gotHOPs])
-        axarr[1].annotate('HOP: '+"{:5.1f}".format(meanHOPs)+', '+"{:5.1f}".format(sdHOPs),xy=(0.55,0.82),xycoords='axes fraction',size=10,color='blue')
+        axarr[1].annotate('HOP: '+"{:5.1f}".format(meanHOPs)+', '+"{:5.1f}".format(sdHOPs),xy=(0.6,0.82),xycoords='axes fraction',size=10,color='blue')
     if (len(gotLOVs) > 0):
         LOVhist = np.histogram(LOVbun[gotLOVs]/10.,binsies) # produces a two D array, second dim as 401 points, first has 400
         axarr[1].plot(LOVhist[1][0:60]+0.5,LOVhist[0],c='violet')
 	meanLOVs = np.mean(LOVbun[gotLOVs])
 	sdLOVs = np.std(LOVbun[gotLOVs])
-        axarr[1].annotate('LOV: '+"{:5.1f}".format(meanLOVs)+', '+"{:5.1f}".format(sdLOVs),xy=(0.55,0.78),xycoords='axes fraction',size=10,color='violet')
+        axarr[1].annotate('LOV: '+"{:5.1f}".format(meanLOVs)+', '+"{:5.1f}".format(sdLOVs),xy=(0.6,0.78),xycoords='axes fraction',size=10,color='violet')
     
     axarr[1].annotate('b)',xy=(0.03,0.94),xycoords='axes fraction',size=12)
 
@@ -535,30 +639,39 @@ def main(argv):
     if (len(gotHOABs) > 0):
         axarr[2].scatter(HOAbun[gotHOABs],HOBbun[gotHOABs],c='grey',marker='o',linewidth=0.,s=2)
         fitsAB = np.polyfit(HOAbun[gotHOABs],HOBbun[gotHOABs],1)
+	# Get RMSE of residuals from line of best fit
+	RMSE_AB = np.sqrt(np.mean((HOBbun[gotHOABs] - fitsAB[0]*HOAbun[gotHOABs]+fitsAB[1])**2))
 	pctHOABs = (len(gotHOABs)/float(nobs))*100
         axarr[2].plot(HOAbun[gotHOABs],fitsAB[0]*HOAbun[gotHOABs]+fitsAB[1],c='grey')
-        axarr[2].annotate('HOBHOA: '+str(len(gotHOABs))+' ('+"{:5.2f}".format(pctHOABs)+'%), '+"{:5.2f}".format(fitsAB[0])+', '+"{:5.2f}".format(fitsAB[1]),xy=(0.1,0.94),xycoords='axes fraction',size=10,color='grey') 
+        #axarr[2].annotate('HOBHOA: '+str(len(gotHOABs))+' ('+"{:5.2f}".format(pctHOABs)+'%), '+"{:5.2f}".format(fitsAB[0])+', '+"{:5.2f}".format(fitsAB[1])+' ('+"{:6.2f}".format(RMSE_AB)+')',xy=(0.1,0.94),xycoords='axes fraction',size=10,color='grey') 
+        axarr[2].annotate('HOBHOA: '+"{:5.2f}".format(pctHOABs)+'%, '+"{:5.2f}".format(fitsAB[0])+', '+"{:5.2f}".format(fitsAB[1])+' ('+"{:6.2f}".format(RMSE_AB)+')',xy=(0.1,0.94),xycoords='axes fraction',size=10,color='grey') 
     gotHOATs = np.where((HOAbun > 0) & (HOTbun > 0))[0]
     if (len(gotHOATs) > 0):
         axarr[2].scatter(HOAbun[gotHOATs],HOTbun[gotHOATs],c='red',marker='o',linewidth=0.,s=2)
         fitsAT = np.polyfit(HOAbun[gotHOATs],HOTbun[gotHOATs],1)
+	RMSE_AT = np.sqrt(np.mean((HOTbun[gotHOATs] - fitsAT[0]*HOAbun[gotHOATs]+fitsAT[1])**2))
 	pctHOATs = (len(gotHOATs)/float(nobs))*100
         axarr[2].plot(HOAbun[gotHOATs],fitsAT[0]*HOAbun[gotHOATs]+fitsAT[1],c='red')
-        axarr[2].annotate('HOTHOA: '+str(len(gotHOATs))+' ('+"{:5.2f}".format(pctHOATs)+'%), '+"{:5.2f}".format(fitsAT[0])+', '+"{:5.2f}".format(fitsAT[1]),xy=(0.1,0.90),xycoords='axes fraction',size=10,color='red')
+        #axarr[2].annotate('HOTHOA: '+str(len(gotHOATs))+' ('+"{:5.2f}".format(pctHOATs)+'%), '+"{:5.2f}".format(fitsAT[0])+', '+"{:5.2f}".format(fitsAT[1])+' ('+"{:6.2f}".format(RMSE_AT)+')',xy=(0.1,0.90),xycoords='axes fraction',size=10,color='red')
+        axarr[2].annotate('HOTHOA: '+"{:5.2f}".format(pctHOATs)+'%, '+"{:5.2f}".format(fitsAT[0])+', '+"{:5.2f}".format(fitsAT[1])+' ('+"{:6.2f}".format(RMSE_AT)+')',xy=(0.1,0.90),xycoords='axes fraction',size=10,color='red')
     gotHOPBs = np.where((HOPbun > 0) & (HOBbun > 0))[0]
     if (len(gotHOPBs) > 0):
         axarr[2].scatter(HOPbun[gotHOPBs],HOBbun[gotHOPBs],c='orange',marker='o',linewidth=0.,s=2)
         fitsPB = np.polyfit(HOPbun[gotHOPBs],HOBbun[gotHOPBs],1)
+	RMSE_PB = np.sqrt(np.mean((HOBbun[gotHOPBs] - fitsPB[0]*HOPbun[gotHOPBs]+fitsPB[1])**2))
 	pctHOPBs = (len(gotHOPBs)/float(nobs))*100
         axarr[2].plot(HOPbun[gotHOPBs],fitsPB[0]*HOPbun[gotHOPBs]+fitsPB[1],c='orange')
-        axarr[2].annotate('HOBHOP: '+str(len(gotHOPBs))+' ('+"{:5.2f}".format(pctHOPBs)+'%), '+"{:5.2f}".format(fitsPB[0])+', '+"{:5.2f}".format(fitsPB[1]),xy=(0.1,0.86),xycoords='axes fraction',size=10,color='orange')
+        #axarr[2].annotate('HOBHOP: '+str(len(gotHOPBs))+' ('+"{:5.2f}".format(pctHOPBs)+'%), '+"{:5.2f}".format(fitsPB[0])+', '+"{:5.2f}".format(fitsPB[1])+' ('+"{:6.2f}".format(RMSE_PB)+')',xy=(0.1,0.86),xycoords='axes fraction',size=10,color='orange')
+        axarr[2].annotate('HOBHOP: '+"{:5.2f}".format(pctHOPBs)+'%, '+"{:5.2f}".format(fitsPB[0])+', '+"{:5.2f}".format(fitsPB[1])+' ('+"{:6.2f}".format(RMSE_PB)+')',xy=(0.1,0.86),xycoords='axes fraction',size=10,color='orange')
     gotHOPTs = np.where((HOPbun > 0) & (HOTbun > 0))[0]
     if (len(gotHOPTs) > 0):
         axarr[2].scatter(HOPbun[gotHOPTs],HOTbun[gotHOPTs],c='blue',marker='o',linewidth=0.,s=2)
         fitsPT = np.polyfit(HOPbun[gotHOPTs],HOTbun[gotHOPTs],1)
+	RMSE_PT = np.sqrt(np.mean((HOTbun[gotHOPTs] - fitsPT[0]*HOPbun[gotHOPTs]+fitsPT[1])**2))
 	pctHOPTs = (len(gotHOPTs)/float(nobs))*100
         axarr[2].plot(HOPbun[gotHOPTs],fitsPT[0]*HOPbun[gotHOPTs]+fitsPT[1],c='blue')
-        axarr[2].annotate('HOTHOP: '+str(len(gotHOPTs))+' ('+"{:5.2f}".format(pctHOPTs)+'%), '+"{:5.2f}".format(fitsPT[0])+', '+"{:5.2f}".format(fitsPT[1]),xy=(0.1,0.82),xycoords='axes fraction',size=10,color='blue')
+        #axarr[2].annotate('HOTHOP: '+str(len(gotHOPTs))+' ('+"{:5.2f}".format(pctHOPTs)+'%), '+"{:5.2f}".format(fitsPT[0])+', '+"{:5.2f}".format(fitsPT[1])+' ('+"{:6.2f}".format(RMSE_PT)+')',xy=(0.1,0.82),xycoords='axes fraction',size=10,color='blue')
+        axarr[2].annotate('HOTHOP: '+"{:5.2f}".format(pctHOPTs)+'%, '+"{:5.2f}".format(fitsPT[0])+', '+"{:5.2f}".format(fitsPT[1])+' ('+"{:6.2f}".format(RMSE_PT)+')',xy=(0.1,0.82),xycoords='axes fraction',size=10,color='blue')
     axarr[2].annotate('c)',xy=(0.03,0.94),xycoords='axes fraction',size=12)
 
     #  - plots differences HOA - HOT, HOA - HOB, HOP - HOB, HOP - HOT with lines of best fit
@@ -566,9 +679,9 @@ def main(argv):
     axarr[3].set_position([xpos[3],ypos[3],xfat[3],ytall[3]])
     axarr[3].set_xlim(0,60)
     axarr[3].set_ylim(0,60)
-    axarr[2].set_xlabel('Anemometer/Visual Obs Platform Height (m)')
+    axarr[3].set_xlabel('Anemometer/Visual Obs Platform Height (m)')
     #axarr[3].set_xlabel('Thermometer/Barmometer Height (m)')
-    axarr[3].set_ylabel('Height Difference(m)')
+    axarr[3].set_ylabel('Height Difference (m)')
     meanHOABs = -99.9
     meanHOATs = -99.9
     meanHOPBs = -99.9
@@ -614,16 +727,20 @@ def main(argv):
     if (len(gotHOBLs) > 0):
         axarr[4].scatter(LOVbun[gotHOBLs],HOBbun[gotHOBLs],c='grey',marker='o',linewidth=0.,s=1)
         fitsLB = np.polyfit(LOVbun[gotHOBLs],HOBbun[gotHOBLs],1)
+	RMSE_LB = np.sqrt(np.mean((LOVbun[gotHOBLs] - fitsLB[0]*LOVbun[gotHOBLs]+fitsLB[1])**2))
 	pctHOBLs = (len(gotHOBLs)/float(nobs))*100
         axarr[4].plot(LOVbun[gotHOBLs],fitsLB[0]*LOVbun[gotHOBLs]+fitsLB[1],c='grey')
-        axarr[4].annotate('HOBLOV: '+str(len(gotHOBLs))+' ('+"{:5.2f}".format(pctHOBLs)+'%), '+"{:5.2f}".format(fitsLB[0])+', '+"{:5.2f}".format(fitsLB[1]),xy=(0.1,0.94),xycoords='axes fraction',size=10,color='grey')
+        #axarr[4].annotate('HOBLOV: '+str(len(gotHOBLs))+' ('+"{:5.2f}".format(pctHOBLs)+'%), '+"{:5.2f}".format(fitsLB[0])+', '+"{:5.2f}".format(fitsLB[1])' ('+"{:6.2f}".format(RMSE_LB)+')',xy=(0.1,0.94),xycoords='axes fraction',size=10,color='grey')
+        axarr[4].annotate('HOBLOV: '+"{:5.2f}".format(pctHOBLs)+'%, '+"{:5.2f}".format(fitsLB[0])+', '+"{:5.2f}".format(fitsLB[1])+' ('+"{:6.2f}".format(RMSE_LB)+')',xy=(0.1,0.94),xycoords='axes fraction',size=10,color='grey')
     gotHOTLs = np.where((LOVbun > 0) & (HOTbun > 0))[0]
     if (len(gotHOTLs) > 0):
         axarr[4].scatter(LOVbun[gotHOTLs],HOTbun[gotHOTLs],c='red',marker='o',linewidth=0.,s=1)
         fitsLT = np.polyfit(LOVbun[gotHOTLs],HOTbun[gotHOTLs],1)
+	RMSE_LT = np.sqrt(np.mean((LOVbun[gotHOTLs] - fitsLT[0]*LOVbun[gotHOTLs]+fitsLT[1])**2))
 	pctHOTLs = (len(gotHOTLs)/float(nobs))*100
         axarr[4].plot(LOVbun[gotHOTLs],fitsLT[0]*LOVbun[gotHOTLs]+fitsLT[1],c='red')
-        axarr[4].annotate('HOTLOV: '+str(len(gotHOTLs))+' ('+"{:5.2f}".format(pctHOTLs)+'%), '+"{:5.2f}".format(fitsLT[0])+', '+"{:5.2f}".format(fitsLT[1]),xy=(0.5,0.90),xycoords='axes fraction',size=10,color='red')
+        #axarr[4].annotate('HOTLOV: '+str(len(gotHOTLs))+' ('+"{:5.2f}".format(pctHOTLs)+'%), '+"{:5.2f}".format(fitsLT[0])+', '+"{:5.2f}".format(fitsLT[1])' ('+"{:6.2f}".format(RMSE_LT)+')',xy=(0.1,0.90),xycoords='axes fraction',size=10,color='red')
+        axarr[4].annotate('HOTLOV: '+"{:5.2f}".format(pctHOTLs)+'%, '+"{:5.2f}".format(fitsLT[0])+', '+"{:5.2f}".format(fitsLT[1])+' ('+"{:6.2f}".format(RMSE_LT)+')',xy=(0.1,0.90),xycoords='axes fraction',size=10,color='red')
     axarr[4].annotate('e)',xy=(0.03,0.94),xycoords='axes fraction',size=12)
 
     #  - plots ratio LOV / HOT, LOV / HOB with lines of best fit
