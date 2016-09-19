@@ -63,21 +63,85 @@ Should be the only place to edit these each time around.
 import datetime as dt
 
 
-plots = True
-doMedian = False
+#*********************************************
+class Settings(object):
+    '''
+    Class to hold all settings information
+    '''
+    
+    def __init__(self, OUTROOT, ICOADS_LOCATION, DATA_LOCATION, PLOT_LOCATION, START_YEAR, END_YEAR, doMedian, plots, mdi):
+        self.OUTROOT = OUTROOT
+        self.ICOADS_LOCATION = ICOADS_LOCATION
+        self.DATA_LOCATION = DATA_LOCATION
+        self.PLOT_LOCATION = PLOT_LOCATION
+        self.START_YEAR = START_YEAR
+        self.END_YEAR = END_YEAR
+        self.doMedian = doMedian
+        self.plots = plots
+        self.mdi = mdi
 
-# Constants in CAPS
-OUTROOT = "ERAclimNBC"
+    def __str__(self):     
 
-ICOADS_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/{}/".format(OUTROOT)
-# KW Changed GRIDS to GRIDS2 adn PLOTS to PLOTS2 to make sure I don't write over what has been done already
-DATA_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS3/"
-PLOT_LOCATION="/project/hadobs2/hadisdh/marine/PLOTS3/"
+        outstring = "Settings are:\n OUTROOT = {}\n ICOADS_LOCATION = {}\n DATA_LOCATION = {}\n PLOT_LOCATION = {}\n START_YEAR = {}\n END_YEAR = {}\n doMedian = {}\n plots = {}".format(self.OUTROOT, self.ICOADS_LOCATION, self.DATA_LOCATION, self.PLOT_LOCATION, self.START_YEAR, self.END_YEAR, self.doMedian, self.plots)
 
-START_YEAR = 1973
-END_YEAR = dt.datetime.now().year - 1
+        return outstring
 
-mdi = -1.e30
+    __repr__ = __str__
+
+#*********************************************
+#*********************************************
+
+#*********************************************
+def set(doBC = False, doQC = True):
+    '''
+    Create a settings object and return
+
+    :param bool doBC: set up for bias correction
+    :param bool doQC: set up for quality control
+
+    :returns: Settings object
+    '''
+
+
+    plots = True
+    doMedian = False
+
+    if doBC:
+        # Constants in CAPS
+        OUTROOT = "ERAclimBC"
+
+        ICOADS_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/{}/".format(OUTROOT)
+        # KW Changed GRIDS to GRIDS2 adn PLOTS to PLOTS2 to make sure I don't write over what has been done already
+        DATA_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS_BC/"
+        PLOT_LOCATION="/project/hadobs2/hadisdh/marine/PLOTS_BC/"
+
+    elif doQC:
+        # Constants in CAPS
+        OUTROOT = "ERAclimNBC"
+
+        ICOADS_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/{}/".format(OUTROOT)
+        # KW Changed GRIDS to GRIDS2 adn PLOTS to PLOTS2 to make sure I don't write over what has been done already
+        DATA_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS3/"
+        PLOT_LOCATION="/project/hadobs2/hadisdh/marine/PLOTS3/"
+
+    else:
+        # Constants in CAPS
+        OUTROOT = "ERAclimNBC"
+
+        ICOADS_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/{}/".format(OUTROOT)
+        # KW Changed GRIDS to GRIDS2 adn PLOTS to PLOTS2 to make sure I don't write over what has been done already
+        DATA_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS_noQC/"
+        PLOT_LOCATION="/project/hadobs2/hadisdh/marine/PLOTS_noQC/"
+
+
+    START_YEAR = 1973
+    END_YEAR = dt.datetime.now().year - 1
+
+    mdi = -1.e30
+
+
+    return Settings(OUTROOT, ICOADS_LOCATION, DATA_LOCATION, PLOT_LOCATION, START_YEAR, END_YEAR, doMedian, plots, mdi) # set
+
 
 #------------------------------------------------------------
 # END

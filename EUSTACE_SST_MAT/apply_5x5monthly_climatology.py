@@ -80,10 +80,11 @@ import netCDF4 as ncdf
 import copy
 
 import utils
-from set_paths_and_vars import *
+import set_paths_and_vars
+defaults = set_paths_and_vars.set()
 
 
-OBS_ORDER = utils.make_MetVars(mdi, multiplier = False) 
+OBS_ORDER = utils.make_MetVars(defaults.mdi, multiplier = False) 
 
 # what size grid (lat/lon)
 DELTA_LAT = 5
@@ -96,16 +97,20 @@ grid_lons = np.arange(-180 + DELTA_LAT, 180 + DELTA_LON, DELTA_LON)
 
 # subroutine start
 #*********************************************
-def apply_climatology(suffix = "relax", period = "both", daily = False):
+def apply_climatology(suffix = "relax", period = "both", daily = False, doQC = False, doBC = False):
     '''
     Apply monthly 5x5 climatology
 
     :param str suffix: "relax" or "strict" criteria
     :param str period: which period to do day/night/both?
     :param bool daily: run in 1x1 daily --> 5x5 monthly data
+    :param bool doQC: incorporate the QC flags or not
+    :param bool doBC: work on the bias corrected data
 
     :returns:
     '''
+    settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC)
+
 
     if suffix == "relax":
         N_YEARS_PRESENT = 10 # number of years present to calculate climatology
@@ -117,11 +122,11 @@ def apply_climatology(suffix = "relax", period = "both", daily = False):
 
     # set filenames
     if daily:
-        climfilename = DATA_LOCATION + "{}_5x5_monthly_climatology_from_daily_{}_{}.nc".format(OUTROOT, period, suffix)
-        obsfilename = DATA_LOCATION + "{}_5x5_monthly_from_daily_{}_{}.nc".format(OUTROOT, period, suffix)
+        climfilename = settings.DATA_LOCATION + "{}_5x5_monthly_climatology_from_daily_{}_{}.nc".format(settings.OUTROOT, period, suffix)
+        obsfilename = settings.DATA_LOCATION + "{}_5x5_monthly_from_daily_{}_{}.nc".format(settings.OUTROOT, period, suffix)
     else:
-        climfilename = DATA_LOCATION + "{}_5x5_monthly_climatology_{}_{}.nc".format(OUTROOT, period, suffix)
-        obsfilename = DATA_LOCATION + "{}_5x5_monthly_from_daily_{}_{}.nc".format(OUTROOT, period, suffix)
+        climfilename = settings.DATA_LOCATION + "{}_5x5_monthly_climatology_{}_{}.nc".format(settings.OUTROOT, period, suffix)
+        obsfilename = settings.DATA_LOCATION + "{}_5x5_monthly_from_daily_{}_{}.nc".format(settings.OUTROOT, period, suffix)
 
     # load netCDF files
     clim_file = ncdf.Dataset(climfilename,'r', format='NETCDF4')
@@ -155,9 +160,9 @@ def apply_climatology(suffix = "relax", period = "both", daily = False):
 
     # write file
     if daily:
-        out_filename = DATA_LOCATION + OUTROOT + "_5x5_monthly_anomalies_from_daily_{}_{}.nc".format(period, suffix)
+        out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_5x5_monthly_anomalies_from_daily_{}_{}.nc".format(period, suffix)
     else:
-        out_filename = DATA_LOCATION + OUTROOT + "_5x5_monthly_anomalies_{}_{}.nc".format(period, suffix)
+        out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_5x5_monthly_anomalies_{}_{}.nc".format(period, suffix)
 
     if period == "both":
         utils.netcdf_write(out_filename, all_anoms, n_grids, n_obs, OBS_ORDER, grid_lats[::-1], grid_lons, times, frequency = "Y")
@@ -180,10 +185,14 @@ if __name__=="__main__":
                         help='which period to run for (day/night/all), default = "both"')
     parser.add_argument('--daily', dest='daily', action='store_true', default = False,
                         help='run on 1x1 daily --> 5x5 monthly data (rather than 1x1 monthly --> 5x5 monthly), default = False')
+    parser.add_argument('--doQC', dest='doQC', action='store_true', default = False,
+                        help='process the QC information, default = False')
+    parser.add_argument('--doBC', dest='doBC', action='store_true', default = False,
+                        help='process the bias corrected data, default = False')
     args = parser.parse_args()
 
 
-    apply_climatology(suffix = str(args.suffix), period = str(args.period), daily = args.daily)
+    apply_climatology(suffix = str(args.suffix), period = str(args.period), daily = args.daily, doQC = args.doQC, doBC = args.doBC)
 
 # END
 # ************************************************************************

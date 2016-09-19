@@ -77,9 +77,10 @@ import netCDF4 as ncdf
 import gc
 
 import utils
-from set_paths_and_vars import *
+import set_paths_and_vars
+defaults = set_paths_and_vars.set()
 
-OBS_ORDER = utils.make_MetVars(mdi, multiplier = False)
+OBS_ORDER = utils.make_MetVars(defaults.mdi, multiplier = False)
 
 # what size grid (lat/lon)
 DELTA_LAT = 1
@@ -92,10 +93,11 @@ grid_lons = np.arange(-180 + DELTA_LAT, 180 + DELTA_LON, DELTA_LON)
 
 
 #************************************************************************
-def read_data(suffix, name, year, grid_lats, grid_lons, period, N_OBS_PER_DAY):
+def read_data(settings, suffix, name, year, grid_lats, grid_lons, period, N_OBS_PER_DAY):
     '''
     Read in the data from the netCDF files
 
+    :param Settings settings: object to hold all filepaths etc.
     :param str suffix: used to determine whether using strict or relaxed criteria
     :param str name: variable name
     :param int year: year to read
@@ -119,7 +121,7 @@ def read_data(suffix, name, year, grid_lats, grid_lons, period, N_OBS_PER_DAY):
     # set up empty data array
     var_3hrlys = np.ma.zeros([utils.days_in_year(year)*N_OBS_PER_DAY, len(grid_lats), len(grid_lons)])
     var_3hrlys.mask = np.zeros([utils.days_in_year(year)*N_OBS_PER_DAY, len(grid_lats), len(grid_lons)])
-    var_3hrlys.fill_value = mdi
+    var_3hrlys.fill_value = settings.mdi
     
     year_start = dt.datetime(year, 1, 1, 0, 0)
     
@@ -129,7 +131,7 @@ def read_data(suffix, name, year, grid_lats, grid_lons, period, N_OBS_PER_DAY):
         month_start = utils.day_of_year(year, month)
         month_end = month_start + calendar.monthrange(year, month)[1]
         
-        filename = "{}/{}_1x1_3hr_{}{:02d}_{}_{}.nc".format(DATA_LOCATION, OUTROOT, year, month, period, suffix)
+        filename = "{}/{}_1x1_3hr_{}{:02d}_{}_{}.nc".format(settings.DATA_LOCATION, settings.OUTROOT, year, month, period, suffix)
                 
         ncdf_file = ncdf.Dataset(filename,'r', format='NETCDF4')
         
@@ -177,7 +179,7 @@ def process_february(var_3hrlys, doMask = True):
 
 
 #************************************************************************
-def do_conversion(suffix = "relax", start_year = START_YEAR, end_year = END_YEAR, period = "all"):
+def do_conversion(suffix = "relax", start_year = defaults.START_YEAR, end_year = defaults.END_YEAR, period = "all", doQC = False, doBC = False):
     '''
     Convert 3 hrlies to pentads 1x1
 
@@ -188,9 +190,13 @@ def do_conversion(suffix = "relax", start_year = START_YEAR, end_year = END_YEAR
     :param int start_year: start year to process
     :param int end_year: end year to process
     :param str period: which period to do day/night/all?
+    :param bool doQC: incorporate the QC flags or not
+    :param bool doBC: work on the bias corrected data
 
     :returns:
     '''
+    settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC)
+
 
     # KW Added SUFFIX variable because all hourlies/dailies/monthlies now have suffix 'strict' (4/2 per daily/day-night) 
     # or 'relax' (2/1 per daily/day-night)
@@ -215,7 +221,7 @@ def do_conversion(suffix = "relax", start_year = START_YEAR, end_year = END_YEAR
             # arrays too massive to process all variables at once.
             print var.name
        
-            var_3hrlys = read_data(suffix, var.name, year, grid_lats, grid_lons, period, N_OBS_PER_DAY)
+            var_3hrlys = read_data(settings, suffix, var.name, year, grid_lats, grid_lons, period, N_OBS_PER_DAY)
 
             # reshape to days x 3hrly obs (365(366),8,180,360)
             var_3hrlys = var_3hrlys.reshape(-1, N_OBS_PER_DAY, var_3hrlys.shape[1], var_3hrlys.shape[2])
@@ -233,7 +239,7 @@ def do_conversion(suffix = "relax", start_year = START_YEAR, end_year = END_YEAR
             n_days_per_timestamp = np.ma.count(var_3hrlys, axis = 1) # n_pentads x hrs x lat x lon
 
             # get average at each timestamp across the pentad - so have N_OBS_PER_DAY averaged values per pentad
-            if doMedian:
+            if settings.doMedian:
                 pentad_3hrly_grid = utils.bn_median(var_3hrlys, axis = 1) # n_pentads x hrs x lat x lon
             else:
                 pentad_3hrly_grid = np.ma.mean(var_3hrlys, axis = 1) # n_pentads x hrs x lat x lon
@@ -247,7 +253,7 @@ def do_conversion(suffix = "relax", start_year = START_YEAR, end_year = END_YEAR
             # the pentad containing feb 29th is the 11th in the year (KW actually its the 12th, so the 11 in array speak which is what you have done)
             if calendar.isleap(year):
                 #  overwrite this with the me(di)an of a 6-day pentad
-                if doMedian:
+                if settings.doMedian:
                     pentad_3hrly_grid[11, :, :, :] = utils.bn_median(incl_feb29th, axis = 0)
                 else:
                     pentad_3hrly_grid[11, :, :, :] = np.ma.mean(incl_feb29th, axis = 0)
@@ -258,7 +264,7 @@ def do_conversion(suffix = "relax", start_year = START_YEAR, end_year = END_YEAR
 
                 print "processed Feb 29th"
 
-            if plots and v == 0:
+            if settings.plots and v == 0:
                 import matplotlib.pyplot as plt
                 plt.clf()
                 plt.hist(n_days_per_timestamp.reshape(-1), bins = np.arange(-1,7), align = "left", log = True, rwidth=0.5)
@@ -266,14 +272,14 @@ def do_conversion(suffix = "relax", start_year = START_YEAR, end_year = END_YEAR
                 plt.title("Number of days with obs at each 3hrly timestamp (over entire year)")
                 plt.xlabel("Number of days (max = 5)")
                 plt.ylabel("Frequency (log scale)")
-                plt.savefig(PLOT_LOCATION + "pentads_n_days_{}_{}_{}.png".format(year, period, suffix))
+                plt.savefig(settings.PLOT_LOCATION + "pentads_n_days_{}_{}_{}.png".format(year, period, suffix))
 
             # get single pentad values
             n_hrs_per_pentad = np.ma.count(pentad_3hrly_grid, axis = 1) # get the number of pentad-hours present in each pentad
             n_grids_per_pentad = np.sum(n_days_per_timestamp, axis = 1) # get the number of 3hrly 1x1 grids included per pentad 1x1
 
             # get average at each timestamp across the pentad - so have N_OBS_PER_DAY values per pentad
-            if doMedian:
+            if settings.doMedian:
                 pentad_grid = utils.bn_median(pentad_3hrly_grid, axis = 1)
             else:
                 pentad_grid = np.ma.mean(pentad_3hrly_grid, axis = 1)
@@ -288,7 +294,7 @@ def do_conversion(suffix = "relax", start_year = START_YEAR, end_year = END_YEAR
             all_pentads[v, :, :, :] = pentad_grid
 
             # diagnostics plots of obs/grids per pentad
-            if plots and v == 0:
+            if settings.plots and v == 0:
                 plt.clf()
                 plt.hist(n_hrs_per_pentad.reshape(-1), bins = np.arange(-1,10), align = "left", log = True, rwidth=0.5)
                 if period == "all":
@@ -298,7 +304,7 @@ def do_conversion(suffix = "relax", start_year = START_YEAR, end_year = END_YEAR
                 plt.title("Number of hrs with obs in each pentad (over entire year)")
                 plt.xlabel("Number of days (max = 8)")
                 plt.ylabel("Frequency (log scale)")
-                plt.savefig(PLOT_LOCATION + "pentads_n_hrs_{}_{}_{}.png".format(year, period, suffix))
+                plt.savefig(settings.PLOT_LOCATION + "pentads_n_hrs_{}_{}_{}.png".format(year, period, suffix))
 
             # clear up memory
             del pentad_3hrly_grid
@@ -307,7 +313,7 @@ def do_conversion(suffix = "relax", start_year = START_YEAR, end_year = END_YEAR
 
         # done all main variables.  Now for number of observations
         print "n_obs"
-        n_obs = read_data(suffix, "n_obs", year, grid_lats, grid_lons, period, N_OBS_PER_DAY)
+        n_obs = read_data(settings, suffix, "n_obs", year, grid_lats, grid_lons, period, N_OBS_PER_DAY)
 	# KW so we've gone from 8*365hrs,lats,lons to 365,8,lats,lons
         n_obs = n_obs.reshape(-1, N_OBS_PER_DAY, n_obs.shape[1], n_obs.shape[2])
         if calendar.isleap(year):
@@ -335,7 +341,7 @@ def do_conversion(suffix = "relax", start_year = START_YEAR, end_year = END_YEAR
         times = utils.TimeVar("time", "time since 1/1/{} in hours".format(year), "hours", "time")
         times.data = np.arange(0, all_pentads.shape[1]) * 5 * 24
 
-        out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_from_3hrly_{}_{}_{}.nc".format(year, period, suffix)
+        out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_1x1_pentad_from_3hrly_{}_{}_{}.nc".format(year, period, suffix)
         
         utils.netcdf_write(out_filename, all_pentads, n_grids_per_pentad, n_obs_per_pentad, OBS_ORDER, grid_lats, grid_lons, times, frequency = "P")
 
@@ -351,16 +357,20 @@ if __name__=="__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--suffix', dest='suffix', action='store', default = "relax",
                         help='"relax" or "strict" completeness, default = relax')
-    parser.add_argument('--start_year', dest='start_year', action='store', default = START_YEAR,
+    parser.add_argument('--start_year', dest='start_year', action='store', default = defaults.START_YEAR,
                         help='which year to start run, default = 1973')
-    parser.add_argument('--end_year', dest='end_year', action='store', default = END_YEAR,
+    parser.add_argument('--end_year', dest='end_year', action='store', default = defaults.END_YEAR,
                         help='which year to end run, default = present')
     parser.add_argument('--period', dest='period', action='store', default = "all",
                         help='which period to run for (day/night/all), default = "all"')
+    parser.add_argument('--doQC', dest='doQC', action='store_true', default = False,
+                        help='process the QC information, default = False')
+    parser.add_argument('--doBC', dest='doBC', action='store_true', default = False,
+                        help='process the bias corrected data, default = False')
     args = parser.parse_args()
 
 
-    do_conversion(suffix = str(args.suffix), start_year = int(args.start_year), end_year = int(args.end_year), period = str(args.period))
+    do_conversion(suffix = str(args.suffix), start_year = int(args.start_year), end_year = int(args.end_year), period = str(args.period), doQC = args.doQC, doBC = args.doBC)
 
 # END
 # ************************************************************************

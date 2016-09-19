@@ -74,7 +74,8 @@ import netCDF4 as ncdf
 import copy
 
 import utils
-from set_paths_and_vars import *
+import set_paths_and_vars
+defaults = set_paths_and_vars.set()
 
 #***************************************
 def mask_and_normalise_weights(cosines, data):
@@ -154,186 +155,239 @@ def write_ncdf_ts(times, OBS_ORDER, filename, annual = False, monthly = False, d
     outfile.close()
 
     return # write_ncdf_ts
+
 #***************************************
 #***************************************
+def make_timeseries(suffix = "relax", doQC = False, doBC = False):
+    '''
+    Make the timeseries - plots and netCDF files
 
-# monthly -> annual
-suffix = "relax"
+    :param str suffix: "relax" or "strict" criteria
+    :param bool doQC: incorporate the QC flags or not
+    :param bool doBC: work on the bias corrected data
 
-watermarkstring="/".join(os.getcwd().split('/')[4:])+'/'+os.path.basename( __file__ )+"   "+dt.datetime.strftime(dt.datetime.now(), "%d-%b-%Y %H:%M")
+    :returns:
+    '''
+    settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC)
 
-# run on the actuals (which include anomalies from ERA) and the anomalies (calculated from obs-actuals, but also include the anomalies from ERA)
-for version in ["", "_anomalies"]:
+    print "Do QC = {}".format(doQC)
+    print "Do BC = {}".format(doBC)
 
-    if version == "":
-        print "5x5 monthly Standard"
-    elif version == "_anomalies":
-        print "5x5 monthly Anomalies"
 
-    for period in ["both", "day", "night"]:
-        print period
+    # monthly -> annual
 
-        filename = "{}/{}_5x5_monthly{}_from_daily_{}_{}.nc".format(DATA_LOCATION, OUTROOT, version, period, suffix) 
+    watermarkstring="/".join(os.getcwd().split('/')[4:])+'/'+os.path.basename( __file__ )+"   "+dt.datetime.strftime(dt.datetime.now(), "%d-%b-%Y %H:%M")
 
-        ncdf_file = ncdf.Dataset(filename,'r', format='NETCDF4')
+    # run on the actuals (which include anomalies from ERA) and the anomalies (calculated from obs-actuals, but also include the anomalies from ERA)
+    for version in ["", "_anomalies"]:
 
-        lat_centres = ncdf_file.variables["latitude"]
-        lon_centres = ncdf_file.variables["longitude"]
+        if version == "":
+            print "5x5 monthly Standard"
+        elif version == "_anomalies":
+            print "5x5 monthly Anomalies"
 
-        n_obs = utils.set_MetVar_attributes("n_obs", "Number of Observations", "Number of Observations", 1, -1, np.dtype("int16"), 0)
-        OBS_ORDER = utils.make_MetVars(mdi, multiplier = False)
-        OBS_ORDER += [n_obs]
+        for period in ["both", "day", "night"]:
+            print period
 
+            filename = "{}/{}_5x5_monthly{}_from_daily_{}_{}.nc".format(settings.DATA_LOCATION, settings.OUTROOT, version, period, suffix) 
+
+            ncdf_file = ncdf.Dataset(filename,'r', format='NETCDF4')
+
+            lat_centres = ncdf_file.variables["latitude"]
+            lon_centres = ncdf_file.variables["longitude"]
+
+            n_obs = utils.set_MetVar_attributes("n_obs", "Number of Observations", "Number of Observations", 1, -1, np.dtype("int64"), 0)
+            OBS_ORDER = utils.make_MetVars(settings.mdi, multiplier = False)
+            OBS_ORDER += [n_obs]
+
+
+            for v, var in enumerate(OBS_ORDER):
+                print var.name
+
+
+                var.data = ncdf_file.variables[var.name][:]
+
+                # make annual and monthly timeseries
+
+                mesh_lon, mesh_lat = np.meshgrid(lon_centres, lat_centres)
+                cosines = np.cos(np.radians(mesh_lat))
+
+                full_cosines = mask_and_normalise_weights(cosines, var.data)
+                #masked weights now sum to one for each field
+
+                if var.name == "n_obs":
+                    weighted_data = var.data
+                else:
+                    weighted_data = var.data * full_cosines
+
+                plot_values = np.zeros(weighted_data.shape[0])
+                plot_times = []
+                for y in range(weighted_data.shape[0]):
+
+                    plot_values[y] = np.ma.sum(weighted_data[y])
+
+                    plot_times += [dt.datetime(settings.START_YEAR+(y/12), 1 + (y%12), 1, 0, 0)]
+
+                # plot the monthly data
+                plt.clf()
+                plt.plot(plot_times, plot_values, "r-", label = "Monthly")
+
+                var.mdata = plot_values
+                monthly_times = plot_times
+
+                # and annual
+                plot_values = plot_values.reshape(-1, 12)
+
+                if var.name != "n_obs":
+                    plot_values = np.mean(plot_values, axis = 1)
+                    plot_times = [dt.datetime(settings.START_YEAR+y, 7, 1) for y in range(plot_values.shape[0])]
+                    plt.plot(plot_times, plot_values, "b-", label = "Annual")
+
+                    plt.ylabel(var.units)
+
+
+                else:
+                    # if n_obs, then have second x-axis
+                    plot_values = np.sum(plot_values, axis = 1)
+                    plot_times = [dt.datetime(settings.START_YEAR+y, 7, 1) for y in range(plot_values.shape[0])]
+
+                    # finish off first axis
+                    ax1 = plt.gca()
+                    ax1.set_ylabel("Monthly", color='r')
+                    for tl in ax1.get_yticklabels():
+                        tl.set_color('r')
+                    
+                    # add second axis
+                    ax2 = ax1.twinx()
+                    ax2.plot(plot_times, plot_values, "b-", label = "Annual")
+                    ax2.set_ylabel("Annual", color='b')
+                    for tl in ax2.get_yticklabels():
+                        tl.set_color('b')
+                   
+                    
+
+                var.adata = plot_values
+                annual_times = plot_times
+
+                # and prettify the plot
+                plt.title(" ".join([x.capitalize() for x in var.name.split("_")]))
+                if var.name != "n_obs": plt.legend()
+                plt.figtext(0.01,0.01,watermarkstring,size=6)
+
+                plt.savefig("{}/{}_5x5_monthly{}_from_daily_{}_{}_ts.png".format(settings.PLOT_LOCATION, settings.OUTROOT, version, period, var.name))
+
+            # clean up
+            ncdf_file.close()
+            del(weighted_data)
+            del(full_cosines)
+            gc.collect()
+
+            # write output files (annual and monthly)
+            filename = "{}/{}_5x5_monthly{}_from_daily_{}_{}_ts_annual.nc".format(settings.DATA_LOCATION, settings.OUTROOT, version, period, suffix) 
+            if os.path.exists(filename):
+                os.remove(filename)
+            write_ncdf_ts(annual_times, OBS_ORDER, filename, annual = True, do_zip = True)
+
+            filename = "{}/{}_5x5_monthly{}_from_daily_{}_{}_ts_monthly.nc".format(settings.DATA_LOCATION, settings.OUTROOT, version, period, suffix) 
+            if os.path.exists(filename):
+                os.remove(filename)
+            write_ncdf_ts(monthly_times, OBS_ORDER, filename, monthly = True, do_zip = True)
+
+            # clean up
+            del(plot_values)
+            del(plot_times)
+            del(OBS_ORDER)
+            gc.collect()
+
+    # not activated at present
+    pentads = False
+    if pentads:
+        # pentad -> annual
+        OBS_ORDER = utils.make_MetVars(settings.mdi, multiplier = False)
 
         for v, var in enumerate(OBS_ORDER):
             print var.name
 
 
-            var.data = ncdf_file.variables[var.name][:]
+            filename = "{}/{}_1x1_pentads_from_3hrly_{}_{}_{}.nc".format(settings.DATA_LOCATION, settings.OUTROOT, var.name, period, suffix) 
 
-            # make annual and monthly timeseries
+            ncdf_file = ncdf.Dataset(filename,'r', format='NETCDF4')
 
+            lat_centres = ncdf_file.variables["latitude"]
+            lon_centres = ncdf_file.variables["longitude"]
+
+            data_shape = ncdf_file.variables[var.name][:].shape
+
+            # pentads
             mesh_lon, mesh_lat = np.meshgrid(lon_centres, lat_centres)
             cosines = np.cos(np.radians(mesh_lat))
 
-            full_cosines = mask_and_normalise_weights(cosines, var.data)
-            #masked weights now sum to one for each field
-
-            if var.name == "n_obs":
-                weighted_data = var.data
-            else:
-                weighted_data = var.data * full_cosines
-
-            plot_values = np.zeros(weighted_data.shape[0])
+            plot_values = np.zeros(data_shape[0])
             plot_times = []
-            for y in range(weighted_data.shape[0]):
+            year = copy.deepcopy(settings.START_YEAR)
 
-                plot_values[y] = np.ma.sum(weighted_data[y])
+            for ts in range(data_shape[0]):
 
-                plot_times += [dt.datetime(START_YEAR+(y/12), 1 + (y%12), 1, 0, 0)]
+                data = ncdf_file.variables[var.name][ts]
 
-            # plot the monthly data
+                full_cosines = np.ma.array(cosines)
+                full_cosines.mask = data.mask
+                full_cosines = full_cosines / np.sum(full_cosines)
+
+                weighted_data = data * full_cosines
+
+                plot_values[ts] = np.ma.sum(weighted_data)
+
+                if calendar.isleap(year) and  ((ts+1)*5)%365 > 60:
+                    # account for 6 day pentad in leap years
+                    plot_times += [dt.datetime(year, 1 , 1, 0, 0) + dt.timedelta(days = ((ts+1)*5)%365 + 1)]
+                else:
+                    plot_times += [dt.datetime(year, 1 , 1, 0, 0) + dt.timedelta(days = ((ts+1)*5)%365)]
+
+                print year, ts, plot_times[-1]
+
+                if ((ts+1)*5)%365 == 0:
+                    year += 1
+
+
+
             plt.clf()
-            plt.plot(plot_times, plot_values, "r-", label = "Monthly")
-
-            var.mdata = plot_values
-            monthly_times = plot_times
-
-            # and annual
-            plot_values = plot_values.reshape(-1, 12)
-
-            if var.name != "n_obs":
-                plot_values = np.mean(plot_values, axis = 1)
-            else:
-                plot_values = np.sum(plot_values, axis = 1)
-
-            plot_times = [dt.datetime(START_YEAR+y, 7, 1) for y in range(plot_values.shape[0])]
-            plt.plot(plot_times, plot_values, "b-", label = "Annual")
-
-            var.adata = plot_values
-            annual_times = plot_times
-
-            # and prettify the plot
-            plt.title(" ".join([x.capitalize() for x in var.name.split("_")]))
+            plt.plot(plot_times, plot_values, "r-")
+            plt.title(var.name)
             plt.ylabel(var.units)
-            plt.legend()
-            plt.figtext(0.01,0.01,watermarkstring,size=6)
 
-            plt.savefig("{}/{}_5x5_monthly{}_from_daily_{}_{}_ts.png".format(PLOT_LOCATION, OUTROOT, version, period, var.name))
+            # annual
 
-        # clean up
-        ncdf_file.close()
-        del(weighted_data)
-        del(full_cosines)
-        gc.collect()
+            plot_values = plot_values.reshape(-1, 73, data_shape[-2], data_shape[-1])
+            plot_values = np.mean(plot_values, axis = 1)
 
-        # write output files
-        filename = "{}/{}_5x5_monthly{}_from_daily_{}_{}_ts_annual.nc".format(DATA_LOCATION, OUTROOT, version, period, suffix) 
-        if os.path.exists(filename):
-            os.remove(filename)
-        write_ncdf_ts(annual_times, OBS_ORDER, filename, annual = True, do_zip = True)
+            plt.plot(plot_times[36::73], plot_values, "b-")
 
-        filename = "{}/{}_5x5_monthly{}_from_daily_{}_{}_ts_monthly.nc".format(DATA_LOCATION, OUTROOT, version, period, suffix) 
-        if os.path.exists(filename):
-            os.remove(filename)
-        write_ncdf_ts(monthly_times, OBS_ORDER, filename, monthly = True, do_zip = True)
+            plt.savefig("{}/{}_pentads_all.png".format(settings.PLOT_LOCATION, var.name))
 
-        # clean up
-        del(plot_values)
-        del(plot_times)
-        del(OBS_ORDER)
-        gc.collect()
+            raw_input("check")
 
-sys.exit()
+    return # make_timeseries
 
+#************************************************************************
+if __name__=="__main__":
 
-
-
-
-# pentad -> annual
-OBS_ORDER = utils.make_MetVars(mdi, multiplier = False)
-
-for v, var in enumerate(OBS_ORDER):
-    print var.name
-
-
-    filename = "{}/{}_1x1_pentads_from_3hrly_{}_{}_{}.nc".format(DATA_LOCATION, OUTROOT, var.name, period, suffix) 
-
-    ncdf_file = ncdf.Dataset(filename,'r', format='NETCDF4')
-
-    lat_centres = ncdf_file.variables["latitude"]
-    lon_centres = ncdf_file.variables["longitude"]
-
-    data_shape = ncdf_file.variables[var.name][:].shape
-
-    # pentads
-    mesh_lon, mesh_lat = np.meshgrid(lon_centres, lat_centres)
-    cosines = np.cos(np.radians(mesh_lat))
-
-    plot_values = np.zeros(data_shape[0])
-    plot_times = []
-    year = copy.deepcopy(START_YEAR)
-
-    for ts in range(data_shape[0]):
-
-        data = ncdf_file.variables[var.name][ts]
-
-        full_cosines = np.ma.array(cosines)
-        full_cosines.mask = data.mask
-        full_cosines = full_cosines / np.sum(full_cosines)
-
-        weighted_data = data * full_cosines
-
-        plot_values[ts] = np.ma.sum(weighted_data)
-
-        if calendar.isleap(year) and  ((ts+1)*5)%365 > 60:
-            # account for 6 day pentad in leap years
-            plot_times += [dt.datetime(year, 1 , 1, 0, 0) + dt.timedelta(days = ((ts+1)*5)%365 + 1)]
-        else:
-            plot_times += [dt.datetime(year, 1 , 1, 0, 0) + dt.timedelta(days = ((ts+1)*5)%365)]
-
-        print year, ts, plot_times[-1]
-
-        if ((ts+1)*5)%365 == 0:
-            year += 1
-            
-
-
-    plt.clf()
-    plt.plot(plot_times, plot_values, "r-")
-    plt.title(var.name)
-    plt.ylabel(var.units)
-
-    # annual
-
-    plot_values = plot_values.reshape(-1, 73, data_shape[-2], data_shape[-1])
-    plot_values = np.mean(plot_values, axis = 1)
-
-    plt.plot(plot_times[36::73], plot_values, "b-")
     
-    plt.savefig("{}/{}_pentads_all.png".format(PLOT_LOCATION, var.name))
+    import argparse
 
-    raw_input("check")
+    # set up keyword arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--suffix', dest='suffix', action='store', default = "relax",
+                        help='"relax" or "strict" completeness, default = relax')
+    parser.add_argument('--doQC', dest='doQC', action='store_true', default = False,
+                        help='process the QC information, default = False')
+    parser.add_argument('--doBC', dest='doBC', action='store_true', default = False,
+                        help='process the bias corrected data, default = False')
+    args = parser.parse_args()
+
+
+    make_timeseries(suffix = str(args.suffix), doQC = args.doQC, doBC = args.doBC)
+
 
 # END
 # ************************************************************************

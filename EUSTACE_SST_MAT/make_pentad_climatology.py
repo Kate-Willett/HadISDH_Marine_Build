@@ -80,9 +80,10 @@ import calendar
 import netCDF4 as ncdf
 
 import utils
-from set_paths_and_vars import *
+import set_paths_and_vars
+defaults = set_paths_and_vars.set()
 
-OBS_ORDER = utils.make_MetVars(mdi, multiplier = False)
+OBS_ORDER = utils.make_MetVars(defaultsmdi, multiplier = False)
 # KW make OBS_ORDER only the actual variables - remove anomalies
 NEWOBS_ORDER = []
 for v, var in enumerate(OBS_ORDER):
@@ -102,7 +103,7 @@ grid_lons = np.arange(-180 + DELTA_LAT, 180 + DELTA_LON, DELTA_LON)
 
 # subroutine start
 #*********************************************
-def calculate_climatology(suffix = "relax", start_year = 1981, end_year = 2010, period = "both", do3hr = False):
+def calculate_climatology(suffix = "relax", start_year = 1981, end_year = 2010, period = "both", do3hr = False, doQC = False, doBC = False):
     '''
     Make 1x1 pentad climatology
 
@@ -111,9 +112,13 @@ def calculate_climatology(suffix = "relax", start_year = 1981, end_year = 2010, 
     :param int end_year: end year to process
     :param str period: which period to do day/night/both?
     :param bool do3hr: run on 3hr --> pentad data
+    :param bool doQC: incorporate the QC flags or not
+    :param bool doBC: work on the bias corrected data
 
     :returns:
     '''
+    settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC)
+
     if suffix == "relax":
         N_YEARS_PRESENT = 10 # number of years present to calculate climatology
     elif suffix == "strict":
@@ -147,7 +152,7 @@ def calculate_climatology(suffix = "relax", start_year = 1981, end_year = 2010, 
         all_pentads = np.ma.zeros([N_YEARS, 73, len(grid_lats), len(grid_lons)])
 	# sets up a mask of 'False' = not masked!
         all_pentads.mask = np.zeros([N_YEARS, 73, len(grid_lats), len(grid_lons)])
-        all_pentads.fill_value = mdi
+        all_pentads.fill_value = settings.mdi
 
         # read in relevant years
         for y, year in enumerate(np.arange(start_year, end_year + 1)): 
@@ -155,10 +160,10 @@ def calculate_climatology(suffix = "relax", start_year = 1981, end_year = 2010, 
             print year
 
             if do3hr:
-                filename = DATA_LOCATION + "{}_1x1_pentad_from_3hrly_{}_{}_{}.nc".format(OUTROOT, year, period, suffix)
+                filename = settings.DATA_LOCATION + "{}_1x1_pentad_from_3hrly_{}_{}_{}.nc".format(settings.OUTROOT, year, period, suffix)
  
             else:
-                filename = DATA_LOCATION + "{}_1x1_pentad_{}_{}_{}.nc".format(OUTROOT, year, period, suffix)
+                filename = settings.DATA_LOCATION + "{}_1x1_pentad_{}_{}_{}.nc".format(settings.OUTROOT, year, period, suffix)
 
             ncdf_file = ncdf.Dataset(filename,'r', format='NETCDF4')
 
@@ -171,7 +176,7 @@ def calculate_climatology(suffix = "relax", start_year = 1981, end_year = 2010, 
         n_grids = np.ma.count(all_pentads, axis = 0)
 
         # collapse down the years
-        if doMedian:
+        if settings.doMedian:
             all_clims[v, :, :, :] = utils.bn_median(all_pentads, axis = 0)
         else:
             all_clims[v, :, :, :] = np.ma.mean(all_pentads, axis = 0)
@@ -184,7 +189,7 @@ def calculate_climatology(suffix = "relax", start_year = 1981, end_year = 2010, 
         # KW should probably mask stdev too - although unmasked it does show the potential coverage
         all_stds[v, :, :, :].mask[locs] = True
 
-        if plots and v == 0:
+        if settings.plots and v == 0:
             import matplotlib.pyplot as plt
             plt.clf()
             plt.hist(n_grids.reshape(-1), bins = np.arange(-1,32), align = "left", log = True, rwidth=0.5)
@@ -192,7 +197,7 @@ def calculate_climatology(suffix = "relax", start_year = 1981, end_year = 2010, 
             plt.title("Number of years present in each pentad")
             plt.xlabel("Number of years (max = 30)")
             plt.ylabel("Frequency (log scale)")
-            plt.savefig(PLOT_LOCATION + "pentad_clims_n_years_{}_{}_{}.png".format(year, period, suffix))
+            plt.savefig(settings.PLOT_LOCATION + "pentad_clims_n_years_{}_{}_{}.png".format(year, period, suffix))
 
             
     # now process number of observations (KW all_n_obs wasn't a masked array - so have set it up as one - BUT not really convinced this 
@@ -205,24 +210,24 @@ def calculate_climatology(suffix = "relax", start_year = 1981, end_year = 2010, 
 
     # write files
     if do3hr:
-        out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_climatology_from_3hrly_{}_{}.nc".format(period, suffix)
+        out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_1x1_pentad_climatology_from_3hrly_{}_{}.nc".format(period, suffix)
     else:
-        out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_climatology_{}_{}.nc".format(period, suffix)
+        out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_1x1_pentad_climatology_{}_{}.nc".format(period, suffix)
 
     utils.netcdf_write(out_filename, all_clims, n_grids, all_obs, OBS_ORDER, grid_lats, grid_lons, times, frequency = "P")
 
     if do3hr:
-        out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_stdev_from_3hrly_{}_{}.nc".format(period, suffix)
+        out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_1x1_pentad_stdev_from_3hrly_{}_{}.nc".format(period, suffix)
     else:
-       out_filename = DATA_LOCATION + OUTROOT + "_1x1_pentad_stdev_{}_{}.nc".format(period, suffix)
+       out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_1x1_pentad_stdev_{}_{}.nc".format(period, suffix)
 
     utils.netcdf_write(out_filename, all_stds, n_grids, all_obs, OBS_ORDER, grid_lats, grid_lons, times, frequency = "P")
 
     # test distribution of obs with grid boxes
     if do3hr:
-        outfile = file(OUTROOT + "_1x1_pentad_climatology_from_3hrly_{}_{}.txt".format(period, suffix), "w")
+        outfile = file(settings.OUTROOT + "_1x1_pentad_climatology_from_3hrly_{}_{}.txt".format(period, suffix), "w")
     else:
-        outfile = file(OUTROOT + "_1x1_pentad_climatology_{}_{}.txt".format(period, suffix), "w")
+        outfile = file(settings.OUTROOT + "_1x1_pentad_climatology_{}_{}.txt".format(period, suffix), "w")
 
     utils.boxes_with_n_obs(outfile, all_obs, all_clims[0], N_YEARS_PRESENT)
 
@@ -245,10 +250,14 @@ if __name__=="__main__":
                         help='which period to run for (day/night/all), default = "both"')
     parser.add_argument('--do3hr', dest='do3hr', action='store_true', default = False,
                         help='run on 3hr --> pentad data (rather than daily --> pentad), default = False')
+    parser.add_argument('--doQC', dest='doQC', action='store_true', default = False,
+                        help='process the QC information, default = False')
+    parser.add_argument('--doBC', dest='doBC', action='store_true', default = False,
+                        help='process the bias corrected data, default = False')
     args = parser.parse_args()
 
 
-    calculate_climatology(suffix = str(args.suffix), start_year = int(args.start_year), end_year = int(args.end_year), period = str(args.period), do3hr = args.do3hr)
+    calculate_climatology(suffix = str(args.suffix), start_year = int(args.start_year), end_year = int(args.end_year), period = str(args.period), do3hr = args.do3hr, doQC = args.doQC, doBC = args.doBC)
 
 # END
 # ************************************************************************

@@ -64,11 +64,6 @@ import matplotlib
 import struct
 import netCDF4 as ncdf
 
-QC_FLAGS = np.array(["day","land","trk","date1","date2","pos","blklst","dup","POSblank1",\
-"SSTbud","SSTclim","SSTnonorm","SSTfreez","SSTnoval","SSTnbud","SSTbbud","SSTrep","SSTblank",\
-"ATbud","ATclim","ATnonorm","ATblank1","ATnoval","ATnbud","ATbbud","ATrep","ATblank2",\
-"DPTbud","DPTclim","DPTnonorm","DPTssat","DPTnoval","DPTnbud","DPTbbud","DPTrep","DPTrepsat",\
-"few","ntrk","DUMblank1","DUMblank2","DUMblank3","DUMblank4","DUMblank5","DUMblank6"])
 
 #*********************************************
 class MetVar(object):
@@ -104,10 +99,42 @@ class TimeVar(object):
 
     __repr__ = __str__
    
-     
+  
 
 #*****************************************************
-def read_qc_data(filename, location, fieldwidths):
+def set_qc_flag_list(doBC = False, doUncert = False):
+    '''
+    Set the QC flags present in the raw data
+
+    :param bool doBC: run for bias corrected data
+    :param bool doUncert: work on files with uncertainty information (not currently used)
+
+    :returns: QC_FLAGS - np string array
+    '''
+
+
+    if doBC:
+        # reduced number of QC flags.
+        return np.array(["day","land","trk","date1","date2","pos","blklst","dup",\
+"SSTbud","SSTclim","SSTnonorm","SSTfreez","SSTrep",\
+"ATbud","ATclim","ATnonorm","ATround","ATrep",\
+"DPTbud","DPTclim","DPTssat","DPTround","DPTrep","DPTrepsat"])
+    else:
+        # full number
+        return np.array(["day","land","trk","date1","date2","pos","blklst","dup",\
+"SSTbud","SSTclim","SSTnonorm","SSTfreez","SSTrep",\
+"ATbud","ATclim","ATnonorm","ATnoval","ATround","ATrep",\
+"DPTbud","DPTclim","DPTnonorm","DPTssat","DPTnoval","DPTround","DPTrep","DPTrepsat"]) # set_qc_flag_list
+
+# RD - kept original flag array here just in case MDS_RWtools isn't used before next read
+#np.array(["day","land","trk","date1","date2","pos","blklst","dup","POSblank1",\
+#"SSTbud","SSTclim","SSTnonorm","SSTfreez","SSTnoval","SSTnbud","SSTbbud","SSTrep","SSTblank",\
+#"ATbud","ATclim","ATnonorm","ATblank1","ATnoval","ATnbud","ATbbud","ATrep","ATblank2",\
+#"DPTbud","DPTclim","DPTnonorm","DPTssat","DPTnoval","DPTnbud","DPTbbud","DPTrep","DPTrepsat",\
+#"few","ntrk","DUMblank1","DUMblank2","DUMblank3","DUMblank4","DUMblank5","DUMblank6"])
+
+#*****************************************************
+def read_qc_data(filename, location, fieldwidths, doBC = False):
     """
     Read in the QC'd data and return
     Expects fixed field format
@@ -118,6 +145,7 @@ def read_qc_data(filename, location, fieldwidths):
     :param str filename: filename to read
     :param str location: location of file
     :param str fieldwidths: fixed field widths to use
+    :param bool doBC: run on the bias corrected data
 
     :returns: data - np.array of string data
     """
@@ -135,17 +163,30 @@ def read_qc_data(filename, location, fieldwidths):
         for line in infile:
 
             try:
-                # some lines might not be the correct length
-                assert len(line) == 410
+                if doBC:
+                    # some lines might not be the correct length
+                    assert len(line) == 751
                 
-                fields = parse(line)
+                    fields = parse(line)
                 
-                # now unpack and process
+                    # now unpack and process
+                    platform_data += [fields[: 8]]
+                    dummy_obs = [fields[8: 8+18]] # used to help counting the fields
+                    platform_obs += [fields[8+18: 8+18+14]] # the ???tbc fields
+                    dummy_obs = [fields[8+18+14: 8+18+14+14+14+14]] # ditto
+                    platform_meta += [fields[8+18+14+14+14+14: 8+18+14+14+14+14+12]]
+                    platform_qc += [fields[8+18+14+14+14+14+12:]]
+                else:
+                    # some lines might not be the correct length
+                    assert len(line) == 410
                 
-                platform_data += [fields[: 8]]
-                platform_obs += [fields[8: 8+17]]
-                platform_meta += [fields[8+17: 8+17+30]]
-                platform_qc += [fields[8+17+30:]]
+                    fields = parse(line)
+                
+                    # now unpack and process
+                    platform_data += [fields[: 8]]
+                    platform_obs += [fields[8: 8+17]]
+                    platform_meta += [fields[8+17: 8+17+20]]
+                    platform_qc += [fields[8+17+20:]]
 
             except AssertionError:
                 print "skipping line in {} - malformed data".format(filename)
@@ -163,9 +204,10 @@ def read_qc_data(filename, location, fieldwidths):
 
 
     # filter PT=14
-    PT = np.array([int(x) for x in platform_meta[:,3]])
-    goods, = np.where(PT != 14)
+    PT = np.array([int(x) for x in platform_meta[:,2]])
 
+    goods, = np.where(PT != 14)
+    # should no longer be needed but retained for completeness
 
     return platform_data[goods], \
         platform_obs[goods].astype(int), \
@@ -428,7 +470,7 @@ def set_MetVar_attributes(name, long_name, standard_name, units, mdi, dtype, col
     return new_var # set_MetVar_attributes
  
 #*****************************************************
-def make_MetVars(mdi, doSST_SLP = False, multiplier = False):
+def make_MetVars(mdi, doSST_SLP = False, multiplier = False, doBC = False):
     '''
     Set up the MetVars and return a list.  
     Had hard-coded columns for the input files.
@@ -436,38 +478,64 @@ def make_MetVars(mdi, doSST_SLP = False, multiplier = False):
     :param flt mdi: missing data indicator
     :param bool doSST_SLP: do the extra variables
     :param bool multiplier: add a non-unity multiplier
+    :param bool doBC: run on bias corrected data (adjusts the columns to read in from data array)
    
     :returns: list [mat, mat_an, dpt, dpt_an, shu, shu_an, vap, vap_an, crh, crh_an, cwb, cwb_an, dpd, dpd_an]
       if doSST_SLP:
       [mat, mat_an, sst, sst_an, slp, dpt, dpt_an, shu, shu_an, vap, vap_an, crh, crh_an, cwb, cwb_an, dpd, dpd_an]
+      
     '''
+    if doBC and doSST_SLP:
+        raise RuntimeError("Cannot have doBC and doSST_SLP set at the same tiem")
 
- 
-    mat = set_MetVar_attributes("marine_air_temperature", "Marine Air Temperature", "marine air temperature", "degrees C", mdi, np.dtype('float64'), 0, multiplier = multiplier)
-    mat_an = set_MetVar_attributes("marine_air_temperature_anomalies", "Marine Air Temperature Anomalies", "marine air temperature anomalies", "degrees C", mdi, np.dtype('float64'), 1, multiplier = multiplier)
+    if doBC:
+        mat = set_MetVar_attributes("marine_air_temperature", "Marine Air Temperature", "marine air temperature", "degrees C", mdi, np.dtype('float64'), 0, multiplier = multiplier)
+        mat_an = set_MetVar_attributes("marine_air_temperature_anomalies", "Marine Air Temperature Anomalies", "marine air temperature anomalies", "degrees C", mdi, np.dtype('float64'), 1, multiplier = multiplier)
 
-    sst = set_MetVar_attributes("sea_surface_temperature", "Sea Surface Temperature", "sea surface temperature", "degrees C", mdi, np.dtype('float64'), 2, multiplier = multiplier)
-    sst_an = set_MetVar_attributes("sea_surface_temperature_anomalies", "Sea Surface Temperature Anomalies", "sea surface temperature anomalies", "degrees C", mdi, np.dtype('float64'), 3, multiplier = multiplier)
+        dpt = set_MetVar_attributes("dew_point_temperature", "Dew Point Temperature", "dew point temperature", "degrees C", mdi, np.dtype('float64'), 2, multiplier = multiplier)
+        dpt_an = set_MetVar_attributes("dew_point_temperature_anomalies", "Dew Point Temperature Anomalies", "dew point temperature anomalies", "degrees C", mdi, np.dtype('float64'), 3, multiplier = multiplier)
 
-    slp = set_MetVar_attributes("sea_level_pressure", "Sea Level Pressure", "sea level pressure", "hPa", mdi, np.dtype('float64'), 4, multiplier = multiplier)
+        shu = set_MetVar_attributes("specific_humidity", "Specific humidity", "specific_humidity", "g/kg", mdi, np.dtype('float64'), 4, multiplier = multiplier)
+        shu_an = set_MetVar_attributes("specific_humidity_anomalies", "Specific humidity Anomalies", "specific_humidity_anomalies", "g/kg", mdi, np.dtype('float64'), 5, multiplier = multiplier)
 
-    dpt = set_MetVar_attributes("dew_point_temperature", "Dew Point Temperature", "dew point temperature", "degrees C", mdi, np.dtype('float64'), 5, multiplier = multiplier)
-    dpt_an = set_MetVar_attributes("dew_point_temperature_anomalies", "Dew Point Temperature Anomalies", "dew point temperature anomalies", "degrees C", mdi, np.dtype('float64'), 6, multiplier = multiplier)
+        vap = set_MetVar_attributes("vapor_pressure", "Vapor pressure calculated w.r.t water", "water vapor pressure", "hPa", mdi, np.dtype('float64'), 6, multiplier = multiplier)
+        vap_an = set_MetVar_attributes("vapor_pressure_anomalies", "Vapor pressure Anomalies calculated w.r.t water", "water vapor pressure anomalies", "hPa", mdi, np.dtype('float64'), 7, multiplier = multiplier)
 
-    shu = set_MetVar_attributes("specific_humidity", "Specific humidity", "specific_humidity", "g/kg", mdi, np.dtype('float64'), 7, multiplier = multiplier)
-    shu_an = set_MetVar_attributes("specific_humidity_anomalies", "Specific humidity Anomalies", "specific_humidity_anomalies", "g/kg", mdi, np.dtype('float64'), 8, multiplier = multiplier)
- 
-    vap = set_MetVar_attributes("vapor_pressure", "Vapor pressure calculated w.r.t water", "water vapor pressure", "hPa", mdi, np.dtype('float64'), 9, multiplier = multiplier)
-    vap_an = set_MetVar_attributes("vapor_pressure_anomalies", "Vapor pressure Anomalies calculated w.r.t water", "water vapor pressure anomalies", "hPa", mdi, np.dtype('float64'), 10, multiplier = multiplier)
+        crh = set_MetVar_attributes("relative_humidity", "Relative humidity", "relative humidity", "%rh", mdi, np.dtype('float64'), 8, multiplier = multiplier)
+        crh_an = set_MetVar_attributes("relative_humidity_anomalies", "Relative humidity Anomalies", "relative humidity anomalies", "%rh", mdi, np.dtype('float64'), 9, multiplier = multiplier)
 
-    crh = set_MetVar_attributes("relative_humidity", "Relative humidity", "relative humidity", "%rh", mdi, np.dtype('float64'), 11, multiplier = multiplier)
-    crh_an = set_MetVar_attributes("relative_humidity_anomalies", "Relative humidity Anomalies", "relative humidity anomalies", "%rh", mdi, np.dtype('float64'), 12, multiplier = multiplier)
+        cwb = set_MetVar_attributes("wet_bulb_temperature", "Wet bulb temperatures", "wet bulb temperature", "degrees C", mdi, np.dtype('float64'), 10, multiplier = multiplier)
+        cwb_an = set_MetVar_attributes("wet_bulb_temperature_anomalies", "Wet bulb temperatures Anomalies", "wet bulb temperature anomalies", "degrees C", mdi, np.dtype('float64'), 11, multiplier = multiplier)
 
-    cwb = set_MetVar_attributes("wet_bulb_temperature", "Wet bulb temperatures", "wet bulb temperature", "degrees C", mdi, np.dtype('float64'), 13, multiplier = multiplier)
-    cwb_an = set_MetVar_attributes("wet_bulb_temperature_anomalies", "Wet bulb temperatures Anomalies", "wet bulb temperature anomalies", "degrees C", mdi, np.dtype('float64'), 14, multiplier = multiplier)
+        dpd = set_MetVar_attributes("dew_point_depression", "Dew Point Depression", "dew point depression", "degrees C", mdi, np.dtype('float64'), 12, multiplier = multiplier)
+        dpd_an = set_MetVar_attributes("dew_point_depression_anomalies", "Dew Point Depression Anomalies", "dew point depression anomalies", "degrees C", mdi, np.dtype('float64'), 13, multiplier = multiplier)
 
-    dpd = set_MetVar_attributes("dew_point_depression", "Dew Point Depression", "dew point depression", "degrees C", mdi, np.dtype('float64'), 15, multiplier = multiplier)
-    dpd_an = set_MetVar_attributes("dew_point_depression_anomalies", "Dew Point Depression Anomalies", "dew point depression anomalies", "degrees C", mdi, np.dtype('float64'), 16, multiplier = multiplier)
+    else:
+        mat = set_MetVar_attributes("marine_air_temperature", "Marine Air Temperature", "marine air temperature", "degrees C", mdi, np.dtype('float64'), 0, multiplier = multiplier)
+        mat_an = set_MetVar_attributes("marine_air_temperature_anomalies", "Marine Air Temperature Anomalies", "marine air temperature anomalies", "degrees C", mdi, np.dtype('float64'), 1, multiplier = multiplier)
+
+        sst = set_MetVar_attributes("sea_surface_temperature", "Sea Surface Temperature", "sea surface temperature", "degrees C", mdi, np.dtype('float64'), 2, multiplier = multiplier)
+        sst_an = set_MetVar_attributes("sea_surface_temperature_anomalies", "Sea Surface Temperature Anomalies", "sea surface temperature anomalies", "degrees C", mdi, np.dtype('float64'), 3, multiplier = multiplier)
+
+        slp = set_MetVar_attributes("sea_level_pressure", "Sea Level Pressure", "sea level pressure", "hPa", mdi, np.dtype('float64'), 4, multiplier = multiplier)
+
+        dpt = set_MetVar_attributes("dew_point_temperature", "Dew Point Temperature", "dew point temperature", "degrees C", mdi, np.dtype('float64'), 5, multiplier = multiplier)
+        dpt_an = set_MetVar_attributes("dew_point_temperature_anomalies", "Dew Point Temperature Anomalies", "dew point temperature anomalies", "degrees C", mdi, np.dtype('float64'), 6, multiplier = multiplier)
+
+        shu = set_MetVar_attributes("specific_humidity", "Specific humidity", "specific_humidity", "g/kg", mdi, np.dtype('float64'), 7, multiplier = multiplier)
+        shu_an = set_MetVar_attributes("specific_humidity_anomalies", "Specific humidity Anomalies", "specific_humidity_anomalies", "g/kg", mdi, np.dtype('float64'), 8, multiplier = multiplier)
+
+        vap = set_MetVar_attributes("vapor_pressure", "Vapor pressure calculated w.r.t water", "water vapor pressure", "hPa", mdi, np.dtype('float64'), 9, multiplier = multiplier)
+        vap_an = set_MetVar_attributes("vapor_pressure_anomalies", "Vapor pressure Anomalies calculated w.r.t water", "water vapor pressure anomalies", "hPa", mdi, np.dtype('float64'), 10, multiplier = multiplier)
+
+        crh = set_MetVar_attributes("relative_humidity", "Relative humidity", "relative humidity", "%rh", mdi, np.dtype('float64'), 11, multiplier = multiplier)
+        crh_an = set_MetVar_attributes("relative_humidity_anomalies", "Relative humidity Anomalies", "relative humidity anomalies", "%rh", mdi, np.dtype('float64'), 12, multiplier = multiplier)
+
+        cwb = set_MetVar_attributes("wet_bulb_temperature", "Wet bulb temperatures", "wet bulb temperature", "degrees C", mdi, np.dtype('float64'), 13, multiplier = multiplier)
+        cwb_an = set_MetVar_attributes("wet_bulb_temperature_anomalies", "Wet bulb temperatures Anomalies", "wet bulb temperature anomalies", "degrees C", mdi, np.dtype('float64'), 14, multiplier = multiplier)
+
+        dpd = set_MetVar_attributes("dew_point_depression", "Dew Point Depression", "dew point depression", "degrees C", mdi, np.dtype('float64'), 15, multiplier = multiplier)
+        dpd_an = set_MetVar_attributes("dew_point_depression_anomalies", "Dew Point Depression Anomalies", "dew point depression anomalies", "degrees C", mdi, np.dtype('float64'), 16, multiplier = multiplier)
 
     if doSST_SLP:
         return [mat, mat_an, sst, sst_an, slp, dpt, dpt_an, shu, shu_an, vap, vap_an, crh, crh_an, cwb, cwb_an, dpd, dpd_an] # make_MetVars
@@ -503,10 +571,11 @@ def PlotFirstField(filename, variable = "Marine Air Temperature", vmin = None,vm
     return # PlotFirstField
 
 #*********************************************************
-def process_qc_flags(qc_flags, these_flags):
+def process_qc_flags(qc_flags, these_flags, doBC = False):
     '''
     :param array qc_flags: names of QC flags in column order
     :param dict these_flags: names and values of QC flags to test.
+    :param bool doBC: work on the bias corrected QC flag definitions
 
     Test values
     0 - pass
@@ -514,6 +583,9 @@ def process_qc_flags(qc_flags, these_flags):
     8 - unable to test
     9 - not run (failure further up chain?)
     '''
+
+    QC_FLAGS = set_qc_flag_list(doBC = doBC)
+
     # set up a mask with every point set
     mask = np.ones((qc_flags.shape[0], len(these_flags.keys())))
 
@@ -538,15 +610,17 @@ def process_qc_flags(qc_flags, these_flags):
 
 
 #*********************************************************
-def day_or_night(qc_flags):
+def day_or_night(qc_flags, doBC = False):
     '''
     Return locations of observations which are day or night
     
     :param array qc_flags: array of QC flags (0 --> 9)
+    :param bool doBC: work on the bias corrected QC flag definitions
 
     :returns: day_locs, night_locs - locations of day/night obs
     '''
-       
+    QC_FLAGS = set_qc_flag_list(doBC = doBC)
+      
     daycol = np.where(QC_FLAGS == "day")
 
     day_locs = np.where(qc_flags[daycol, :] == 0)
@@ -555,7 +629,7 @@ def day_or_night(qc_flags):
     return day_locs, night_locs # day_or_night
 
 #*********************************************************
-def grid_1by1_cam(clean_data, raw_qc, hours_since, lat_index, lon_index, grid_hours, grid_lats, grid_lons, OBS_ORDER, mdi, doMedian = True):
+def grid_1by1_cam(clean_data, raw_qc, hours_since, lat_index, lon_index, grid_hours, grid_lats, grid_lons, OBS_ORDER, mdi, doMedian = True, doBC = False):
     '''
     Grid using the Climate Anomaly Method on 1x1 degree for each month
 
@@ -569,7 +643,11 @@ def grid_1by1_cam(clean_data, raw_qc, hours_since, lat_index, lon_index, grid_ho
     :param list OBS_ORDER: list of MetVar variables
     :param float mdi: missing data indicator
     :param bool doMedian: use the median (default) instead of the mean
+    :param bool doBC: work on the bias corrected QC flag definitions
     '''
+
+    QC_FLAGS = set_qc_flag_list(doBC = doBC)
+
     day_flag_loc, = np.where(QC_FLAGS == 'day')[0]
 
     # set up the arrays

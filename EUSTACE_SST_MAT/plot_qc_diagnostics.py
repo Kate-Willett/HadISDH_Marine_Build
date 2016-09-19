@@ -68,7 +68,7 @@ import utils as utils
 
 
 #*****************************************************
-def values_vs_lat(var, lats, data, qc_flags, these_flags, filename, multiplier = 100.):
+def values_vs_lat(var, lats, data, qc_flags, these_flags, filename, multiplier = 100., doBC = False):
     '''
     Plots showing benefit of QC using all QC flags bar day/night
 
@@ -79,10 +79,11 @@ def values_vs_lat(var, lats, data, qc_flags, these_flags, filename, multiplier =
     :param array these_flags: QC flags to apply
     :param str filename: output filename
     :param float multiplier: multiplier which has been applied to the data already.
+    :param bool doBC: work on the bias corrected QC flag definitions
     '''
 
     # get the final data mask
-    data_mask = utils.process_qc_flags(qc_flags, these_flags)
+    data_mask = utils.process_qc_flags(qc_flags, these_flags, doBC = doBC)
 
     # apportion the mask
     clean_data = np.ma.masked_array(data, data_mask)
