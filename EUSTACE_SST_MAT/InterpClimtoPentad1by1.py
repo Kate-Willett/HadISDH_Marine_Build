@@ -1450,13 +1450,14 @@ def main(argv):
 #    InOBSsd = 'GRIDS_noQC/ERAclimNBC_5x5_monthly_stdev_from_daily_both_relax.nc'
     
     OUTDIR = '/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/'
-    OutOBS1 = 'GRIDS3/RES5BY5/'+VarDict[varee]['short_name']+'_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax.nc'
+    OutOBS1 = 'GRIDS3/RES5BY5/'+VarDict[varee]['short_name']+'_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
     OutOBS5 = 'GRIDS3/RES5BY5/'+VarDict[varee]['short_name']+'_ERAclimNBC_5x5_monthly_climatology_stdev_from_daily_both_relax_INFILLED.nc'
 #    OutOBS1 = 'GRIDS_noQC/'+VarDict[varee]['short_name']+'_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
 #    OutOBS5 = 'GRIDS_noQC/'+VarDict[varee]['short_name']+'_ERAclimNBC_5x5_monthly_climatology_stdev_from_daily_both_relax_INFILLED.nc'
 
 #    OUTDIR = '/data/local/hadkw/HADCRUH2/MARINE/otherdata/'
 #    OutOBS1 = VarDict[varee]['short_name']+'_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
+#    OutOBS5 = VarDict[varee]['short_name']+'_ERAclimNBC_5x5_monthly_climatology_stdev_from_daily_both_relax_INFILLED.nc'
     
     # create arrays for lats/lons
     lats1 = np.arange(180,0,-1)-90.5

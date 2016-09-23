@@ -36,13 +36,6 @@
 #
 # This program creates two figures (pngs - can output eps if line is uncommented) and a text file that is appended to with each run
 # Ideally You would run for each year
-#
-# This program has a switch for:
-# switch = 'all' # include all obs
-# switch = 'ships' # include only ships with PT = 0, 1, 2, 3, 4, 5
-# switch = 'buoys' # include only those obs with PT = 6(moored), 8(ice) 
-# switch = 'platforms' # include only those obs with PT = 9(ice), 10(oceanographic), 15 (fixed ocean)
-# Also now outputs total number of obs (in switch category)
 #  
 # -----------------------
 # LIST OF MODULES

@@ -202,7 +202,7 @@ TheDelimitersUnc=(10,8,8,8,8,8,8,8,
 #************************************************************************
 def ReadMDSstandard(TheYear,TheMonth,TheType):
 
-    InDir = '/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/ERAclimNBC/'
+    InDir = '/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/'+TheType+'/'
     InFil = 'new_suite_'+TheYear+TheMonth+'_'+TheType+'.txt'
     
     TheFilee = InDir+InFil
@@ -338,8 +338,8 @@ def ReadMDSstandard(TheYear,TheMonth,TheType):
 #************************************************************************
 def ReadMDSextended(TheYear,TheMonth,TheType):
 
-#    InDir = '/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/ERAclimBC/'
-    InDir = '/data/local/hadkw/HADCRUH2/MARINE/'
+    InDir = '/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/'+TheType+'/'
+#    InDir = '/data/local/hadkw/HADCRUH2/MARINE/'
     InFil = 'new_suite_'+TheYear+TheMonth+'_'+TheType+'_extended.txt'
     
     TheFilee = InDir+InFil
@@ -491,8 +491,8 @@ def ReadMDSextended(TheYear,TheMonth,TheType):
 #************************************************************************
 def ReadMDSuncertainty(TheYear,TheMonth,TheType):
 
-#    InDir = '/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/ERAclimBC/'
-    InDir = '/data/local/hadkw/HADCRUH2/MARINE/'
+    InDir = '/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/'+TheType+'/'
+#    InDir = '/data/local/hadkw/HADCRUH2/MARINE/'
     InFil = 'new_suite_'+TheYear+TheMonth+'_'+TheType+'_uncertainty.txt'
     
     TheFilee = InDir+InFil
@@ -681,7 +681,7 @@ def ReadData(FileName,typee,delimee):
 def WriteMDSstandard(TheYear,TheMonth,TheType):
 
     # I've deliberately put a bug in this filepath to protect the data
-    OutDir = '/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/ERAclimNBCa/'
+    OutDir = '/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/'+TheType+'a/'
     OutFil = 'new_suite_'+TheYear+TheMonth+'_'+TheType+'.txt'
     
     TheFilee = OutDir+OutFil
@@ -814,7 +814,7 @@ def WriteMDSstandard(TheYear,TheMonth,TheType):
 #************************************************************************
 def WriteMDSextended(TheYear,TheMonth,TheType,MDSDict):
 
-    OutDir = '/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/ERAclimBC/'
+    OutDir = '/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/'+TheType+'/'
 #    OutDir = '/data/local/hadkw/HADCRUH2/MARINE/'
     OutFil = 'new_suite_'+TheYear+TheMonth+'_'+TheType+'_extended.txt'
     
@@ -970,7 +970,7 @@ def WriteMDSextended(TheYear,TheMonth,TheType,MDSDict):
 #************************************************************************
 def WriteMDSuncertainty(TheYear,TheMonth,TheType,MDSDict):
 
-    OutDir = '/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/ERAclimBC/'
+    OutDir = '/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/'+TheType+'/'
 #    OutDir = '/data/local/hadkw/HADCRUH2/MARINE/'
     OutFil = 'new_suite_'+TheYear+TheMonth+'_'+TheType+'_uncertainty.txt'
     
