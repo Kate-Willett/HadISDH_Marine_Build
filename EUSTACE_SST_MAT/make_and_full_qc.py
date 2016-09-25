@@ -435,7 +435,7 @@ def main(argv):
             if ((readyear > 2007) & (readyear < 2015)):
                 filename = icoads_dir+'/R2.5.2.'+syr+'.'+smn+'.gz'
             if (readyear >= 2015):
-                filename = recent_icoads_dir+'/IMMA.'+syr+'.'+smn+'.gz'
+                filename = recent_icoads_dir+'/IMMA.'+syr+'.'+smn+'.Z'
     
             icoads_file = gzip.open(filename,"r")
 
@@ -536,9 +536,46 @@ def main(argv):
                         rep.calcvar(['SHU','VAP','CRH','CWB','DPD'])
 			
 # Now we have the checker for very silly values - which will just break the loop
+# No RH - means that there is either an AT or DPT missing
+# RH must be between 0 and 150
+# AT must be between -80 and 65
+# DPT must be between -80 and 65
+# SHU must be greater than 0.0
 # Inadvertantly, this kicks out any ob for which no climatology is available - the ones that would late fail pos or date checks
 # Later on - we may change this to just set the humidity values to missing rather than delete the ob. SST might be ok after all.
                         if (rep.getvar('CRH') == None):
+#			    print('Found a SILLINESS ',rep.getvar('AT'),rep.getvar('DPT'))
+#			    pdb.set_trace()
+			    # delete the rep to keep things tidy
+			    del rep
+			    # create a new rec because we're skipping the end of the WHILE loop
+			    rec = IMMA()
+			    continue
+                        if ((rep.getvar('CRH') <= 0.0) | (rep.getvar('CRH') > 150.0)):
+#			    print('Found a SILLINESS ',rep.getvar('AT'),rep.getvar('DPT'))
+#			    pdb.set_trace()
+			    # delete the rep to keep things tidy
+			    del rep
+			    # create a new rec because we're skipping the end of the WHILE loop
+			    rec = IMMA()
+			    continue
+                        if ((rep.getvar('AT') < -80.) | (rep.getvar('AT') > 65.)):
+#			    print('Found a SILLINESS ',rep.getvar('AT'),rep.getvar('DPT'))
+#			    pdb.set_trace()
+			    # delete the rep to keep things tidy
+			    del rep
+			    # create a new rec because we're skipping the end of the WHILE loop
+			    rec = IMMA()
+			    continue
+                        if ((rep.getvar('DPT') < -80.) | (rep.getvar('DPT') > 65.)):
+#			    print('Found a SILLINESS ',rep.getvar('AT'),rep.getvar('DPT'))
+#			    pdb.set_trace()
+			    # delete the rep to keep things tidy
+			    del rep
+			    # create a new rec because we're skipping the end of the WHILE loop
+			    rec = IMMA()
+			    continue
+                        if (rep.getvar('SHU') <= 0.0):
 #			    print('Found a SILLINESS ',rep.getvar('AT'),rep.getvar('DPT'))
 #			    pdb.set_trace()
 			    # delete the rep to keep things tidy
