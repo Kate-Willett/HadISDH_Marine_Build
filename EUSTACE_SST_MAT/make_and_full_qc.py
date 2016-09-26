@@ -435,7 +435,7 @@ def main(argv):
             if ((readyear > 2007) & (readyear < 2015)):
                 filename = icoads_dir+'/R2.5.2.'+syr+'.'+smn+'.gz'
             if (readyear >= 2015):
-                filename = recent_icoads_dir+'/IMMA.'+syr+'.'+smn+'.Z'
+                filename = recent_icoads_dir+'/IMMA.'+syr+'.'+smn+'.gz'
     
             icoads_file = gzip.open(filename,"r")
 
