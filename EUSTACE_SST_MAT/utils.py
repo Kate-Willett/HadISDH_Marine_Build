@@ -40,6 +40,22 @@ None
 VERSION/RELEASE NOTES
 -----------------------
 
+Version 2 (26 Sep 2016) Kate Willett
+---------
+ 
+Enhancements
+ 
+Changes
+ 
+Bug fixes
+Possible bug fix in set_qc_flag_list
+This had an incomplete list of QC flags for the full list and wasn't matching the QC flags up correctly.
+This is now based on MDS_RWtools standard list.
+
+Possible number of elements mistake in read_qc_data
+This was causing an error where it was trying to treat 'None' as an intefer. I think it was miscounting the elements.
+This is now based on MDS_RWtools standard list.
+
 Version 1 (release date)
 ---------
  
@@ -120,11 +136,21 @@ def set_qc_flag_list(doBC = False, doUncert = False):
 "ATbud","ATclim","ATnonorm","ATround","ATrep",\
 "DPTbud","DPTclim","DPTssat","DPTround","DPTrep","DPTrepsat"])
     else:
-        # full number
-        return np.array(["day","land","trk","date1","date2","pos","blklst","dup",\
-"SSTbud","SSTclim","SSTnonorm","SSTfreez","SSTrep",\
-"ATbud","ATclim","ATnonorm","ATnoval","ATround","ATrep",\
-"DPTbud","DPTclim","DPTnonorm","DPTssat","DPTnoval","DPTround","DPTrep","DPTrepsat"]) # set_qc_flag_list
+# KATE modified - this doesn't seem to be working and I can't quite see how the subset listed below would work without any former subsetting of the read in data
+# This now uses the complete list from MDS_RWtools.py standard version
+        # full list
+        return np.array(["day","land","trk","date1","date2","pos","blklst","dup","POSblank1",\
+                         "SSTbud","SSTclim","SSTnonorm","SSTfreez","SSTnoval","SSTnbud","SSTbbud","SSTrep","SSTblank",\
+                         "ATbud","ATclim","ATnonorm","ATblank1","ATnoval","ATround","ATbbud","ATrep","ATblank2",\
+                         "DPTbud","DPTclim","DPTnonorm","DPTssat","DPTnoval","DPTround","DPTbbud","DPTrep","DPTrepsat",\
+                         "few","ntrk","POSblank2","POSblank3","POSblank4","POSblank5","POSblank6","POSblank7"]) # set_qc_flag_list
+	
+#        # full number
+#        return np.array(["day","land","trk","date1","date2","pos","blklst","dup",\
+#"SSTbud","SSTclim","SSTnonorm","SSTfreez","SSTrep",\
+#"ATbud","ATclim","ATnonorm","ATnoval","ATround","ATrep",\
+#"DPTbud","DPTclim","DPTnonorm","DPTssat","DPTnoval","DPTround","DPTrep","DPTrepsat"]) # set_qc_flag_list
+# end
 
 # RD - kept original flag array here just in case MDS_RWtools isn't used before next read
 #np.array(["day","land","trk","date1","date2","pos","blklst","dup","POSblank1",\
@@ -185,9 +211,12 @@ def read_qc_data(filename, location, fieldwidths, doBC = False):
                     # now unpack and process
                     platform_data += [fields[: 8]]
                     platform_obs += [fields[8: 8+17]]
-                    platform_meta += [fields[8+17: 8+17+20]]
-                    platform_qc += [fields[8+17+20:]]
-
+# KATE modified - this seems to be wrong
+                    platform_meta += [fields[8+17: 8+17+30]]
+                    platform_qc += [fields[8+17+30:]]
+                    #platform_meta += [fields[8+17: 8+17+20]]
+                    #platform_qc += [fields[8+17+20:]]
+# end
             except AssertionError:
                 print "skipping line in {} - malformed data".format(filename)
                 print line

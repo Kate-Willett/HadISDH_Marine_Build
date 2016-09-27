@@ -35,7 +35,7 @@ Requires 5x5 monthly grids - either calculated from daily or monthly data
 -----------------------
 HOW TO RUN THE CODE
 -----------------------
-python2.7 make_5x5monthly_climatology.py --suffix relax --period day --daily
+python2.7 make_5x5monthly_climatology.py --suffix relax --start_year YYYY --end_year YYYY --period day --daily (OPTIONAL: one of --doQC, --doQC1it, --doQC2it, --doQC3it, --doBC)
 
 python2.7 make_5x5monthly_climatology.py --help 
 will show all options
@@ -51,6 +51,21 @@ Plots to appear in
 -----------------------
 VERSION/RELEASE NOTES
 -----------------------
+
+Version 2 (26 Sep 2016) Kate Willett
+---------
+ 
+Enhancements
+This can now cope with the iterative approach (doQC1it, doQC2it, doQC3it in addition to doQC and doBC)
+Look for # KATE modified
+         ...
+	 # end
+ 
+Changes
+Now assumes day and night are also 90 to -90 latitude for consistency with both
+ 
+Bug fixes
+
 
 Version 1 (release date)
 ---------
@@ -90,12 +105,19 @@ DELTA_LAT = 5
 DELTA_LON = 5
 
 # set up the grid
-grid_lats = np.arange(-90 + DELTA_LAT, 90 + DELTA_LAT, DELTA_LAT)
+# KATE modified - flipped the lats to go 90 to -90
+grid_lats = np.arange(90 - DELTA_LAT, -90 - DELTA_LAT, -DELTA_LAT)
+#grid_lats = np.arange(-90 + DELTA_LAT, 90 + DELTA_LAT, DELTA_LAT)
+# end
 grid_lons = np.arange(-180 + DELTA_LAT, 180 + DELTA_LON, DELTA_LON)
 
 # subroutine start
 #*********************************************
-def calculate_climatology(suffix = "relax", start_year = 1981, end_year = 2010, period = "both", daily = False, doQC = False, doBC = False):
+# KATE modified
+def calculate_climatology(suffix = "relax", start_year = 1981, end_year = 2010, period = "both", daily = False, 
+                          doQC = False, doQC1it = False, doQC2it = False, doQC3it = False, doBC = False):
+#def calculate_climatology(suffix = "relax", start_year = 1981, end_year = 2010, period = "both", daily = False, doQC = False, doBC = False):
+# end
     '''
     Make 5x5 monthly climatology
 
@@ -105,12 +127,19 @@ def calculate_climatology(suffix = "relax", start_year = 1981, end_year = 2010, 
     :param str period: which period to do day/night/both?
     :param bool daily: run in 1x1 daily --> 5x5 monthly data
     :param bool doQC: incorporate the QC flags or not
+# KATE modified
+    :param bool doQC1it: incorporate the 1st iteration QC flags or not
+    :param bool doQC2it: incorporate the 2nd iteration QC flags or not
+    :param bool doQC3it: incorporate the 3rd iteration QC flags or not
+# end
     :param bool doBC: work on the bias corrected data
 
     :returns:
     '''
-    settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC)
-
+# KATE modified
+    settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC, doQC1it = doQC1it, doQC2it = doQC2it, doQC3it = doQC3it)
+    #settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC)
+# end
 
     if suffix == "relax":
         N_YEARS_PRESENT = 10 # number of years present to calculate climatology
@@ -168,11 +197,14 @@ def calculate_climatology(suffix = "relax", start_year = 1981, end_year = 2010, 
         n_grids = np.ma.count(all_months, axis = 0)
 
         # collapse down the years
-        if settings.doMedian:
-            all_clims[v, :, :, :] = utils.bn_median(all_months, axis = 0)
-        else:
-            all_clims[v, :, :, :] = np.ma.mean(all_months, axis = 0)
-
+# KATE MEDIAN WATCH
+# KATE modified - forced to use MEAN
+        all_clims[v, :, :, :] = np.ma.mean(all_months, axis = 0)
+        #if settings.doMedian:
+        #    all_clims[v, :, :, :] = utils.bn_median(all_months, axis = 0)
+        #else:
+        #    all_clims[v, :, :, :] = np.ma.mean(all_months, axis = 0)
+# end
         all_stds[v, :, :, :] = np.ma.std(all_months, axis = 0)
 
         # mask where fewer than 50% of years have data
@@ -209,21 +241,25 @@ def calculate_climatology(suffix = "relax", start_year = 1981, end_year = 2010, 
     else:
         out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_5x5_monthly_climatology_{}_{}.nc".format(period, suffix)
 
-    if period == "both":
-        utils.netcdf_write(out_filename, all_clims, n_grids, all_obs, OBS_ORDER, grid_lats[::-1], grid_lons, times, frequency = "Y")
-    else:
-        utils.netcdf_write(out_filename, all_clims, n_grids, all_obs, OBS_ORDER, grid_lats, grid_lons, times, frequency = "Y")
-
+# KATE modified - only outputting 90 to -90 now and have changed grid_lats above
+    utils.netcdf_write(out_filename, all_clims, n_grids, all_obs, OBS_ORDER, grid_lats, grid_lons, times, frequency = "Y")
+    #if period == "both":
+    #    utils.netcdf_write(out_filename, all_clims, n_grids, all_obs, OBS_ORDER, grid_lats[::-1], grid_lons, times, frequency = "Y")
+    #else:
+    #    utils.netcdf_write(out_filename, all_clims, n_grids, all_obs, OBS_ORDER, grid_lats, grid_lons, times, frequency = "Y")
+# end
     if daily:
         out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_5x5_monthly_stdev_from_daily_{}_{}.nc".format(period, suffix)
     else:
         out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_5x5_monthly_stdev_{}_{}.nc".format(period, suffix)
 
-    if period == "both":
-        utils.netcdf_write(out_filename, all_stds, n_grids, all_obs, OBS_ORDER, grid_lats[::-1], grid_lons, times, frequency = "Y")
-    else:
-        utils.netcdf_write(out_filename, all_stds, n_grids, all_obs, OBS_ORDER, grid_lats, grid_lons, times, frequency = "Y")
-
+# KATE modified - only outputting 90 to -90 now and have changed grid_lats above
+    utils.netcdf_write(out_filename, all_stds, n_grids, all_obs, OBS_ORDER, grid_lats, grid_lons, times, frequency = "Y")
+    #if period == "both":
+    #    utils.netcdf_write(out_filename, all_stds, n_grids, all_obs, OBS_ORDER, grid_lats[::-1], grid_lons, times, frequency = "Y")
+    #else:
+    #    utils.netcdf_write(out_filename, all_stds, n_grids, all_obs, OBS_ORDER, grid_lats, grid_lons, times, frequency = "Y")
+# end
     # test distribution of obs with grid boxes
     if daily:
         outfile = file(settings.OUTROOT + "_5x5_monthly_climatology_from_daily_{}_{}.txt".format(period, suffix), "w")
@@ -253,12 +289,25 @@ if __name__=="__main__":
                         help='run on 1x1 daily --> 5x5 monthly data (rather than 1x1 monthly --> 5x5 monthly), default = False')
     parser.add_argument('--doQC', dest='doQC', action='store_true', default = False,
                         help='process the QC information, default = False')
+# KATE modified
+    parser.add_argument('--doQC1it', dest='doQC1it', action='store_true', default = False,
+                        help='process the first iteration QC information, default = False')
+    parser.add_argument('--doQC2it', dest='doQC2it', action='store_true', default = False,
+                        help='process the second iteration QC information, default = False')
+    parser.add_argument('--doQC3it', dest='doQC3it', action='store_true', default = False,
+                        help='process the third iteration QC information, default = False')
+# end
     parser.add_argument('--doBC', dest='doBC', action='store_true', default = False,
                         help='process the bias corrected data, default = False')
     args = parser.parse_args()
 
-
-    calculate_climatology(suffix = str(args.suffix), start_year = int(args.start_year), end_year = int(args.end_year), period = str(args.period), daily = args.daily, doQC = args.doQC, doBC = args.doBC)
+    print(' CHOSEN CLIMATOLOGY PERIOD MUST BE 30 YEARS: ',args.start_year,args.end_year)
+    
+    calculate_climatology(suffix = str(args.suffix), start_year = int(args.start_year), end_year = int(args.end_year), period = str(args.period), daily = args.daily, \
+# KATE modified
+                          doQC = args.doQC, doQC1it = args.doQC1it, doQC2it = args.doQC2it, doQC3it = args.doQC3it, doBC = args.doBC)
+                          #doQC = args.doQC, doBC = args.doBC)
+# end
 
 # END
 # ************************************************************************

@@ -14,7 +14,12 @@ Location: /project/hadobs2/hadisdh/marine/PROGS/Build
 -----------------------
 CODE PURPOSE AND OUTPUT
 -----------------------
-Takes annual 5x5 monthly fields and makes a pentad climatology over 1981-2010 (default).
+Takes 5x5 monthly fields absolutes and anomalies and applies (subtracts) the 5x5 monthly climatology and 
+climatological average of the anomalies (1981-2010). This has the effect of producing derived anomalies relative to
+the gridded climatology for comparison with the gridded anomalies (calculated at the individual observation 
+level) AND renormalising the gridded anomalies to have a zero mean over the 1981-2010 period. This is only really 
+essential for the first iteration where the ERA-Interim climatology has caused a bias in the anomalies. Ideally
+we want to present the gridded anomalies because these mitigate errors from first gridding absolute values. 
 
 Can work with 5x5 monthly fields created from daily or monthly data and using relaxed or strict completeness
 settings according to commandline switches.  
@@ -30,14 +35,14 @@ DATA
 Input data and output data stored in:
 /project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS2/
 
-Requires 5x5 monthly grids - either calculated from daily or monthly data
+Requires 5x5 monthly grids and climatologies - either calculated from daily or monthly data
 
 -----------------------
 HOW TO RUN THE CODE
 -----------------------
-python2.7 make_5x5monthly_climatology.py --suffix relax --period day --daily
+python2.7 apply_5x5monthly_climatology.py --suffix relax --period day --daily
 
-python2.7 make_5x5monthly_climatology.py --help 
+python2.7 apply_5x5monthly_climatology.py --help 
 will show all options
 
 -----------------------
@@ -51,6 +56,25 @@ Plots to appear in
 -----------------------
 VERSION/RELEASE NOTES
 -----------------------
+
+Version 2 (26 Sep 2016) Kate Willett
+---------
+ 
+Enhancements
+This can now cope with the iterative approach (doQC1it, doQC2it, doQC3it in addition to doQC and doBC),
+In reality we should only need to run it for the first iteration.
+Look for # KATE modified
+         ...
+	 # end
+ 
+Changes
+I have changed the output name to include the word 'renorm19812010'. This will need to be changed if a different climatology
+period is used.
+
+Now assumes day and night are also 90 to -90 latitude for consistency with both
+ 
+Bug fixes
+
 
 Version 1 (release date)
 ---------
@@ -91,13 +115,21 @@ DELTA_LAT = 5
 DELTA_LON = 5
 
 # set up the grid
-grid_lats = np.arange(-90 + DELTA_LAT, 90 + DELTA_LAT, DELTA_LAT)
+# set up the grid
+# KATE modified - flipped the lats to go 90 to -90
+grid_lats = np.arange(90 - DELTA_LAT, -90 - DELTA_LAT, -DELTA_LAT)
+#grid_lats = np.arange(-90 + DELTA_LAT, 90 + DELTA_LAT, DELTA_LAT)
+# end
 grid_lons = np.arange(-180 + DELTA_LAT, 180 + DELTA_LON, DELTA_LON)
 
 
 # subroutine start
 #*********************************************
-def apply_climatology(suffix = "relax", period = "both", daily = False, doQC = False, doBC = False):
+# KATE modified
+def apply_climatology(suffix = "relax", period = "both", daily = False, 
+                      doQC = False, doQC1it = False, doQC2it = False, doQC3it = False, doBC = False):
+                      #doQC = False, doBC = False):
+# end
     '''
     Apply monthly 5x5 climatology
 
@@ -105,12 +137,19 @@ def apply_climatology(suffix = "relax", period = "both", daily = False, doQC = F
     :param str period: which period to do day/night/both?
     :param bool daily: run in 1x1 daily --> 5x5 monthly data
     :param bool doQC: incorporate the QC flags or not
+# KATE modified
+    :param bool doQC1it: incorporate the 1st iteration QC flags or not
+    :param bool doQC2it: incorporate the 2nd iteration QC flags or not
+    :param bool doQC3it: incorporate the 3rd iteration QC flags or not
+# end
     :param bool doBC: work on the bias corrected data
 
     :returns:
     '''
-    settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC)
-
+# KATE modified
+    settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC, doQC1it = doQC1it, doQC2it = doQC2it, doQC3it = doQC3it)
+    #settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC)
+# end
 
     if suffix == "relax":
         N_YEARS_PRESENT = 10 # number of years present to calculate climatology
@@ -160,15 +199,23 @@ def apply_climatology(suffix = "relax", period = "both", daily = False, doQC = F
 
     # write file
     if daily:
-        out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_5x5_monthly_anomalies_from_daily_{}_{}.nc".format(period, suffix)
+# KATE modified - added renorm19812010 to the filename
+        out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_5x5_monthly_renorm19812010_anomalies_from_daily_{}_{}.nc".format(period, suffix)
+        #out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_5x5_monthly_anomalies_from_daily_{}_{}.nc".format(period, suffix)
+# end
     else:
-        out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_5x5_monthly_anomalies_{}_{}.nc".format(period, suffix)
+# KATE modified - added renorm19812010 to the filename
+        out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_5x5_monthly_renorm19812010_anomalies_{}_{}.nc".format(period, suffix)
+        #out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_5x5_monthly_anomalies_{}_{}.nc".format(period, suffix)
+# end
 
-    if period == "both":
-        utils.netcdf_write(out_filename, all_anoms, n_grids, n_obs, OBS_ORDER, grid_lats[::-1], grid_lons, times, frequency = "Y")
-    else:
-        utils.netcdf_write(out_filename, all_anoms, n_grids, n_obs, OBS_ORDER, grid_lats, grid_lons, times, frequency = "Y")
-
+# KATE modified - only outputting 90 to -90 now and have changed grid_lats above
+    utils.netcdf_write(out_filename, all_anoms, n_grids, n_obs, OBS_ORDER, grid_lats, grid_lons, times, frequency = "Y")
+    #if period == "both":
+    #    utils.netcdf_write(out_filename, all_anoms, n_grids, n_obs, OBS_ORDER, grid_lats[::-1], grid_lons, times, frequency = "Y")
+    #else:
+    #    utils.netcdf_write(out_filename, all_anoms, n_grids, n_obs, OBS_ORDER, grid_lats, grid_lons, times, frequency = "Y")
+# end
     return # apply_climatology
 
 
@@ -189,11 +236,22 @@ if __name__=="__main__":
                         help='process the QC information, default = False')
     parser.add_argument('--doBC', dest='doBC', action='store_true', default = False,
                         help='process the bias corrected data, default = False')
+# KATE modified
+    parser.add_argument('--doQC1it', dest='doQC1it', action='store_true', default = False,
+                        help='process the first iteration QC information, default = False')
+    parser.add_argument('--doQC2it', dest='doQC2it', action='store_true', default = False,
+                        help='process the second iteration QC information, default = False')
+    parser.add_argument('--doQC3it', dest='doQC3it', action='store_true', default = False,
+                        help='process the third iteration QC information, default = False')
+# end
     args = parser.parse_args()
 
 
-    apply_climatology(suffix = str(args.suffix), period = str(args.period), daily = args.daily, doQC = args.doQC, doBC = args.doBC)
-
+    apply_climatology(suffix = str(args.suffix), period = str(args.period), daily = args.daily, \
+# KATE modified
+                          doQC = args.doQC, doQC1it = args.doQC1it, doQC2it = args.doQC2it, doQC3it = args.doQC3it, doBC = args.doBC)
+                      #doQC = args.doQC, doBC = args.doBC)
+# end
 # END
 # ************************************************************************
 

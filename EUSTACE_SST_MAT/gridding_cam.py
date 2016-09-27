@@ -30,7 +30,7 @@ LIST OF MODULES
 utils.py
 set_paths_and_vars.py - set file paths and some universal variables.
 plot_qc_diagnostics.py - to output plots of clean obs vs all
-MDS_basic_KATE.py - for the file format
+MDS_RWtools.py - for the file format
 
 
 -----------------------
@@ -52,6 +52,33 @@ will show all options
 -----------------------
 OUTPUT
 -----------------------
+# *** KATE ADDED:
+First iteration reads in ERAclimNBC, does NOT include buddy QC flag, and outputs to GRIDSERAclimNBC:
+/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDSERAclimNBC/
+Second iteration reads in OBSclim1NBC, does NOT include buddy QC flag, and outputs to GRIDSOBSclim1NBC:
+/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDSOBSclim1NBC/
+Third iteration reads in OBSclim2NBC, DOES include buddy QC flag, and outpus to GRIDSOBSclim2NBC:
+/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDSOBSclim2NBC/
+We then grid the bias corrected version of OBSclim2NBC so reads in from OBSclim2BC and outputs to GRIDSOBSclim2BC:
+/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDSOBSclim2BC/
+We also grid up a noQC version for comparison but one that uses teh OBSclim2 base data (obs based climatology) 
+so reads in from OBSclim2NBC and outputs to GRIDSOBSclim2noQC:
+/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDSOBSclim2noQC/
+
+and the plots:
+First iteration reads in ERAclimNBC, does NOT include buddy QC flag, and outputs to GRIDSERAclimNBC:
+/project/hadobs2/hadisdh/marine/PLOTSERAclimNBC/
+Second iteration reads in OBSclim1NBC, does NOT include buddy QC flag, and outputs to GRIDSOBSclim1NBC:
+/project/hadobs2/hadisdh/marine/PLOTSOBSclim1NBC/
+Third iteration reads in OBSclim2NBC, DOES include buddy QC flag, and outpus to GRIDSOBSclim2NBC:
+/project/hadobs2/hadisdh/marine/PLOTSOBSclim2NBC/
+We then grid the bias corrected version of OBSclim2NBC so reads in from OBSclim2BC and outputs to GRIDSOBSclim2BC:
+/project/hadobs2/hadisdh/marine/PLOTSOBSclim2BC/
+We also grid up a noQC version for comparison but one that uses teh OBSclim2 base data (obs based climatology) 
+so reads in from OBSclim2NBC and outputs to GRIDSOBSclim2noQC:
+/project/hadobs2/hadisdh/marine/PLOTSOBSclim2noQC/
+#*** end
+
 /project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS2/
 
 Plots to appear in 
@@ -60,6 +87,27 @@ Plots to appear in
 -----------------------
 VERSION/RELEASE NOTES
 -----------------------
+
+Version 2 (26 Sep 2016) Kate Willett
+---------
+ 
+Enhancements
+This can now cope with three different types of QC in addition:
+doQC1it, doQC2it and doQC3it - for working with ERA, then OBS clims versions
+Look for # KATE modified
+         ...
+	 # end
+ 
+Changes
+I have commented out the monthy 1x1s and monthly 5x5s from monthly 1x1s as these are no longer needed
+
+I have hard coded in the MEAN for creating daily 1x1s and monthly 5x5s because I think this is more sensible
+Look for # KATE MEDIAN WATCH
+
+I have added an internally operated switch - SwitchOutput - 1 = output all interim grids, 0 only output 5x5monthlies
+ 
+Bug fixes
+
 
 Version 1 (release date)
 ---------
@@ -120,9 +168,20 @@ DELTA_HOUR = 3
 grid_lats = np.arange(-90 + DELTA_LAT, 90 + DELTA_LAT, DELTA_LAT)
 grid_lons = np.arange(-180 + DELTA_LON, 180 + DELTA_LON, DELTA_LON)
 
+# KATE modified
+# Make this 1 if you want to run in test mode - outputting all interim files and plots
+# Make this 0 if you want to run in operational mode - only output 5x5 monthly files and plots
+SwitchOutput = 0
+
+# end
+
 
 #************************************************************************
-def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = defaults.END_YEAR, start_month = 1, end_month = 12, doQC = False, doSST_SLP = False, doBC = False, doUncert = False):
+# KATE modified    
+def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = defaults.END_YEAR, start_month = 1, end_month = 12, 
+                doQC = False, doQC1it = False, doQC2it = False, doQC3it = False, doSST_SLP = False, doBC = False, doUncert = False):
+#def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = defaults.END_YEAR, start_month = 1, end_month = 12, doQC = False, doSST_SLP = False, doBC = False, doUncert = False):
+# end
     '''
     Do the gridding, first to 3hrly 1x1, then to daily 1x1 and finally monthly 1x1 and 5x5
 
@@ -138,8 +197,10 @@ def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = d
 
     :returns:
     '''
-    settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC)
-
+# KATE modified    
+    settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC, doQC1it = doQC1it, doQC2it = doQC2it, doQC3it = doQC3it)
+    #settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC)
+# end
 
     if doBC:
         fields = mds.TheDelimitersExt # extended (BC)
@@ -159,8 +220,13 @@ def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = d
 
 
     # flags to check on and values to allow through
-    these_flags = {"ATbud":0, "ATclim":0,"ATrep":0,"DPTbud":0,"DPTclim":0,"DPTssat":0,"DPTrep":0,"DPTrepsat":0}
-
+# KATE modified
+    if doQC1it | doQC2it:
+        these_flags = {"ATclim":0,"ATrep":0,"DPTclim":0,"DPTssat":0,"DPTrep":0,"DPTrepsat":0}
+    else:
+        these_flags = {"ATbud":0, "ATclim":0,"ATrep":0,"DPTbud":0,"DPTclim":0,"DPTssat":0,"DPTrep":0,"DPTrepsat":0}    
+    #these_flags = {"ATbud":0, "ATclim":0,"ATrep":0,"DPTbud":0,"DPTclim":0,"DPTssat":0,"DPTrep":0,"DPTrepsat":0}
+# end
 
     # spin through years and months to read files
     for year in np.arange(start_year, end_year + 1): 
@@ -191,7 +257,10 @@ def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = d
             if not utils.check_date(months, month, "months", filename):
                 sys.exit(1)
 
-            if plots and (year in [1973, 1983, 1993, 2003, 2013]):
+# KATE modified - seems to be an error with missing global name plots so have changed to settings.plots
+            if settings.plots and (year in [1973, 1983, 1993, 2003, 2013]):
+            #if plots and (year in [1973, 1983, 1993, 2003, 2013]):
+# end
                 # plot the distribution of hours
 
                 import matplotlib.pyplot as plt
@@ -212,7 +281,10 @@ def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = d
  
 
             # QC sub-selection
-            if doQC:
+# KATE modified
+            if doQC | doQC1it | doQC2it | doQC3it:
+            #if doQC:
+# end
                 print "Using {} as flags".format(these_flags)
                 mask = utils.process_qc_flags(raw_qc, these_flags, doBC = doBC)
 
@@ -221,6 +293,7 @@ def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = d
                     complete_mask[:,i] = mask
                 clean_data = np.ma.masked_array(raw_obs, mask = complete_mask)
 
+# end
             else:
                 print "No QC flags selected"
                 clean_data = np.ma.masked_array(raw_obs, mask = np.zeros(raw_obs.shape))
@@ -242,7 +315,11 @@ def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = d
             # NOTE - ALWAYS GIVING TOP-RIGHT OF BOX TO GIVE < HARD LIMIT (as opposed to <=)
             # do the gridding
             # extract the full grid, number of obs, and day/night flag
-            raw_month_grid, raw_month_n_obs, this_month_period = utils.grid_1by1_cam(clean_data, raw_qc, hours_since, lat_index, lon_index, grid_hours, grid_lats, grid_lons, OBS_ORDER, settings.mdi, doMedian = True, doBC = doBC)
+# KATE MEDIAN WATCH This is hard coded to doMedian (rather than settings.doMedian) - OK WITH MEDIAN HERE!!!
+# KATE modified - to add settings.doMedian instead of just doMedian which seems to be consistent with the other bits and 
+	    raw_month_grid, raw_month_n_obs, this_month_period = utils.grid_1by1_cam(clean_data, raw_qc, hours_since, lat_index, lon_index, grid_hours, grid_lats, grid_lons, OBS_ORDER, settings.mdi, doMedian = settings.doMedian, doBC = doBC)
+	    #raw_month_grid, raw_month_n_obs, this_month_period = utils.grid_1by1_cam(clean_data, raw_qc, hours_since, lat_index, lon_index, grid_hours, grid_lats, grid_lons, OBS_ORDER, settings.mdi, doMedian = True, doBC = doBC)
+# end
             print "successfully read data into 1x1 3hrly grids"
 
             # create matching array size
@@ -260,11 +337,18 @@ def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = d
                     this_month_grid = copy.deepcopy(raw_month_grid)
                     this_month_obs = copy.deepcopy(raw_month_n_obs)
                     
-                # have one month of gridded data.
-                out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_1x1_3hr_{}{:02d}_{}_{}.nc".format(year, month, period, suffix)              
+# KATE modified
+                # If SwitchOutput == 1 then we're in test mode - output interim files!!!
+		if (SwitchOutput == 1):
+		    # have one month of gridded data.
+                    out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_1x1_3hr_{}{:02d}_{}_{}.nc".format(year, month, period, suffix)              
 
-                utils.netcdf_write(out_filename, this_month_grid, np.zeros(this_month_obs.shape), this_month_obs, OBS_ORDER, grid_lats, grid_lons, times, frequency = "H")
+                    utils.netcdf_write(out_filename, this_month_grid, np.zeros(this_month_obs.shape), this_month_obs, OBS_ORDER, grid_lats, grid_lons, times, frequency = "H")
+		## have one month of gridded data.
+                #out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_1x1_3hr_{}{:02d}_{}_{}.nc".format(year, month, period, suffix)              
 
+                #utils.netcdf_write(out_filename, this_month_grid, np.zeros(this_month_obs.shape), this_month_obs, OBS_ORDER, grid_lats, grid_lons, times, frequency = "H")
+# end
                 # now average over time
                 # Dailies
                 daily_hours = grid_hours.reshape(-1, 24/DELTA_HOUR)
@@ -273,10 +357,14 @@ def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = d
                 this_month_grid = this_month_grid.reshape(shape[0], -1, 24/DELTA_HOUR, shape[2], shape[3])
                 this_month_obs = this_month_obs.reshape(-1, 24/DELTA_HOUR, shape[2], shape[3])
 
-                if settings.doMedian:
-                    daily_grid = np.ma.median(this_month_grid, axis = 2)
-                else:
-                    daily_grid = np.ma.mean(this_month_grid, axis = 2)
+# KATE MEDIAN WATCH - settings.doMedian is generally set to True - I think we may want the MEAN HERE!!!
+# KATE modified - to hard wire in MEAN here
+                daily_grid = np.ma.mean(this_month_grid, axis = 2)
+                #if settings.doMedian:
+                #    daily_grid = np.ma.median(this_month_grid, axis = 2)
+                #else:
+                #    daily_grid = np.ma.mean(this_month_grid, axis = 2)
+# end
                 daily_grid.fill_value = settings.mdi
 
                 # filter on number of observations/day
@@ -289,7 +377,10 @@ def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = d
                     bad_locs = np.where(n_hrs_per_day < np.floor(N_OBS_DAY / 2.)) # at least 1 of possible 8 3-hourly values (6hrly data *KW OR AT LEAST 4 3HRLY OBS PRESENT*)              
                 daily_grid.mask[bad_locs] = True
 
-                if settings.plots and (year in [1973, 1983, 1993, 2003, 2013]):
+# KATE modified - added SwitchOutput to if loop
+                if (SwitchOutput == 1) and settings.plots and (year in [1973, 1983, 1993, 2003, 2013]):
+                #if settings.plots and (year in [1973, 1983, 1993, 2003, 2013]):
+# end
                     # plot the distribution of hours
 
                     plt.clf()
@@ -316,94 +407,105 @@ def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = d
                 del this_month_obs
                 gc.collect()
 
-                # write dailies file
-                times.data = daily_hours[:,0]
-                out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_1x1_daily_{}{:02d}_{}_{}.nc".format(year, month, period, suffix)
+# KATE modified
+                # If SwitchOutput == 1 then we're in test mode - output interim files!!!
+		if (SwitchOutput == 1):
+                    # write dailies file
+                    times.data = daily_hours[:,0]
+                    out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_1x1_daily_{}{:02d}_{}_{}.nc".format(year, month, period, suffix)
 
-                utils.netcdf_write(out_filename, daily_grid, n_hrs_per_day[0], n_obs_per_day, OBS_ORDER, grid_lats, grid_lons, times, frequency = "D")
+                    utils.netcdf_write(out_filename, daily_grid, n_hrs_per_day[0], n_obs_per_day, OBS_ORDER, grid_lats, grid_lons, times, frequency = "D")
+                #times.data = daily_hours[:,0]
+                #out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_1x1_daily_{}{:02d}_{}_{}.nc".format(year, month, period, suffix)
 
+                #utils.netcdf_write(out_filename, daily_grid, n_hrs_per_day[0], n_obs_per_day, OBS_ORDER, grid_lats, grid_lons, times, frequency = "D")
+# end
                 # Monthlies
                 times.data = daily_hours[0,0]
 
-                if settings.doMedian:
-                    monthly_grid = np.ma.median(daily_grid, axis = 1)
-                else:
-                    monthly_grid = np.ma.mean(daily_grid, axis = 1)
-
-                monthly_grid.fill_value = settings.mdi
-
-                # filter on number of observations/month
-                n_grids_per_month = np.ma.count(daily_grid, axis = 1) 
-                bad_locs = np.where(n_grids_per_month < calendar.monthrange(year, month)[1] * N_OBS_FRAC_MONTH) # 30% of possible daily values
-                monthly_grid.mask[bad_locs] = True
-
-                # number of raw observations
-                n_obs_per_month = np.ma.sum(n_obs_per_day, axis = 0)
-
-                if settings.plots and (year in [1973, 1983, 1993, 2003, 2013]):
-                    # plot the distribution of days
-
-                    plt.clf()
-                    plt.hist(n_obs_per_month.reshape(-1), bins = np.arange(-10,500,10),  log = True, rwidth=0.5)
-                    plt.title("Total number of raw observations in each 1x1 monthly grid box")
-                    plt.xlabel("Number of raw observations")
-                    plt.ylabel("Frequency (log scale)")
-                    plt.savefig(settings.PLOT_LOCATION + "n_obs_1x1_monthly_{}{:02d}_{}_{}.png".format(year, month, period, suffix))
-
-                    plt.clf()
-                    plt.hist(n_grids_per_month[0].reshape(-1), bins = np.arange(-2,40,2), align = "left",  log = True, rwidth=0.5)
-                    plt.axvline(x = calendar.monthrange(year, month)[1] * N_OBS_FRAC_MONTH, color="r")
-                    plt.title("Total number of 1x1 daily grids in each 1x1 monthly grid")
-                    plt.xlabel("Number of 1x1 daily grids")
-                    plt.ylabel("Frequency (log scale)")
-                    plt.savefig(settings.PLOT_LOCATION + "n_grids_1x1_monthly_{}{:02d}_{}_{}.png".format(year, month, period, suffix))
-
-                # write monthly 1x1 file
-                out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_1x1_monthly_{}{:02d}_{}_{}.nc".format(year, month, period, suffix)
-                utils.netcdf_write(out_filename, monthly_grid, n_grids_per_month[0], n_obs_per_month, OBS_ORDER, grid_lats, grid_lons, times, frequency = "M")
-            
-                # now to re-grid to coarser resolution
-                # KW # Here we may want to use the mean because its a large area but could be sparsely
-                #             populated with quite different climatologies so we want 
-                # the influence of the outliers (we've done our best to ensure these are good values) 
-
-                # go from monthly 1x1 to monthly 5x5 - retained as limited overhead
-                monthly_5by5, monthly_5by5_n_grids, monthly_5by5_n_obs, grid5_lats, grid5_lons = utils.grid_5by5(monthly_grid, n_obs_per_month, grid_lats, grid_lons, doMedian = settings.doMedian, daily = False)
-                out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_5x5_monthly_{}{:02d}_{}_{}.nc".format(year, month, period, suffix)
-
-                utils.netcdf_write(out_filename, monthly_5by5, monthly_5by5_n_grids, monthly_5by5_n_obs, OBS_ORDER, grid5_lats, grid5_lons, times, frequency = "M")
-
-                if settings.plots and (year in [1973, 1983, 1993, 2003, 2013]):
-                    # plot the distribution of days
-
-                    plt.clf()
-                    plt.hist(monthly_5by5_n_obs.reshape(-1), bins = np.arange(0,100,5), log = True, rwidth=0.5)
-                    plt.title("Total number of raw observations in each 5x5 monthly grid box")
-                    plt.xlabel("Number of raw observations")
-                    plt.ylabel("Frequency (log scale)")
-                    plt.savefig(settings.PLOT_LOCATION + "n_obs_5x5_monthly_{}{:02d}_{}_{}.png".format(year, month, period, suffix))
-
-                    plt.clf()
-                    plt.hist(monthly_5by5_n_grids.reshape(-1), bins = np.arange(-2,30,2), align = "left", log = True, rwidth=0.5)
-                    plt.axvline(x = 1, color="r")
-                    plt.title("Total number of 1x1 monthly grids in each 5x5 monthly grid")
-                    plt.xlabel("Number of 1x1 monthly grids")
-                    plt.ylabel("Frequency (log scale)")
-                    plt.savefig(settings.PLOT_LOCATION + "n_grids_5x5_monthly_{}{:02d}_{}_{}.png".format(year, month, period, suffix))
-
-                # clear up memory
-                del monthly_grid
-                del monthly_5by5
-                del monthly_5by5_n_grids
-                del monthly_5by5_n_obs
-                del n_grids_per_month
-                del n_obs_per_month
-                del n_hrs_per_day
-                gc.collect()
-
+# KATE modified - commenting out as we don't need this anymore
+#                if settings.doMedian:
+#                    monthly_grid = np.ma.median(daily_grid, axis = 1)
+#                else:
+#                    monthly_grid = np.ma.mean(daily_grid, axis = 1)
+#
+#                monthly_grid.fill_value = settings.mdi
+#
+#                # filter on number of observations/month
+#                n_grids_per_month = np.ma.count(daily_grid, axis = 1) 
+#                bad_locs = np.where(n_grids_per_month < calendar.monthrange(year, month)[1] * N_OBS_FRAC_MONTH) # 30% of possible daily values
+#                monthly_grid.mask[bad_locs] = True
+#
+#                # number of raw observations
+#                n_obs_per_month = np.ma.sum(n_obs_per_day, axis = 0)
+#
+#                if settings.plots and (year in [1973, 1983, 1993, 2003, 2013]):
+#                    # plot the distribution of days
+#
+#                    plt.clf()
+#                    plt.hist(n_obs_per_month.reshape(-1), bins = np.arange(-10,500,10),  log = True, rwidth=0.5)
+#                    plt.title("Total number of raw observations in each 1x1 monthly grid box")
+#                    plt.xlabel("Number of raw observations")
+#                    plt.ylabel("Frequency (log scale)")
+#                    plt.savefig(settings.PLOT_LOCATION + "n_obs_1x1_monthly_{}{:02d}_{}_{}.png".format(year, month, period, suffix))
+#
+#                    plt.clf()
+#                    plt.hist(n_grids_per_month[0].reshape(-1), bins = np.arange(-2,40,2), align = "left",  log = True, rwidth=0.5)
+#                    plt.axvline(x = calendar.monthrange(year, month)[1] * N_OBS_FRAC_MONTH, color="r")
+#                    plt.title("Total number of 1x1 daily grids in each 1x1 monthly grid")
+#                    plt.xlabel("Number of 1x1 daily grids")
+#                    plt.ylabel("Frequency (log scale)")
+#                    plt.savefig(settings.PLOT_LOCATION + "n_grids_1x1_monthly_{}{:02d}_{}_{}.png".format(year, month, period, suffix))
+#
+#                # write monthly 1x1 file
+#                out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_1x1_monthly_{}{:02d}_{}_{}.nc".format(year, month, period, suffix)
+#                utils.netcdf_write(out_filename, monthly_grid, n_grids_per_month[0], n_obs_per_month, OBS_ORDER, grid_lats, grid_lons, times, frequency = "M")
+#            
+#                # now to re-grid to coarser resolution
+#                # KW # Here we may want to use the mean because its a large area but could be sparsely
+#                #             populated with quite different climatologies so we want 
+#                # the influence of the outliers (we've done our best to ensure these are good values) 
+#
+#                # go from monthly 1x1 to monthly 5x5 - retained as limited overhead
+#                monthly_5by5, monthly_5by5_n_grids, monthly_5by5_n_obs, grid5_lats, grid5_lons = utils.grid_5by5(monthly_grid, n_obs_per_month, grid_lats, grid_lons, doMedian = settings.doMedian, daily = False)
+#                out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_5x5_monthly_{}{:02d}_{}_{}.nc".format(year, month, period, suffix)
+#
+#                utils.netcdf_write(out_filename, monthly_5by5, monthly_5by5_n_grids, monthly_5by5_n_obs, OBS_ORDER, grid5_lats, grid5_lons, times, frequency = "M")
+#
+#                if settings.plots and (year in [1973, 1983, 1993, 2003, 2013]):
+#                    # plot the distribution of days
+#
+#                    plt.clf()
+#                    plt.hist(monthly_5by5_n_obs.reshape(-1), bins = np.arange(0,100,5), log = True, rwidth=0.5)
+#                    plt.title("Total number of raw observations in each 5x5 monthly grid box")
+#                    plt.xlabel("Number of raw observations")
+#                    plt.ylabel("Frequency (log scale)")
+#                    plt.savefig(settings.PLOT_LOCATION + "n_obs_5x5_monthly_{}{:02d}_{}_{}.png".format(year, month, period, suffix))
+#
+#                    plt.clf()
+#                    plt.hist(monthly_5by5_n_grids.reshape(-1), bins = np.arange(-2,30,2), align = "left", log = True, rwidth=0.5)
+#                    plt.axvline(x = 1, color="r")
+#                    plt.title("Total number of 1x1 monthly grids in each 5x5 monthly grid")
+#                    plt.xlabel("Number of 1x1 monthly grids")
+#                    plt.ylabel("Frequency (log scale)")
+#                    plt.savefig(settings.PLOT_LOCATION + "n_grids_5x5_monthly_{}{:02d}_{}_{}.png".format(year, month, period, suffix))
+#
+#                # clear up memory
+#                del monthly_grid
+#                del monthly_5by5
+#                del monthly_5by5_n_grids
+#                del monthly_5by5_n_obs
+#                del n_grids_per_month
+#                del n_obs_per_month
+#                del n_hrs_per_day
+#                gc.collect()
+# end
                 # go direct from daily 1x1 to monthly 5x5
-                monthly_5by5, monthly_5by5_n_grids, monthly_5by5_n_obs, grid5_lats, grid5_lons = utils.grid_5by5(daily_grid, n_obs_per_day, grid_lats, grid_lons, doMedian = settings.doMedian, daily = True)
-
+# KATE MEDIAN WATCH - settings.doMedian is generally set to True - I think we may want the MEAN HERE!!!
+# KATE modified - to hard wire in MEAN here
+                monthly_5by5, monthly_5by5_n_grids, monthly_5by5_n_obs, grid5_lats, grid5_lons = utils.grid_5by5(daily_grid, n_obs_per_day, grid_lats, grid_lons, doMedian = False, daily = True)
+                #monthly_5by5, monthly_5by5_n_grids, monthly_5by5_n_obs, grid5_lats, grid5_lons = utils.grid_5by5(daily_grid, n_obs_per_day, grid_lats, grid_lons, doMedian = settings.doMedian, daily = True)
+# end
                 out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_5x5_monthly_from_daily_{}{:02d}_{}_{}.nc".format(year, month, period, suffix)
  
                 utils.netcdf_write(out_filename, monthly_5by5, monthly_5by5_n_grids, monthly_5by5_n_obs, OBS_ORDER, grid5_lats, grid5_lons, times, frequency = "M")
@@ -460,6 +562,14 @@ if __name__=="__main__":
                         help='which month to end run, default = 12')
     parser.add_argument('--doQC', dest='doQC', action='store_true', default = False,
                         help='process the QC information, default = False')
+# KATE modified
+    parser.add_argument('--doQC1it', dest='doQC1it', action='store_true', default = False,
+                        help='process the first iteration QC information without buddy check, default = False')
+    parser.add_argument('--doQC2it', dest='doQC2it', action='store_true', default = False,
+                        help='process the second iteration QC information without buddy check, default = False')
+    parser.add_argument('--doQC3it', dest='doQC3it', action='store_true', default = False,
+                        help='process the third iteration QC information with buddy check, default = False')
+# end
     parser.add_argument('--doBC', dest='doBC', action='store_true', default = False,
                         help='process the bias corrected data, default = False')
     args = parser.parse_args()
@@ -467,7 +577,10 @@ if __name__=="__main__":
 
     do_gridding(suffix = str(args.suffix), start_year = int(args.start_year), end_year = int(args.end_year), \
                     start_month = int(args.start_month), end_month = int(args.end_month), \
-                    doQC = args.doQC, doBC = args.doBC)
+# KATE modified
+                    doQC = args.doQC, doQC1it = args.doQC1it, doQC2it = args.doQC2it, doQC3it = args.doQC3it, doBC = args.doBC)
+                    #doQC = args.doQC, doBC = args.doBC)
+# end
 
 # END
 # ************************************************************************

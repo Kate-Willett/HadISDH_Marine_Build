@@ -32,7 +32,7 @@ Input data stored in:
 -----------------------
 HOW TO RUN THE CODE
 -----------------------
-python2.7 merge_day_night.py --suffix relax --clims --months --start_year YYYY --end_year YYYY --start_month MM --end_month MM
+python2.7 merge_day_night.py --suffix relax --clims --months --start_year YYYY --end_year YYYY --start_month MM --end_month MM (OPTIONAL: one of --doQC, --doQC1it, --doQC2it, --doQC3it, --doBC)
 
 python2.7 gridding_cam.py --help 
 will show all options
@@ -48,6 +48,28 @@ OUTPUT
 -----------------------
 VERSION/RELEASE NOTES
 -----------------------
+
+Version 2 (26 Sep 2016) Kate Willett
+---------
+ 
+Enhancements
+This can now work with the iterative approach which requires doQCit1, doQCit2 and doQCit3 to set the correct filepaths
+Look for:
+# KATE modified
+...
+# end
+ 
+Changes
+This hard wires the MEAN in places where I think that is sensible, despite settings.doMedian being set to True.
+Look for # KATE MEDIAN WATCH
+ACTUALLY - A TEST OF np.mean AND np.median ON A 2-ELEMENT ARRAY GIVES THE SAME ANSWER!!!!
+ 
+Bug fixes
+set_up_merge had issues with start_year = START_YEAR. I commented out the four time elements as these are all defined in the call
+to function and do not need to be redefined here
+
+The output latitudes were one box too high (92.5 to -82.5) so I switched the + for a - to solve this
+
 
 Version 1 (release date)
 ---------
@@ -127,11 +149,12 @@ def do_merge(fileroot, mdi, suffix = "relax", clims = False, doMedian = False):
 
                 all_data[p, v] = ncdf_file.variables[var.name][:]
 
-
                 # get lats/lons of box centres
                 lat_centres = ncdf_file.variables["latitude"]
-                latitudes = lat_centres + (lat_centres[1] - lat_centres[0])/2.
-
+# KATE modified - this results in lats that go from 92.5 to -82,5 so I've switched the + for a -
+                latitudes = lat_centres - (lat_centres[1] - lat_centres[0])/2.
+                #latitudes = lat_centres + (lat_centres[1] - lat_centres[0])/2.
+# end
                 lon_centres = ncdf_file.variables["longitude"]
                 longitudes = lon_centres + (lon_centres[1] - lon_centres[0])/2.
 
@@ -229,7 +252,11 @@ def get_fileroot(settings, climatology = False, pentads = False, months = [], do
 
 
 #************************************************************************
-def set_up_merge(suffix = "relax", clims = False, months = False, pentads = False, start_year = defaults.START_YEAR, end_year = defaults.END_YEAR, start_month = 1, end_month = 12, doQC = False, doBC = False):
+# KATE modified
+def set_up_merge(suffix = "relax", clims = False, months = False, pentads = False, start_year = defaults.START_YEAR, end_year = defaults.END_YEAR, start_month = 1, end_month = 12, 
+                 doQC = False, doQC1it = False, doQC2it = False, doQC3it = False, doBC = False):
+#def set_up_merge(suffix = "relax", clims = False, months = False, pentads = False, start_year = defaults.START_YEAR, end_year = defaults.END_YEAR, start_month = 1, end_month = 12, doQC = False, doBC = False):
+# end
     '''
     Obtain file roots and set processes running
     
@@ -242,11 +269,22 @@ def set_up_merge(suffix = "relax", clims = False, months = False, pentads = Fals
     :param int start_month: start month to process
     :param int end_month: end month to process
     :param bool doQC: incorporate the QC flags or not
+# KATE modified
+    :param bool doQC1it: incorporate the QC flags or not
+    :param bool doQC2it: incorporate the QC flags or not
+    :param bool doQC3it: incorporate the QC flags or not
+# end
     :param bool doBC: work on the bias corrected data
+
+# KATE modified    
+    NOTE THAT I HAVE OVERWRITTEN settings.doMedian to force MEAN instead
+# end
     '''
     
-    settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC)
-
+# KATE modified
+    settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC, doQC1it = doQC1it, doQC2it = doQC2it, doQC3it = doQC3it)
+    #settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC)
+# end
     if clims:
         print "Processing Climatologies"
         
@@ -254,14 +292,20 @@ def set_up_merge(suffix = "relax", clims = False, months = False, pentads = Fals
 #        do_merge(fileroot, settings.mdi, suffix, doMedian = settings.doMedian)
         
         fileroot = get_fileroot(settings, climatology = True, do3hr = True)
-        do_merge(fileroot, settings.mdi, suffix, clims = True, doMedian = settings.doMedian)
-
+# KATE MEDIAN WATCH
+# KATE modified - forcing MEAN 
+        do_merge(fileroot, settings.mdi, suffix, clims = True, doMedian = False)
+        #do_merge(fileroot, settings.mdi, suffix, clims = True, doMedian = settings.doMedian)
+# end
         # and stdev
         print "Processing Standard Deviations"
 
         fileroot = get_fileroot(settings, climatology = True, do3hr = True, stdev = True)
-        do_merge(fileroot, settings.mdi, suffix, clims = True, doMedian = settings.doMedian)
-
+# KATE MEDIAN WATCH
+# KATE modified - forcing MEAN 
+        do_merge(fileroot, settings.mdi, suffix, clims = True, doMedian = False)
+        #do_merge(fileroot, settings.mdi, suffix, clims = True, doMedian = settings.doMedian)
+# end
 
     if pentads:
         print "Processing Pentads"
@@ -272,16 +316,20 @@ def set_up_merge(suffix = "relax", clims = False, months = False, pentads = Fals
         for year in np.arange(start_year, end_year + 1): 
             print year
             fileroot = get_fileroot(settings, pentads = True, do3hr = True, time = [year])
-            do_merge(fileroot, settings.mdi, suffix, doMedian = settings.doMedian)
-
+# KATE MEDIAN WATCH
+# KATE modified - forcing MEAN 
+            do_merge(fileroot, settings.mdi, suffix, doMedian = False)
+            #do_merge(fileroot, settings.mdi, suffix, doMedian = settings.doMedian)
+# end
     if months:
         print "Processing Monthly Files"
 
-        start_year = START_YEAR
-        end_year = END_YEAR
-        start_month = 1
-        end_month = 12
-
+# KATE modified - START_YEAR not defined - commented these out as they are all set in the call to function
+        #start_year = START_YEAR
+        #end_year = END_YEAR
+        #start_month = 1
+        #end_month = 12
+# end
         for year in np.arange(start_year, end_year + 1): 
             print year
 
@@ -292,8 +340,11 @@ def set_up_merge(suffix = "relax", clims = False, months = False, pentads = Fals
 #                do_merge(fileroot, settings.mdi, suffix, doMedian = settings.doMedian)
 
                 fileroot = get_fileroot(settings, months = True, time = [year, month], daily = True)
-                do_merge(fileroot, settings.mdi, suffix, doMedian = settings.doMedian)
-
+# KATE MEDIAN WATCH
+# KATE modified - forcing MEAN 
+                do_merge(fileroot, settings.mdi, suffix, doMedian = False)
+                #do_merge(fileroot, settings.mdi, suffix, doMedian = settings.doMedian)
+# end
 
     return # set_up_merge
 
@@ -322,14 +373,28 @@ if __name__=="__main__":
                         help='which month to end run, default = 12')
     parser.add_argument('--doQC', dest='doQC', action='store_true', default = False,
                         help='process the QC information, default = False')
+# KATE modified
+    parser.add_argument('--doQC1it', dest='doQC1it', action='store_true', default = False,
+                        help='process the first iteration QC information, default = False')
+    parser.add_argument('--doQC2it', dest='doQC2it', action='store_true', default = False,
+                        help='process the second iteration QC information, default = False')
+    parser.add_argument('--doQC3it', dest='doQC3it', action='store_true', default = False,
+                        help='process the third iteration QC information, default = False')
+# end
     parser.add_argument('--doBC', dest='doBC', action='store_true', default = False,
                         help='process the bias corrected data, default = False')
     args = parser.parse_args()
 
 
+# KATE modified
     set_up_merge(suffix = str(args.suffix), clims = args.clims, months = args.months, pentads = args.pentads, \
                      start_year = int(args.start_year), end_year = int(args.end_year), \
-                     start_month = int(args.start_month), end_month = int(args.end_month), doQC = args.doQC, doBC = args.doBC)
+                     start_month = int(args.start_month), end_month = int(args.end_month), \
+		     doQC = args.doQC, doQC1it = args.doQC1it, doQC2it = args.doQC2it, doQC3it = args.doQC3it, doBC = args.doBC)
+    #set_up_merge(suffix = str(args.suffix), clims = args.clims, months = args.months, pentads = args.pentads, \
+    #                 start_year = int(args.start_year), end_year = int(args.end_year), \
+    #                 start_month = int(args.start_month), end_month = int(args.end_month), doQC = args.doQC, doBC = args.doBC)
+# end
 
 # END
 # ************************************************************************
