@@ -1,122 +1,123 @@
 #!/usr/local/sci/bin/python
 # PYTHON2.7
 # 
-# Author: Kate Willett
-# Created: 11 Sep 2016
-# Last update: 11 Sep 2016
-# Location: /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/
-# GitHub: https://github.com/Kate-Willett/HadISDH_Marine_Build/					
-# -----------------------
-# CODE PURPOSE AND OUTPUT
-# -----------------------
-# This code reads in the monthly 5by5 climatology from the obs and converts 
-# it to pentad 1by1
-#
-# ANNOYINGLY WE CANNOT ASSUME THAT IF A CLIM IS PRESENT AN SD IS ALSO PRESENT!!! 
-# THESE SHOULD BE THE SAME BECAUSE SD IS THE SD OF ALL MONTHS GOING INTO THE CLIM!!! 
-# NEED TO GET ROBERT TO LOOK AT THIS!!!
-#
-# 1) Fill in any individual missing 5by5 gridbox months in time with a 
-#    month present before and after by giving it the MEAN of the two 
-#    surrounding months for climatology and the MAXIMUM of the two 
-#    surrounding months for stdev
-#    Allow continuation December to January
-#    Then go over again and fill any missing end points by previous point
-#    and half of the difference to the next point to account for uncertainty
-#    in that point not carrying on in the same direction
-# 2) Fill in any individual missing 5by5 gridbox months 
-#    in space that have at least two adjacent gridboxes (Including one at same latitude or both the latitude above/below) by giving it the 
-#    MEAN of the surrounding months for climatology and the MAXIMUM of the 
-#    surrounding months for stdev   
-# 3) Interpolate smoothly across each 5by5 gridbox month to 
-#    divide into the appropriate number of pentads in time in equal steps 
-#    between the preceding and following 5by5 gridbox months, ensuring that 
-#    the mean of the pentads is equal to the monthly value. If the candidate 
-#    month is higher/lower than both preceding and following months then the 
-#    middle pentad will take peak/trough. Same for clim and stdev.
-# 4) Interpolate smoothly across each 5by5 gridbox pentad to 
-#    divide into the 5 1by1 gridboxes in space, ensuring that the mean of 
-#    all 1by1 pentad gridboxes is equal to the 5by5 pentad gridbox value. 
-#    This will be done as smoothly as possible. Ideally (although 
-#    arbitrarily) if the surrounding gridboxes are mostly higher/lower then 
-#    the trough/peak will tend towards the middle 1by1 pentad gridbox 
-#    within the 5by5. This will be quite complex though. Same for clim and 
-#    stdev.
-#
-# NOTE:
-# Tests allow for differences in coverage between climatologies and standard deviations although I would hope there are none
-# Tests check for standard deviations going below zero (InterpTime, InterpSpace(shouldn't but check anyway) 
-# - in this event the filled value is given the nearest non-zero value
-# Tests check for q, e, RH and DPD going below zero (Climatology - InterpTime and InterpSpace) and RH going above 100
-# - in this event the filled value is given the nearest non-zero value 
-# There is an added mask which states if a value is real (1), time infilled (2) or space infilled (3)
-#
-# -----------------------
-# LIST OF MODULES
-# -----------------------
-# inbuilt:
-# import datetime as dt
-## Folling two lines should be uncommented if using with SPICE or screen or /project
-## import matplotlib
-## matplotlib.use('Agg')
-# import matplotlib.pyplot as plt
-# import numpy as np
-# from matplotlib.dates import date2num,num2date
-# from datetime import datetime
-# import sys, os
-# import sys, getopt
-# from scipy.optimize import curve_fit,fsolve,leastsq
-# from scipy import pi,sqrt,exp
-# from scipy.special import erf
-# from scipy.interpolate import griddata # for interpolation in InterpSpace
-# import scipy.stats
-# from math import sqrt,pi
-# import struct
-# from netCDF4 import Dataset
-# from netCDF4 import stringtoarr # for putting strings in as netCDF variables
-# import pdb # pdb.set_trace() or c 
-#
-# -----------------------
-# DATA
-# -----------------------
-# 
-# OBS 1981-2010 clims:
-# /project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS/ERAclimNBC_5x5_monthly_climatology_from_daily_both_relax.nc
-#
-# -----------------------
-# HOW TO RUN THE CODE
-# -----------------------
-# make sure the file paths are ok - are we always using ERAclimNBC?
-#
-# python2.7 InterpClimtoPentad1by1.py
-#
-# python2.7 InterpClimtoPentad1by1.py --varee 'q' (and or --typee 'ERAclimNBC' 
-#
-# This runs the code which saves pentad 1by1 version of the climatology
-#
-# -----------------------
-# OUTPUT
-# -----------------------
-# Pentad 1by1 climatologies
-# /project/hadobs2/hadisdh/marine/otherdata/ERAclimNBC_1x1_pentad_climatology_from_5x5_monthly_both_relax.nc
-# 
-# -----------------------
-# VERSION/RELEASE NOTES
-# -----------------------
-# 
-# Version 1 (19 Sep 2016)
-# ---------
-#  
-# Enhancements
-#  
-# Changes
-#  
-# Bug fixes
-#  
-# -----------------------
-# OTHER INFORMATION
-# -----------------------
-#
+'''
+Author: Kate Willett
+Created: 11 Sep 2016
+Last update: 11 Sep 2016
+Location: /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/
+GitHub: https://github.com/Kate-Willett/HadISDH_Marine_Build/				      
+-----------------------
+CODE PURPOSE AND OUTPUT
+-----------------------
+This code reads in the monthly 5by5 climatology from the obs and converts 
+it to pentad 1by1
+
+ANNOYINGLY WE CANNOT ASSUME THAT IF A CLIM IS PRESENT AN SD IS ALSO PRESENT!!! 
+THESE SHOULD BE THE SAME BECAUSE SD IS THE SD OF ALL MONTHS GOING INTO THE CLIM!!! 
+NEED TO GET ROBERT TO LOOK AT THIS!!!
+
+1) Fill in any individual missing 5by5 gridbox months in time with a 
+   month present before and after by giving it the MEAN of the two 
+   surrounding months for climatology and the MAXIMUM of the two 
+   surrounding months for stdev
+   Allow continuation December to January
+   Then go over again and fill any missing end points by previous point
+   and half of the difference to the next point to account for uncertainty
+   in that point not carrying on in the same direction
+2) Fill in any individual missing 5by5 gridbox months 
+   in space that have at least two adjacent gridboxes (Including one at same latitude or both the latitude above/below) by giving it the 
+   MEAN of the surrounding months for climatology and the MAXIMUM of the 
+   surrounding months for stdev   
+3) Interpolate smoothly across each 5by5 gridbox month to 
+   divide into the appropriate number of pentads in time in equal steps 
+   between the preceding and following 5by5 gridbox months, ensuring that 
+   the mean of the pentads is equal to the monthly value. If the candidate 
+   month is higher/lower than both preceding and following months then the 
+   middle pentad will take peak/trough. Same for clim and stdev.
+4) Interpolate smoothly across each 5by5 gridbox pentad to 
+   divide into the 5 1by1 gridboxes in space, ensuring that the mean of 
+   all 1by1 pentad gridboxes is equal to the 5by5 pentad gridbox value. 
+   This will be done as smoothly as possible. Ideally (although 
+   arbitrarily) if the surrounding gridboxes are mostly higher/lower then 
+   the trough/peak will tend towards the middle 1by1 pentad gridbox 
+   within the 5by5. This will be quite complex though. Same for clim and 
+   stdev.
+
+NOTE:
+Tests allow for differences in coverage between climatologies and standard deviations although I would hope there are none
+Tests check for standard deviations going below zero (InterpTime, InterpSpace(shouldn't but check anyway) 
+- in this event the filled value is given the nearest non-zero value
+Tests check for q, e, RH and DPD going below zero (Climatology - InterpTime and InterpSpace) and RH going above 100
+- in this event the filled value is given the nearest non-zero value 
+There is an added mask which states if a value is real (1), time infilled (2) or space infilled (3)
+
+-----------------------
+LIST OF MODULES
+-----------------------
+inbuilt:
+import datetime as dt
+#Folling two lines should be uncommented if using with SPICE or screen or /project
+#import matplotlib
+#matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib.dates import date2num,num2date
+from datetime import datetime
+import sys, os
+import sys, getopt
+from scipy.optimize import curve_fit,fsolve,leastsq
+from scipy import pi,sqrt,exp
+from scipy.special import erf
+from scipy.interpolate import griddata # for interpolation in InterpSpace
+import scipy.stats
+from math import sqrt,pi
+import struct
+from netCDF4 import Dataset
+from netCDF4 import stringtoarr # for putting strings in as netCDF variables
+import pdb # pdb.set_trace() or c 
+
+-----------------------
+DATA
+-----------------------
+
+OBS 1981-2010 clims:
+/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS/ERAclimNBC_5x5_monthly_climatology_from_daily_both_relax.nc
+
+-----------------------
+HOW TO RUN THE CODE
+-----------------------
+make sure the file paths are ok - are we always using ERAclimNBC?
+
+python2.7 InterpClimtoPentad1by1.py
+
+python2.7 InterpClimtoPentad1by1.py --doWHAT 'it1' --varee 'q' (defaults are 'it1' and 't'
+
+This runs the code which saves pentad 1by1 version of the climatology
+
+-----------------------
+OUTPUT
+-----------------------
+Pentad 1by1 climatologies
+/project/hadobs2/hadisdh/marine/otherdata/ERAclimNBC_1x1_pentad_climatology_from_5x5_monthly_both_relax.nc
+
+-----------------------
+VERSION/RELEASE NOTES
+-----------------------
+
+Version 1 (19 Sep 2016)
+---------
+ 
+Enhancements
+ 
+Changes
+ 
+Bug fixes
+ 
+-----------------------
+OTHER INFORMATION
+-----------------------
+'''
 #************************************************************************
 #                                 START
 #************************************************************************
@@ -143,6 +144,17 @@ import struct
 from netCDF4 import Dataset
 from netCDF4 import stringtoarr # for putting strings in as netCDF variables
 import pdb # pdb.set_trace() or c 
+
+# Editables:
+version =  'beta1'
+StClim =   1981
+EdClim =   2010
+nMonths =  12
+nPentads = 73
+nLons1 =   360
+nLats1 =   180
+nLons5 =   72
+nLats5 =   36
 
 #************************************************************************
 # FUNCTIONS
@@ -966,11 +978,11 @@ def InterpSpace(WorkingArrClim, WorkingArrSD, NewWorkingArrClim, NewWorkingArrSD
 			
     # Last check to make sure all values that should be +ve are			
     if (len(NewWorkingArrSD[np.where((NewWorkingArrSD > TheMDI) & (NewWorkingArrSD < 0.))]) > 0):
-        print("Found some negative standard deviations: ", len(NewWorkingArrSD[np.where(NewWorkingArrSD > TheMDI & NewWorkingArrSD < 0.)]))
+        print("Found some negative standard deviations: ", len(NewWorkingArrSD[np.where((NewWorkingArrSD > TheMDI) & (NewWorkingArrSD < 0.))]))
 
 
     if ((TheVar in ['q','e','rh','dpd']) & (len(NewWorkingArrClim[np.where((NewWorkingArrClim > TheMDI) & (NewWorkingArrClim < 0.))]) > 0)):
-        print("Found some negative standard deviations: ", len(NewWorkingArrClim[np.where(NewWorkingArrClim > TheMDI & NewWorkingArrClim < 0.)]))
+        print("Found some negative standard deviations: ", len(NewWorkingArrClim[np.where((NewWorkingArrClim > TheMDI) & (NewWorkingArrClim < 0.))]))
 
     return NewWorkingArrClim, NewWorkingArrSD
 # TEST NOTES
@@ -1369,18 +1381,18 @@ def WriteNCCF(FileName,TimeRes,Latitudes,Longitudes,ClimPoints,DataObject,DimObj
 
 def main(argv):
     # INPUT PARAMETERS AS STRINGS!!!! WITH ''
-    typee = 'ERAclimNBC'
+    doWHAT = 'it1' # 'it1','it2','it3','BC','noQC'
     varee = 't' # t, tw, td, q, rh, e, dpd
 
     try:
         opts, args = getopt.getopt(argv, "hi:",
-	                           ["typee=","varee="])
+	                           ["doWHAT=","varee="])
     except getopt.GetoptError:
-        print 'Usage (as strings) InterpClimtoPentad1by1.py --typee <ERAclimNBC> --varee <t>'
+        print 'Usage (as strings) InterpClimtoPentad1by1.py --doWHAT <it1> --varee <t>'
 	sys.exit(2)
 
     for opt, arg in opts:
-        if opt == "--typee":
+        if opt == "--doWHAT":
             try:
                 typee = arg
             except:
@@ -1391,21 +1403,20 @@ def main(argv):
             except:
                 sys.exit("Failed: typee not a string")
 
-    print(typee, varee)
+    if (doWHAT == 'it1'):
+        typee = 'ERAclimNBC'
+    elif (doWHAT == 'it2'):
+        typee = 'OBSclim1NBC'
+    elif (doWHAT == 'it3'):
+        typee = 'OBSclim2NBC'
+    elif (doWHAT == 'BC'):
+        typee = 'OBSclim2BC'
+    if (doWHAT == 'noQC'):
+        typee = 'OBSclim2noQC'
+    print(doWHAT, varee,typee, typee2)    
 #    pdb.set_trace()
     			
-    mdi=-1e30
-    
-    # Editables:
-    version = 'beta1'
-    StClim = 1981
-    EdClim = 2010
-    nMonths = 12
-    nPentads = 73
-    nLons1 = 360
-    nLats1 = 180
-    nLons5 = 72
-    nLats5 = 36
+    mdi=-1e30    
 
     # How many pentads (or other) in each month (or other)?
     PentadList = [6,6,6,6,6,6,6,7,6,6,6,6]
@@ -1444,14 +1455,14 @@ def main(argv):
     
     					   
     INDIR = '/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/'
-    InOBSclim = 'GRIDS3/RES5BY5/ERAclimNBC_5x5_monthly_climatology_from_daily_both_relax.nc'
-    InOBSsd = 'GRIDS3/RES5BY5/ERAclimNBC_5x5_monthly_stdev_from_daily_both_relax.nc'
+    InOBSclim = 'GRIDS'+typee+'/'+typee+'_5x5_monthly_climatology_from_daily_both_relax.nc'
+    InOBSsd = 'GRIDS'+typee+'/'+typee+'_5x5_monthly_stdev_from_daily_both_relax.nc'
 #    InOBSclim = 'GRIDS_noQC/ERAclimNBC_5x5_monthly_climatology_from_daily_both_relax.nc'
 #    InOBSsd = 'GRIDS_noQC/ERAclimNBC_5x5_monthly_stdev_from_daily_both_relax.nc'
     
     OUTDIR = '/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/'
-    OutOBS1 = 'GRIDS3/RES5BY5/'+VarDict[varee]['short_name']+'_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
-    OutOBS5 = 'GRIDS3/RES5BY5/'+VarDict[varee]['short_name']+'_ERAclimNBC_5x5_monthly_climatology_stdev_from_daily_both_relax_INFILLED.nc'
+    OutOBS1 = 'GRIDS'+typee+'/'+VarDict[varee]['short_name']+'_'+typee+'_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
+    OutOBS5 = 'GRIDS'+typee+'/'+VarDict[varee]['short_name']+'_'+typee+'_5x5_monthly_climatology_stdev_from_daily_both_relax_INFILLED.nc'
 #    OutOBS1 = 'GRIDS_noQC/'+VarDict[varee]['short_name']+'_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
 #    OutOBS5 = 'GRIDS_noQC/'+VarDict[varee]['short_name']+'_ERAclimNBC_5x5_monthly_climatology_stdev_from_daily_both_relax_INFILLED.nc'
 

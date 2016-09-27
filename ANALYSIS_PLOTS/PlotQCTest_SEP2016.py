@@ -564,7 +564,7 @@ def main(argv):
 	MDSdict = 0 # clear out
 
 	# If end of year period then initialise end of year loop 
-	if (ThisMonth == 11):
+	if (ThisMonth == '12'):
 
 	    # plot the annual period stuff
             PlotName = OUTDIR+OutPltAbsday+str(ThisYear)+'_'+nowmon+nowyear
@@ -705,7 +705,7 @@ def main(argv):
 						      AnomsFailClimDPT,AnomsFailBuddyDPT,AnomsFailRepDPT,AnomsFailRepSatDPT,AnomsFailSSatDPT)
 
 
-    pdb.set_trace()
+    #pdb.set_trace()
 
     print("And were done")
 

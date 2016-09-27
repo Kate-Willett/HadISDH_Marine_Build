@@ -125,17 +125,17 @@ TheTypesStd=("|S9","|S8","int","int","int","int","int","int",
           "int","int","int","int","int","int","int","int","int",
           "int","int","int","int","int","int","int","int")
 
-TheDelimitersStd=(10,8,8,8,8,8,8,8,
-               8,8,8,8,8,
-               8,8,8,8,8,8,8,8,8,8,8,8,
-               8,8,8,8,8,9,
-               4,3,3,3,8,3,8,3,8,3,8,
-               4,3,4,4,3,2,3,5,5,5,5,5,7,
-               2,1,1,1,1,1,1,1,1,
-               2,1,1,1,1,1,1,1,1,
-               2,1,1,1,1,1,1,1,1,
-               2,1,1,1,1,1,1,1,1,
-               2,1,1,1,1,1,1,1)
+TheDelimitersStd=(10,8,8,8,8,8,8,8, 		# 8 8 ID, Location and time metadata 
+               8,8,8,8,8,			# 5 Temperature and pressure OBS values AT, SST and SLP
+               8,8,8,8,8,8,8,8,8,8,8,8,		# 12 Humidity related OBS values DPT, SHU, VAP, CRH, CWB and DPD
+               8,8,8,8,8,9,			# 6 Deck and Platform ID and other platform related metadata
+               4,3,3,3,8,3,8,3,8,3,8,		# 11 OBS related metadata
+               4,3,4,4,3,2,3,5,5,5,5,5,7,	# 13 Instrument related metadata
+               2,1,1,1,1,1,1,1,1,		# 9 BASE QC
+               2,1,1,1,1,1,1,1,1,		# 9 SST QC
+               2,1,1,1,1,1,1,1,1,		# 9 AT QC	
+               2,1,1,1,1,1,1,1,1,		# 9 DPT QC
+               2,1,1,1,1,1,1,1)			# 8 Additional QC
 
 # first element is 9 characters lon with a space - so delimiters = 10.
 TheTypesExt=("|S9","|S8","int","int","int","int","int","int",
