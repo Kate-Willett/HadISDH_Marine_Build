@@ -99,13 +99,16 @@ Look for # KATE modified
 	 # end
  
 Changes
+STREAMLINED OUTPUTS
 I have commented out the monthy 1x1s and monthly 5x5s from monthly 1x1s as these are no longer needed
 
+MEAN OVER MEDIAN
 I have hard coded in the MEAN for creating daily 1x1s and monthly 5x5s because I think this is more sensible
 Look for # KATE MEDIAN WATCH
 
+SWITCH OFF UNESSENTIAL OUTPUTS
 I have added an internally operated switch - SwitchOutput - 1 = output all interim grids, 0 only output 5x5monthlies
- 
+
 Bug fixes
 
 

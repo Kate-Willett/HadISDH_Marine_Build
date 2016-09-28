@@ -52,6 +52,12 @@ Tests check for q, e, RH and DPD going below zero (Climatology - InterpTime and 
 - in this event the filled value is given the nearest non-zero value 
 There is an added mask which states if a value is real (1), time infilled (2) or space infilled (3)
 
+A pentad climatology should go higher and lower than a monthly climatology.
+A pentad standard deviation climatology should be larger than a monthly standard deviation climatology.
+I don't think we can make any informed adjustments on this but we can account for it by allowing larger standard deviation thresholds?
+
+We can compare ERA vs OBS using CompareERAOBSclims_APR2016.py
+
 -----------------------
 LIST OF MODULES
 -----------------------
