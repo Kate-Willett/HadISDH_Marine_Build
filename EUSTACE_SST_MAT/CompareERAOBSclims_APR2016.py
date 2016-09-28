@@ -107,6 +107,8 @@ import struct
 from netCDF4 import Dataset
 import pdb # pdb.set_trace() or c 
 
+nowmon = 'SEP'
+nowyear = '2016'
 
 #************************************************************************
 # Main
@@ -144,41 +146,44 @@ def main(argv):
     InERAclimCRH = 'otherdata/rh2m_pentad_1by1marine_ERA-Interim_data_19792015.nc'
     InERAclimCWB = 'otherdata/tw2m_pentad_1by1marine_ERA-Interim_data_19792015.nc'
     InERAclimDPD = 'otherdata/dpd2m_pentad_1by1marine_ERA-Interim_data_19792015.nc'
-#    InOBSclim = 'ICOADS.2.5.1/GRIDS/ERAclimNBC_1x1_pentad_climatology_from_3hrly.nc'
-#    InOBSsd = 'ICOADS.2.5.1/GRIDS/ERAclimNBC_1x1_pentad_stdev_from_3hrly.nc'
-    InOBSclim = 'ICOADS.2.5.1/GRIDS3/ERAclimNBC_1x1_pentad_climatology_from_3hrly_both_relax.nc'
-    InOBSsd = 'ICOADS.2.5.1/GRIDS3/ERAclimNBC_1x1_pentad_stdev_from_3hrly_both_relax.nc'
+    InOBSclimAT = 'otherdata/t2m_'+typee+'_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
+    InOBSclimDPT = 'otherdata/td2m_'+typee+'_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
+    InOBSclimSHU = 'otherdata/q2m_'+typee+'_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
+    InOBSclimVAP = 'otherdata/e2m_'+typee+'_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
+    InOBSclimCRH = 'otherdata/rh2m_'+typee+'_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
+    InOBSclimCWB = 'otherdata/tw2m_'+typee+'_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
+    InOBSclimDPD = 'otherdata/dpd2m_'+typee+'_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
     
     OUTDIR = '/data/local/hadkw/HADCRUH2/MARINE/'
-    OutLatsFilAT = 'IMAGES/ERAOBS3climdiffs_latdiffs_AT_'+typee+'_APR2016'
-    OutMapsFilAT = 'IMAGES/ERAOBS3climdiffs_mapdiffs_AT_'+typee+'_APR2016'
-    OutLatsFilDPT = 'IMAGES/ERAOBS3climdiffs_latdiffs_DPT_'+typee+'_APR2016'
-    OutMapsFilDPT = 'IMAGES/ERAOBS3climdiffs_mapdiffs_DPT_'+typee+'_APR2016'
-    OutLatsFilSHU = 'IMAGES/ERAOBS3climdiffs_latdiffs_SHU_'+typee+'_APR2016'
-    OutMapsFilSHU = 'IMAGES/ERAOBS3climdiffs_mapdiffs_SHU_'+typee+'_APR2016'
-    OutLatsFilVAP = 'IMAGES/ERAOBS3climdiffs_latdiffs_VAP_'+typee+'_APR2016'
-    OutMapsFilVAP = 'IMAGES/ERAOBS3climdiffs_mapdiffs_VAP_'+typee+'_APR2016'
-    OutLatsFilCRH = 'IMAGES/ERAOBS3climdiffs_latdiffs_CRH_'+typee+'_APR2016'
-    OutMapsFilCRH = 'IMAGES/ERAOBS3climdiffs_mapdiffs_CRH_'+typee+'_APR2016'
-    OutLatsFilCWB = 'IMAGES/ERAOBS3climdiffs_latdiffs_CWB_'+typee+'_APR2016'
-    OutMapsFilCWB = 'IMAGES/ERAOBS3climdiffs_mapdiffs_CWB_'+typee+'_APR2016'
-    OutLatsFilDPD = 'IMAGES/ERAOBS3climdiffs_latdiffs_DPD_'+typee+'_APR2016'
-    OutMapsFilDPD = 'IMAGES/ERAOBS3climdiffs_mapdiffs_DPD_'+typee+'_APR2016'
+    OutLatsFilAT = 'IMAGES/ERAOBSclimdiffs_latdiffs_AT_'+typee+'_'+nowmon+nowyear
+    OutMapsFilAT = 'IMAGES/ERAOBSclimdiffs_mapdiffs_AT_'+typee+'_'+nowmon+nowyear
+    OutLatsFilDPT = 'IMAGES/ERAOBSclimdiffs_latdiffs_DPT_'+typee+'_'+nowmon+nowyear
+    OutMapsFilDPT = 'IMAGES/ERAOBSclimdiffs_mapdiffs_DPT_'+typee+'_'+nowmon+nowyear
+    OutLatsFilSHU = 'IMAGES/ERAOBSclimdiffs_latdiffs_SHU_'+typee+'_'+nowmon+nowyear
+    OutMapsFilSHU = 'IMAGES/ERAOBSclimdiffs_mapdiffs_SHU_'+typee+'_'+nowmon+nowyear
+    OutLatsFilVAP = 'IMAGES/ERAOBSclimdiffs_latdiffs_VAP_'+typee+'_'+nowmon+nowyear
+    OutMapsFilVAP = 'IMAGES/ERAOBSclimdiffs_mapdiffs_VAP_'+typee+'_'+nowmon+nowyear
+    OutLatsFilCRH = 'IMAGES/ERAOBSclimdiffs_latdiffs_CRH_'+typee+'_'+nowmon+nowyear
+    OutMapsFilCRH = 'IMAGES/ERAOBSclimdiffs_mapdiffs_CRH_'+typee+'_'+nowmon+nowyear
+    OutLatsFilCWB = 'IMAGES/ERAOBSclimdiffs_latdiffs_CWB_'+typee+'_'+nowmon+nowyear
+    OutMapsFilCWB = 'IMAGES/ERAOBSclimdiffs_mapdiffs_CWB_'+typee+'_'+nowmon+nowyear
+    OutLatsFilDPD = 'IMAGES/ERAOBSclimdiffs_latdiffs_DPD_'+typee+'_'+nowmon+nowyear
+    OutMapsFilDPD = 'IMAGES/ERAOBSclimdiffs_mapdiffs_DPD_'+typee+'_'+nowmon+nowyear
 
-    OutSDLatsFilAT = 'IMAGES/ERAOBS3climSDdiffs_latdiffs_AT_'+typee+'_APR2016'
-    OutSDMapsFilAT = 'IMAGES/ERAOBS3climSDdiffs_mapdiffs_AT_'+typee+'_APR2016'
-    OutSDLatsFilDPT = 'IMAGES/ERAOBS3climSDdiffs_latdiffs_DPT_'+typee+'_APR2016'
-    OutSDMapsFilDPT = 'IMAGES/ERAOBS3climSDdiffs_mapdiffs_DPT_'+typee+'_APR2016'
-    OutSDLatsFilSHU = 'IMAGES/ERAOBS3climSDdiffs_latdiffs_SHU_'+typee+'_APR2016'
-    OutSDMapsFilSHU = 'IMAGES/ERAOBS3climSDdiffs_mapdiffs_SHU_'+typee+'_APR2016'
-    OutSDLatsFilVAP = 'IMAGES/ERAOBS3climSDdiffs_latdiffs_VAP_'+typee+'_APR2016'
-    OutSDMapsFilVAP = 'IMAGES/ERAOBS3climSDdiffs_mapdiffs_VAP_'+typee+'_APR2016'
-    OutSDLatsFilCRH = 'IMAGES/ERAOBS3climSDdiffs_latdiffs_CRH_'+typee+'_APR2016'
-    OutSDMapsFilCRH = 'IMAGES/ERAOBS3climSDdiffs_mapdiffs_CRH_'+typee+'_APR2016'
-    OutSDLatsFilCWB = 'IMAGES/ERAOBS3climSDdiffs_latdiffs_CWB_'+typee+'_APR2016'
-    OutSDMapsFilCWB = 'IMAGES/ERAOBS3climSDdiffs_mapdiffs_CWB_'+typee+'_APR2016'
-    OutSDLatsFilDPD = 'IMAGES/ERAOBS3climSDdiffs_latdiffs_DPD_'+typee+'_APR2016'
-    OutSDMapsFilDPD = 'IMAGES/ERAOBS3climSDdiffs_mapdiffs_DPD_'+typee+'_APR2016'
+    OutSDLatsFilAT = 'IMAGES/ERAOBSclimSDdiffs_latdiffs_AT_'+typee+'_'+nowmon+nowyear
+    OutSDMapsFilAT = 'IMAGES/ERAOBSclimSDdiffs_mapdiffs_AT_'+typee+'_'+nowmon+nowyear
+    OutSDLatsFilDPT = 'IMAGES/ERAOBSclimSDdiffs_latdiffs_DPT_'+typee+'_'+nowmon+nowyear
+    OutSDMapsFilDPT = 'IMAGES/ERAOBSclimSDdiffs_mapdiffs_DPT_'+typee+'_'+nowmon+nowyear
+    OutSDLatsFilSHU = 'IMAGES/ERAOBSclimSDdiffs_latdiffs_SHU_'+typee+'_'+nowmon+nowyear
+    OutSDMapsFilSHU = 'IMAGES/ERAOBSclimSDdiffs_mapdiffs_SHU_'+typee+'_'+nowmon+nowyear
+    OutSDLatsFilVAP = 'IMAGES/ERAOBSclimSDdiffs_latdiffs_VAP_'+typee+'_'+nowmon+nowyear
+    OutSDMapsFilVAP = 'IMAGES/ERAOBSclimSDdiffs_mapdiffs_VAP_'+typee+'_'+nowmon+nowyear
+    OutSDLatsFilCRH = 'IMAGES/ERAOBSclimSDdiffs_latdiffs_CRH_'+typee+'_'+nowmon+nowyear
+    OutSDMapsFilCRH = 'IMAGES/ERAOBSclimSDdiffs_mapdiffs_CRH_'+typee+'_'+nowmon+nowyear
+    OutSDLatsFilCWB = 'IMAGES/ERAOBSclimSDdiffs_latdiffs_CWB_'+typee+'_'+nowmon+nowyear
+    OutSDMapsFilCWB = 'IMAGES/ERAOBSclimSDdiffs_mapdiffs_CWB_'+typee+'_'+nowmon+nowyear
+    OutSDLatsFilDPD = 'IMAGES/ERAOBSclimSDdiffs_latdiffs_DPD_'+typee+'_'+nowmon+nowyear
+    OutSDMapsFilDPD = 'IMAGES/ERAOBSclimSDdiffs_mapdiffs_DPD_'+typee+'_'+nowmon+nowyear
     
     # create empty arrays for lats
     lats = np.arange(180,0,-1)-90.5
@@ -208,39 +213,28 @@ def main(argv):
     ERADPD = np.array(clim.variables['dpd2m_clims'][:])
     ERADPDsd = np.array(clim.variables['dpd2m_stdevs'][:])
     
-    # read in OBS ncs
-    # THESE FILES HAVE THEIR LATS FROM -90 to 90!!!
-    clim = Dataset(INDIR+InOBSclim)
-    OBSAT = np.array(clim.variables['marine_air_temperature'][:])
-    OBSDPT = np.array(clim.variables['dew_point_temperature'][:])
-    OBSSHU = np.array(clim.variables['specific_humidity'][:])
-    OBSVAP = np.array(clim.variables['vapor_pressure'][:])
-    OBSCRH = np.array(clim.variables['relative_humidity'][:])
-    OBSCWB = np.array(clim.variables['wet_bulb_temperature'][:])
-    OBSDPD = np.array(clim.variables['dew_point_depression'][:])
-#    OBSAT = OBSAT[:,::-1,:] # flips the rows (lats)
-#    OBSDPT = OBSDPT[:,::-1,:]
-#    OBSSHU = OBSSHU[:,::-1,:]
-#    OBSVAP = OBSVAP[:,::-1,:]
-#    OBSCRH = OBSCRH[:,::-1,:]
-#    OBSCWB = OBSCWB[:,::-1,:]
-#    OBSDPD = OBSDPD[:,::-1,:]
-
-    clim = Dataset(INDIR+InOBSsd)
-    OBSATsd = np.array(clim.variables['marine_air_temperature'][:])
-    OBSDPTsd = np.array(clim.variables['dew_point_temperature'][:])
-    OBSSHUsd = np.array(clim.variables['specific_humidity'][:])
-    OBSVAPsd = np.array(clim.variables['vapor_pressure'][:])
-    OBSCRHsd = np.array(clim.variables['relative_humidity'][:])
-    OBSCWBsd = np.array(clim.variables['wet_bulb_temperature'][:])
-    OBSDPDsd = np.array(clim.variables['dew_point_depression'][:])
-#    OBSATsd = OBSATsd[:,::-1,:] # flips the rows (lats)
-#    OBSDPTsd = OBSDPTsd[:,::-1,:]
-#    OBSSHUsd = OBSSHUsd[:,::-1,:]
-#    OBSVAPsd = OBSVAPsd[:,::-1,:]
-#    OBSCRHsd = OBSCRHsd[:,::-1,:]
-#    OBSCWBsd = OBSCWBsd[:,::-1,:]
-#    OBSDPDsd = OBSDPDsd[:,::-1,:]
+    # read in OBS ncs - these files have their lats from 90 to -90
+    clim = Dataset(INDIR+InOBSclimAT)
+    OBSAT = np.array(clim.variables['t2m_clims'][:])
+    OBSATsd = np.array(clim.variables['t2m_stdevs'][:])
+    clim = Dataset(INDIR+InOBSclimDPT)
+    OBSDPT = np.array(clim.variables['td2m_clims'][:])
+    OBSDPTsd = np.array(clim.variables['td2m_stdevs'][:])
+    clim = Dataset(INDIR+InOBSclimSHU)
+    OBSSHU = np.array(clim.variables['q2m_clims'][:])
+    OBSSHUsd = np.array(clim.variables['q2m_stdevs'][:])
+    clim = Dataset(INDIR+InOBSclimVAP)
+    OBSVAP = np.array(clim.variables['e2m_clims'][:])
+    OBSVAPsd = np.array(clim.variables['e2m_stdevs'][:])
+    clim = Dataset(INDIR+InOBSclimCRH)
+    OBSCRH = np.array(clim.variables['rh2m_clims'][:])
+    OBSCRHsd = np.array(clim.variables['rh2m_stdevs'][:])
+    clim = Dataset(INDIR+InOBSclimCWB)
+    OBSCWB = np.array(clim.variables['tw2m_clims'][:])
+    OBSCWBsd = np.array(clim.variables['tw2m_stdevs'][:])
+    clim = Dataset(INDIR+InOBSclimDPD)
+    OBSDPD = np.array(clim.variables['dpd2m_clims'][:])
+    OBSDPDsd = np.array(clim.variables['dpd2m_stdevs'][:])
     
     del clim
     
