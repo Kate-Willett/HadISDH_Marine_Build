@@ -1,6 +1,10 @@
 HadISDHSwitch,True
+HardLimits,5.5
+#HardLimits,5.0
 #data_base_dir,/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/ERAclimNBC/
-data_base_dir,/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/OBSclim1NBC/
+#data_base_dir,/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/OBSclim1NBC/
+data_base_dir,/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/OBSclim1NBC/THRESH5_5/
+#data_base_dir,/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/OBSclim1NBC/THRESH5/
 #data_base_dir,/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/OBSclim2NBC/
 #output_suffix,ERAclimNBC
 output_suffix,OBSclim1NBC

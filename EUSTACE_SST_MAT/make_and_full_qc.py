@@ -10,6 +10,14 @@ make_and_full_qc.py invoked by typing::
 This builds an ascii database for the chosen years. The location 
 of the data base, the locations of the climatology files are 
 all to be specified in the configuration files.
+
+# KW edited to kick out silly values and not bother passing them through.
+
+# KW edited to only pass through those obs that have an AT, DPT and humidity climatology /standard devation present
+
+# KW edited to read in threshold limits from the configuration.txt file. If these are not provided in the config file then defaults
+are used. This is to allow me to play with the thresholds - knowing that obs clims and stdevs are interpolated from monthly so stdevs 
+at least are likely too low! This also involves changes to base_qc_report, ex.mdsKATE_buddy_check and ex.get_buddy_limits
 '''
 
 import gzip
@@ -26,10 +34,13 @@ import sys, getopt
 import time
 # KW Added for debugging
 import pdb # pdb.set_trace() or c
+# KW Added to convert a string to float
+import numpy as np
 
-def base_qc_report(rep):
+def base_qc_report(rep,HardLimit):
     '''
     Take a marine report and do some base qc on it.
+    HardLimit: either a float value or None - this is a given maximum limit for clim test
     '''
 #Basic positional QC
     rep.set_qc('POS', 'pos', 
@@ -95,12 +106,17 @@ def base_qc_report(rep):
 #    rep.set_qc('AT', 'clim', 
 #               qc.climatology_check(rep.getvar('AT'), rep.getnorm('AT'), 10.0))
     if (qc.value_check(rep.getstdev('AT')) == 0): 
+# KW check for HardLimit or set to default of 4.5
+        if HardLimit != None:
+	    MyMulti = HardLimit
+	else:
+	    MyMulti = 4.5
         if (rep.getstdev('AT') > 4.):
-	    atlimit = 4.5*4	    
+	    atlimit = MyMulti*4	    
 	elif ((rep.getstdev('AT') >= 1.) & (rep.getstdev('AT') <= 4.)):
-	    atlimit = 4.5*rep.getstdev('AT')
+	    atlimit = MyMulti*rep.getstdev('AT')
 	else: 
-	    atlimit = 4.5*1.
+	    atlimit = MyMulti*1.
     else:
         atlimit = 10.
     rep.set_qc('AT', 'clim', 
@@ -115,12 +131,17 @@ def base_qc_report(rep):
 #    rep.set_qc('DPT', 'clim', 
 #               qc.climatology_check(rep.getvar('DPT'), rep.getnorm('DPT'), 10.0))
     if (qc.value_check(rep.getstdev('DPT')) == 0): 
+# KW check for HardLimit or set to default of 4.5
+        if HardLimit != None:
+	    MyMulti = HardLimit
+	else:
+	    MyMulti = 4.5
         if (rep.getstdev('DPT') > 4.):
-	    dptlimit = 4.5*4.	    # greater than clim+/-10deg (13.5 deg)
+	    dptlimit = MyMulti*4.	    # greater than clim+/-10deg (13.5 deg)
 	elif ((rep.getstdev('DPT') >= 1.) & (rep.getstdev('DPT') <= 4)):
-	    dptlimit = 4.5*rep.getstdev('DPT')
+	    dptlimit = MyMulti*rep.getstdev('DPT')
 	else: 
-	    dptlimit = 4.5*1. 	    # less than clim+/- 10deg (2.25 deg)
+	    dptlimit = MyMulti*1. 	    # less than clim+/- 10deg (2.25 deg)
     else:
         dptlimit = 10.
     rep.set_qc('DPT', 'clim', 
@@ -342,6 +363,14 @@ def main(argv):
 # KW added standard deviation files for AT and DPT - for MDSKate_buddy_check
     at_stdev_climatology_file  = config['AT_stdev_climatology']
     dpt_stdev_climatology_file  = config['DPT_stdev_climatology']
+    
+# KW Added a look for hardwired limits passed through the config file or set to None
+    if ('HardLimits' in config): 
+	HardLimit = np.float(config['HardLimits'])
+    else:
+        HardLimit = None	   
+    print "This is the provided HardLimit: ",HardLimit
+    #pdb.set_trace()
 
     print 'SST climatology =', sst_climatology_file
     print 'NMAT climatology =', nmat_climatology_file
@@ -669,7 +698,9 @@ def main(argv):
                             rep.data['HR'] = 0
                             rep.calculate_dt()
 
-                        rep = base_qc_report(rep)
+# KW Added a HardLimit variable that has to be passed to the base_qc_report
+                        #rep = base_qc_report(rep)
+                        rep = base_qc_report(rep,HardLimit)
 
 #			print(rep.getvar('ID'),rep.getvar('AT'),rep.getvar('DPT'),rep.getvar('SHU'),rep.getvar('CRH'),rep.getvar('VAP'))
 #                        pdb.set_trace()
@@ -813,7 +844,8 @@ def main(argv):
 # rather than the average and only applies buddy check to candidate month
 # ALSO = we now use clim T stdevs from ERA (will eventually be obs+ERA combo?)
 #        passes.mds_buddy_check('AT', sst_pentad_stdev)
-        passes.mdsKATE_buddy_check('AT',  at_pentad_stdev, year, month)
+# KW Added a HardLimit variable that has to be passed to mdsKATE_buddy_check for the stdev multiplier
+        passes.mdsKATE_buddy_check('AT',  at_pentad_stdev, year, month, HardLimit)
 
 # KW - all fails (reps) are set to have a flag of 0 which means to pass the buddy checks.because there is no point in spending
 # further time buddy checking them, same as for track checks

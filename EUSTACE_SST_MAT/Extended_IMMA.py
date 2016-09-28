@@ -1463,7 +1463,9 @@ class Super_Ob:
         return temp_anom, temp_nobs
 
 # KW Kate changed pentad_stdev to all_pentad_stdev which is a 73 layered field
-    def get_buddy_limits(self, all_pentad_stdev):
+    def get_buddy_limits(self, all_pentad_stdev, HardLimit):
+        ''' HardLimit: a provided highest threshold for multiplying stdevs if not None '''
+	''' if None then use default 4, 3.5 , 3, 2.5 '''
         
     #for each populated grid box
         for key in self.grid:
@@ -1489,13 +1491,22 @@ class Super_Ob:
 
                 if len(temp_anom) > 0:
                 
+# KW Set up multipliers based on HardLimit or default
+# KW check for HardLimit or set to default of 4.0, 3.5, 3.0, 2.5
+                    if HardLimit != None:
+	                TheMultpliers = [HardLimit,HardLimit-0.5,HardLimit-1.0,HardLimit-1.5]
+	            else:
+	                TheMultpliers = [4.0, 3.5, 3.0, 2.5]		
+		
                     self.grid[key][3] = np.mean(temp_anom)
                     total_nobs = np.sum(temp_nobs)
                     
                     self.grid[key][4] = \
                     get_threshold_multiplier(total_nobs, 
                                              [0, 5, 15, 100], 
-                                             [4.0, 3.5, 3.0, 2.5])*stdev
+# KW New line with TheMultipliers
+                                             TheMultipliers)*stdev
+                                             #[4.0, 3.5, 3.0, 2.5])*stdev
          
                     match_not_found = False
                     assert total_nobs != 0, "total number of observations is zero"
@@ -1507,6 +1518,13 @@ class Super_Ob:
                                                                     key)
                 
                 if len(temp_anom) > 0:
+
+# KW Set up multipliers based on HardLimit or default
+# KW check for HardLimit or set to default of 4.0, 3.5, 3.0, 2.5
+                    if HardLimit != None:
+	                TheMultpliers = [HardLimit]
+	            else:
+	                TheMultpliers = [4.0]
                     
                     self.grid[key][3] = np.mean(temp_anom)
                     total_nobs = np.sum(temp_nobs)
@@ -1514,7 +1532,9 @@ class Super_Ob:
                     self.grid[key][4] = \
                     get_threshold_multiplier(total_nobs, 
                                              [0], 
-                                             [4.0])*stdev
+# KW New line with TheMultipliers
+                                             TheMultipliers)*stdev
+                                             #[4.0])*stdev
                     
                     match_not_found = False
                     assert total_nobs != 0, "total number of observations is zero"
@@ -1526,6 +1546,13 @@ class Super_Ob:
                                                                     key)
                 
                 if len(temp_anom) > 0:
+
+# KW Set up multipliers based on HardLimit or default
+# KW check for HardLimit or set to default of 4.0, 3.5, 3.0, 2.5
+                    if HardLimit != None:
+	                TheMultpliers = [HardLimit,HardLimit-0.5,HardLimit-1.0,HardLimit-1.5]
+	            else:
+	                TheMultpliers = [4.0, 3.5, 3.0, 2.5]		
                     
                     self.grid[key][3] = np.mean(temp_anom)
                     total_nobs = np.sum(temp_nobs)
@@ -1533,7 +1560,9 @@ class Super_Ob:
                     self.grid[key][4] = \
                     get_threshold_multiplier(total_nobs, 
                                              [0, 5, 15, 100],
-                                             [4.0, 3.5, 3.0, 2.5])*stdev
+# KW New line with TheMultipliers
+                                             TheMultipliers)*stdev
+                                             #[4.0, 3.5, 3.0, 2.5])*stdev
                     
                     match_not_found = False
                     assert total_nobs != 0, "total number of observations is zero"
@@ -1545,6 +1574,13 @@ class Super_Ob:
                                                                     key)
                 
                 if len(temp_anom) > 0:
+
+# KW Set up multipliers based on HardLimit or default
+# KW check for HardLimit or set to default of 4.0, 3.5, 3.0, 2.5
+                    if HardLimit != None:
+	                TheMultpliers = [HardLimit]
+	            else:
+	                TheMultpliers = [4.0]
     
                     self.grid[key][3] = np.mean(temp_anom)
                     total_nobs = np.sum(temp_nobs)
@@ -1552,7 +1588,9 @@ class Super_Ob:
                     self.grid[key][4] = \
                     get_threshold_multiplier(total_nobs,
                                              [0], 
-                                             [4.0])*stdev
+# KW New line with TheMultipliers
+                                             TheMultipliers)*stdev
+                                             #[4.0])*stdev
                     
                     match_not_found = False
                     assert total_nobs != 0  , "total number of observations is zero"                    
@@ -1685,11 +1723,12 @@ class Deck:
 # This uses a stdev field that varies with each pentad seasonally - so has a search on the right pentad
 # The stdev fields are currently from 1by1 pentad ERA-Interim - so most likely underestimates of the standard deviation!
 # WE'RE LIKELY TO REMOVE GOOD DATA!!!
-
-    def mdsKATE_buddy_check(self, intype, all_pentad_stdev, thisyear, thismonth):
+# KW Added a HardLimit variable to this function for multiplying stdevs
+    def mdsKATE_buddy_check(self, intype, all_pentad_stdev, thisyear, thismonth, HardLimit):
         ''' all_pentad_stdev: a lon,lat,73 pentad field of climatological standard deviations of all obs (ERA 1by1 daily grids) going into pentad clim '''
         ''' thisyear: the candidate year '''
         ''' thismonth: the candidate month '''
+	''' HardLimit: the multiplier for buddy limits or None - use default 4,3.5,3,2.5'''
 
 # KW Added capability to cope with DPT
         assert (intype == 'SST' or intype == 'AT' or intype == 'DPT'),intype
@@ -1710,7 +1749,8 @@ class Deck:
 # At least this has some seasonal variability
 #        pdb.set_trace()
 # So i've changed pentad_stdev to all_pentad_stdev
-        grid.get_buddy_limits(all_pentad_stdev)
+# KW Added a HardLimit variable (passed from main program/config file) to be used if not None
+        grid.get_buddy_limits(all_pentad_stdev,HardLimit)
 
     #finally loop over all reports and update buddy QC
         for this_report in self.reps:
