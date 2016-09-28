@@ -584,44 +584,82 @@ def main(argv):
 			    rec = IMMA()
 			    continue
 					
+# Get climatologies for all variables (for outlier test and anomaly creation [done in buddy check and for final print out] - if AT or DPT are missing (None) then do not carry on processing that variable
+# If we're using OBSclims then there are missing data which will be returned as None (NOT A STRING!!!)
+# KW Added bit to find and store climatological stdev for AT and DPT - for outlier test 
                         rep_sst_clim = get_clim(rep, climsst)
                         rep.add_climate_variable('SST', rep_sst_clim)
 
 # KW Set to read in ERA (or OBS+ERA) clim file for AT (not NMAT)
 #                        rep_mat_clim = get_clim(rep, climnmat)
                         rep_mat_clim = get_clim(rep, climat)
-                        rep.add_climate_variable('AT', rep_mat_clim)
-# KW Added bit to find and store climatological stdev for each rep
                         rep_mat_stdev = get_clim(rep, at_pentad_stdev)
-                        rep.add_stdev_variable('AT', rep_mat_stdev)
-
-# KW Get climatologies for the humidity variables so that you can create anomalies later
-                        rep_dpt_clim = get_clim(rep, climdpt)
-                        rep.add_climate_variable('DPT', rep_dpt_clim)
-# KW Added bit to find and store climatological stdev for each rep
-                        rep_dpt_stdev = get_clim(rep, dpt_pentad_stdev)
-                        rep.add_stdev_variable('DPT', rep_dpt_stdev)
+			#print(rep_mat_clim,rep_mat_stdev)
+			#pdb.set_trace()
 ## KW added to test clim value pulled out
 #			print(rep.getvar('UID'),rep.getvar('AT'),rep_mat_clim,rep.getnorm('AT'))			
 #			print(rep.getvar('UID'),rep.getvar('AT'),rep_mat_stdev,rep.getstdev('AT'))			
 #			if (count == 10):
 #			    pdb.set_trace() 
-## KW This seems to be pulling out the correct climatological value (so why is the clim check and anomaly value wrong???)			    
+## KW This seems to be pulling out the correct climatological value 		    
+                        if ((rep_mat_clim == None) | (rep_mat_stdev == None)):
+			    del rep
+			    # create a new rec because we're skipping the end of the WHILE loop
+			    rec = IMMA()
+			    continue
+			else:			
+                            rep.add_climate_variable('AT', rep_mat_clim)
+                            rep.add_stdev_variable('AT', rep_mat_stdev)
+
+                        rep_dpt_clim = get_clim(rep, climdpt)
+                        rep_dpt_stdev = get_clim(rep, dpt_pentad_stdev)
+                        if ((rep_dpt_clim == None) | (rep_dpt_stdev == None)):
+			    del rep
+			    rec = IMMA()
+			    continue
+			else:			
+                            rep.add_climate_variable('DPT', rep_dpt_clim)
+                            rep.add_stdev_variable('DPT', rep_dpt_stdev)
 
                         rep_shu_clim = get_clim(rep, climshu)
-                        rep.add_climate_variable('SHU', rep_shu_clim)
+                        if (rep_shu_clim == None) : # if there is no SHU then either an AT or DPT would be missing I think so loop shoudld already be stopped
+			    del rep
+			    rec = IMMA()
+			    continue
+			else:			
+                            rep.add_climate_variable('SHU', rep_shu_clim)
 
 			rep_vap_clim = get_clim(rep, climvap)
-                        rep.add_climate_variable('VAP', rep_vap_clim)
+                        if (rep_vap_clim == None) : # if there is no SHU then either an AT or DPT would be missing I think so loop shoudld already be stopped
+			    del rep
+			    rec = IMMA()
+			    continue
+			else:			
+                            rep.add_climate_variable('VAP', rep_vap_clim)
 
 		        rep_crh_clim = get_clim(rep, climcrh)
-                        rep.add_climate_variable('CRH', rep_crh_clim)
+                        if (rep_crh_clim == None) : # if there is no SHU then either an AT or DPT would be missing I think so loop shoudld already be stopped
+			    del rep
+			    rec = IMMA()
+			    continue
+			else:			
+                            rep.add_climate_variable('CRH', rep_crh_clim)
 
 			rep_cwb_clim = get_clim(rep, climcwb)
-                        rep.add_climate_variable('CWB', rep_cwb_clim)
+                        if (rep_cwb_clim == None) : # if there is no SHU then either an AT or DPT would be missing I think so loop shoudld already be stopped
+			    del rep
+			    rec = IMMA()
+			    continue
+			else:			
+                            rep.add_climate_variable('CWB', rep_cwb_clim)
 
 			rep_dpd_clim = get_clim(rep, climdpd)
-                        rep.add_climate_variable('DPD', rep_dpd_clim)
+                        if (rep_dpd_clim == None) : # if there is no SHU then either an AT or DPT would be missing I think so loop shoudld already be stopped
+			    del rep
+			    rec = IMMA()
+			    continue
+			else:			
+                            rep.add_climate_variable('DPD', rep_dpd_clim)
 					
 #Deck 701 has a whole bunch of otherwise good obs with missing Hours.
 #Set to 0000UTC and recalculate the ob time
