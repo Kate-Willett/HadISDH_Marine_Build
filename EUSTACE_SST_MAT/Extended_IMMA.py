@@ -1494,9 +1494,9 @@ class Super_Ob:
 # KW Set up multipliers based on HardLimit or default
 # KW check for HardLimit or set to default of 4.0, 3.5, 3.0, 2.5
                     if HardLimit != None:
-	                TheMultpliers = [HardLimit,HardLimit-0.5,HardLimit-1.0,HardLimit-1.5]
+	                TheMultipliers = [HardLimit,HardLimit-0.5,HardLimit-1.0,HardLimit-1.5]
 	            else:
-	                TheMultpliers = [4.0, 3.5, 3.0, 2.5]		
+	                TheMultipliers = [4.0, 3.5, 3.0, 2.5]		
 		
                     self.grid[key][3] = np.mean(temp_anom)
                     total_nobs = np.sum(temp_nobs)
@@ -1522,9 +1522,9 @@ class Super_Ob:
 # KW Set up multipliers based on HardLimit or default
 # KW check for HardLimit or set to default of 4.0, 3.5, 3.0, 2.5
                     if HardLimit != None:
-	                TheMultpliers = [HardLimit]
+	                TheMultipliers = [HardLimit]
 	            else:
-	                TheMultpliers = [4.0]
+	                TheMultipliers = [4.0]
                     
                     self.grid[key][3] = np.mean(temp_anom)
                     total_nobs = np.sum(temp_nobs)
@@ -1550,9 +1550,9 @@ class Super_Ob:
 # KW Set up multipliers based on HardLimit or default
 # KW check for HardLimit or set to default of 4.0, 3.5, 3.0, 2.5
                     if HardLimit != None:
-	                TheMultpliers = [HardLimit,HardLimit-0.5,HardLimit-1.0,HardLimit-1.5]
+	                TheMultipliers = [HardLimit,HardLimit-0.5,HardLimit-1.0,HardLimit-1.5]
 	            else:
-	                TheMultpliers = [4.0, 3.5, 3.0, 2.5]		
+	                TheMultipliers = [4.0, 3.5, 3.0, 2.5]		
                     
                     self.grid[key][3] = np.mean(temp_anom)
                     total_nobs = np.sum(temp_nobs)
@@ -1578,9 +1578,9 @@ class Super_Ob:
 # KW Set up multipliers based on HardLimit or default
 # KW check for HardLimit or set to default of 4.0, 3.5, 3.0, 2.5
                     if HardLimit != None:
-	                TheMultpliers = [HardLimit]
+	                TheMultipliers = [HardLimit]
 	            else:
-	                TheMultpliers = [4.0]
+	                TheMultipliers = [4.0]
     
                     self.grid[key][3] = np.mean(temp_anom)
                     total_nobs = np.sum(temp_nobs)
@@ -1694,7 +1694,8 @@ class Deck:
                          rep.getvar('YR'),  rep.getvar('MO'), 
                          rep.getvar('DY'),  rep.getanom(intype))
         grid.take_average()
-        grid.get_buddy_limits(pentad_stdev)
+# KW Added in the HardLimit which is either a float or None	
+        grid.get_buddy_limits(pentad_stdev, HardLimit)
 
     #finally loop over all reports and update buddy QC
         for this_report in self.reps:
@@ -1750,7 +1751,7 @@ class Deck:
 #        pdb.set_trace()
 # So i've changed pentad_stdev to all_pentad_stdev
 # KW Added a HardLimit variable (passed from main program/config file) to be used if not None
-        grid.get_buddy_limits(all_pentad_stdev,HardLimit)
+        grid.get_buddy_limits(all_pentad_stdev, HardLimit)
 
     #finally loop over all reports and update buddy QC
         for this_report in self.reps:

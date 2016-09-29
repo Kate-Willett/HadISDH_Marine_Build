@@ -894,8 +894,9 @@ def main(argv):
 # with a 1 where it is too great/fails.
 #        passes.bayesian_buddy_check('DPT', sst_stdev_1, sst_stdev_2, sst_stdev_3)
 #        passes.mds_buddy_check('DPT', dpt_pentad_stdev)
+# KW Added a HardLimit variable that has to be passed to mdsKATE_buddy_check for the stdev multiplier
 # KW Using Kate's version of MDS buddy check now which has a stdev for each pentad and only checks candidate month
-        passes.mdsKATE_buddy_check('DPT', dpt_pentad_stdev, year, month)
+        passes.mdsKATE_buddy_check('DPT', dpt_pentad_stdev, year, month, HardLimit)
 
 # KW - all fails (reps) are set to have a flag of 0 which means to pass the buddy checks.because there is no point in spending
 # further time buddy checking them, same as for track checks
