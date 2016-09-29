@@ -45,6 +45,17 @@ Plots to appear in
 VERSION/RELEASE NOTES
 -----------------------
 
+Version 2 (29 Sep 2016) Kate Willett
+---------
+ 
+Enhancements
+ 
+Changes
+ 
+Bug fixes
+Latitudes should always be divided by 100 regardless of anomalies or absolutes so I've hard wired this in.
+
+
 Version 1 (release date)
 ---------
  
@@ -94,8 +105,11 @@ def values_vs_lat(var, lats, data, qc_flags, these_flags, filename, multiplier =
 
     # all data
     plt.subplot(1,2,1)
-    plt.scatter(data/multiplier, lats/multiplier, c = 'k', marker = '.')
-    plt.scatter(dirty_data/multiplier, lats/multiplier, c = 'r', marker = '.')
+# KATE modified - lats should only be div 100, not 10 (absolute.multiplier) so hard wired to 100.
+    plt.scatter(data/multiplier, lats/100., c = 'gold', marker = '.') # KATE changed to gold
+    plt.scatter(dirty_data/multiplier, lats/100., c = 'r', marker = '.')
+    #plt.scatter(data/multiplier, lats/multiplier, c = 'k', marker = '.')
+    #plt.scatter(dirty_data/multiplier, lats/multiplier, c = 'r', marker = '.')
 
     plt.ylim([-90,90])
     plt.yticks(np.arange(-90,120,30), fontsize = 12)
@@ -106,7 +120,9 @@ def values_vs_lat(var, lats, data, qc_flags, these_flags, filename, multiplier =
 
     # clean data
     plt.subplot(1,2,2)
-    plt.scatter(clean_data/multiplier, lats/multiplier, c = 'b', marker = '.')
+# KATE modified - lats should only be div 100, not 10 (absolute.multiplier) so hard wired to 100.
+    plt.scatter(clean_data/multiplier, lats/100., c = 'b', marker = '.')
+    #plt.scatter(clean_data/multiplier, lats/multiplier, c = 'b', marker = '.')
 
     plt.ylim([-90,90])
     plt.yticks(np.arange(-90,120,30), fontsize = 12)
