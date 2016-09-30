@@ -46,6 +46,19 @@ Plots to appear in
 VERSION/RELEASE NOTES
 -----------------------
 
+Version 2 (29 September 2016) Kate Willett
+---------
+ 
+Enhancements
+Can now cope with the three iteration approach
+Look for # KATE modified
+         ...
+	 # end
+ 
+Changes
+ 
+Bug fixes
+
 Version 1 (release date)
 ---------
  
@@ -158,19 +171,35 @@ def write_ncdf_ts(times, OBS_ORDER, filename, annual = False, monthly = False, d
 
 #***************************************
 #***************************************
-def make_timeseries(suffix = "relax", doQC = False, doBC = False):
+# KATE modified
+def make_timeseries(suffix = "relax", doQC = False, doQC1it = False, doQC2it = False, doQC3it = False, doBC = False):
+#def make_timeseries(suffix = "relax", doQC = False, doBC = False):
+# end
     '''
     Make the timeseries - plots and netCDF files
 
     :param str suffix: "relax" or "strict" criteria
     :param bool doQC: incorporate the QC flags or not
+# KATE modified
+    :param bool doQC1it: incorporate the first iteration QC flags or not
+    :param bool doQC2it: incorporate the second iteration QC flags or not
+    :param bool doQC3it: incorporate the third iteration QC flags or not
+# end
     :param bool doBC: work on the bias corrected data
 
     :returns:
     '''
-    settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC)
+# KATE modified
+    settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC, doQC1it = doQC1it, doQC2it = doQC2it, doQC3it = doQC3it)
+    #settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC)
+# end
 
     print "Do QC = {}".format(doQC)
+# KATE modified
+    print "Do QC1it = {}".format(doQC1it)
+    print "Do QC2it = {}".format(doQC2it)
+    print "Do QC3it = {}".format(doQC3it)
+# end
     print "Do BC = {}".format(doBC)
 
 
@@ -179,8 +208,10 @@ def make_timeseries(suffix = "relax", doQC = False, doBC = False):
     watermarkstring="/".join(os.getcwd().split('/')[4:])+'/'+os.path.basename( __file__ )+"   "+dt.datetime.strftime(dt.datetime.now(), "%d-%b-%Y %H:%M")
 
     # run on the actuals (which include anomalies from ERA) and the anomalies (calculated from obs-actuals, but also include the anomalies from ERA)
-    for version in ["", "_anomalies"]:
-
+# KATE modified to add new file name bit '_renorm19812010'
+    for version in ["", "_renorm19812010_anomalies"]:
+    #for version in ["", "_anomalies"]:
+# end
         if version == "":
             print "5x5 monthly Standard"
         elif version == "_anomalies":
@@ -191,7 +222,8 @@ def make_timeseries(suffix = "relax", doQC = False, doBC = False):
 
             filename = "{}/{}_5x5_monthly{}_from_daily_{}_{}.nc".format(settings.DATA_LOCATION, settings.OUTROOT, version, period, suffix) 
 
-            ncdf_file = ncdf.Dataset(filename,'r', format='NETCDF4')
+            print filename
+	    ncdf_file = ncdf.Dataset(filename,'r', format='NETCDF4')
 
             lat_centres = ncdf_file.variables["latitude"]
             lon_centres = ncdf_file.variables["longitude"]
@@ -284,11 +316,13 @@ def make_timeseries(suffix = "relax", doQC = False, doBC = False):
 
             # write output files (annual and monthly)
             filename = "{}/{}_5x5_monthly{}_from_daily_{}_{}_ts_annual.nc".format(settings.DATA_LOCATION, settings.OUTROOT, version, period, suffix) 
+
             if os.path.exists(filename):
                 os.remove(filename)
             write_ncdf_ts(annual_times, OBS_ORDER, filename, annual = True, do_zip = True)
 
             filename = "{}/{}_5x5_monthly{}_from_daily_{}_{}_ts_monthly.nc".format(settings.DATA_LOCATION, settings.OUTROOT, version, period, suffix) 
+
             if os.path.exists(filename):
                 os.remove(filename)
             write_ncdf_ts(monthly_times, OBS_ORDER, filename, monthly = True, do_zip = True)
@@ -381,13 +415,23 @@ if __name__=="__main__":
                         help='"relax" or "strict" completeness, default = relax')
     parser.add_argument('--doQC', dest='doQC', action='store_true', default = False,
                         help='process the QC information, default = False')
+# KATE modified
+    parser.add_argument('--doQC1it', dest='doQC1it', action='store_true', default = False,
+                        help='process the 1st iteration QC information, default = False')
+    parser.add_argument('--doQC2it', dest='doQC2it', action='store_true', default = False,
+                        help='process the 2nd iteration QC information, default = False')
+    parser.add_argument('--doQC3it', dest='doQC3it', action='store_true', default = False,
+                        help='process the 3rd iteration QC information, default = False')
+# end
     parser.add_argument('--doBC', dest='doBC', action='store_true', default = False,
                         help='process the bias corrected data, default = False')
     args = parser.parse_args()
 
 
-    make_timeseries(suffix = str(args.suffix), doQC = args.doQC, doBC = args.doBC)
-
+# KATE modified
+    make_timeseries(suffix = str(args.suffix), doQC = args.doQC, doQC1it = args.doQC1it, doQC2it = args.doQC2it, doQC3it = args.doQC3it, doBC = args.doBC)
+    #make_timeseries(suffix = str(args.suffix), doQC = args.doQC, doBC = args.doBC)
+# end
 
 # END
 # ************************************************************************
