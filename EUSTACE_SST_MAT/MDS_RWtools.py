@@ -202,7 +202,7 @@ TheDelimitersUnc=(10,8,8,8,8,8,8,8,
 #************************************************************************
 def ReadMDSstandard(TheYear,TheMonth,TheType):
 
-    InDir = '/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/'+TheType+'/'
+    InDir = '/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/'+TheType+'/' # THRESH5_5
     InFil = 'new_suite_'+TheYear+TheMonth+'_'+TheType+'.txt'
     
     TheFilee = InDir+InFil
