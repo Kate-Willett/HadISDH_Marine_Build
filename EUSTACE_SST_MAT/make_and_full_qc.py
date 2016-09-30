@@ -121,6 +121,8 @@ def base_qc_report(rep,HardLimit):
         atlimit = 10.
     rep.set_qc('AT', 'clim', 
                qc.climatology_check(rep.getvar('AT'), rep.getnorm('AT'), atlimit))
+    #print('CLIMTEST: ',rep.getvar('AT'), rep.getnorm('AT'),rep.getstdev('AT'),qc.climatology_check(rep.getvar('AT'), rep.getnorm('AT'), HardLimit,dptlimit))	       
+    #pdb.set_trace()
     rep.set_qc('AT', 'nonorm', qc.no_normal_check(rep.getnorm('AT')))
 
 # KW Added QC for DPT
@@ -146,7 +148,8 @@ def base_qc_report(rep,HardLimit):
         dptlimit = 10.
     rep.set_qc('DPT', 'clim', 
                qc.climatology_check(rep.getvar('DPT'), rep.getnorm('DPT'), dptlimit))
-    #print('CLIMTEST: ',rep.getvar('DPT'), rep.getnorm('DPT'),qc.climatology_check(rep.getvar('DPT'), rep.getnorm('DPT'), 10.0))	       
+    #print('CLIMTEST: ',rep.getvar('DPT'), rep.getnorm('DPT'),rep.getstdev('DPT'),qc.climatology_check(rep.getvar('DPT'), rep.getnorm('DPT'), HardLimit,dptlimit))	       
+    #pdb.set_trace()
     rep.set_qc('DPT', 'nonorm', qc.no_normal_check(rep.getnorm('DPT')))
 # KW New QC tests specifically for humidity
     rep.set_qc('DPT', 'ssat', qc.supersat_check(rep.getvar('DPT'),rep.getvar('AT')))
