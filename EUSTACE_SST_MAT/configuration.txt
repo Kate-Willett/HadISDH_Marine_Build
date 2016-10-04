@@ -8,7 +8,7 @@ data_base_dir,/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/OBSclim1NBC/THRESH5_5
 #data_base_dir,/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/OBSclim2NBC/
 #output_suffix,ERAclimNBC
 output_suffix,OBSclim1NBC
-#output_suffix,OBSclim1NBC
+#output_suffix,OBSclim2NBC
 data_base_host,eld256
 data_base_name,had_mdb
 ICOADS_dir,/project/earthobs/ICOADS/ICOADS.2.5.1/
