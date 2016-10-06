@@ -143,6 +143,10 @@ import MDS_RWtools as mds
 import set_paths_and_vars
 defaults = set_paths_and_vars.set()
 
+# Kate MODIFIED
+import pdb
+# end
+
 # KW #
 # Use of median vs mean #
 # Essentially we're using the average as a way of smoothing in time and space so ideally it would have influence from all viable values
@@ -261,7 +265,10 @@ def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = d
                 sys.exit(1)
 
 # KATE modified - seems to be an error with missing global name plots so have changed to settings.plots
-            if settings.plots and (year in [1973, 1983, 1993, 2003, 2013]):
+            # Choose this one to only output once per decade
+	    #if settings.plots and (year in [1973, 1983, 1993, 2003, 2013]):
+	    # Choose this one to output a plot for each month
+            if settings.plots:
             #if plots and (year in [1973, 1983, 1993, 2003, 2013]):
 # end
                 # plot the distribution of hours
@@ -278,10 +285,10 @@ def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = d
 
                 # only for a few of the variables
                 for variable in OBS_ORDER:
-                    if variable.name in ["dew_point_temperature", "specific_humidity", "relative_humidity", "dew_point_temperature_anomalies", "specific_humidity_anomalies", "relative_humidity_anomalies"]:
+                    if variable.name in ["marine_air_temperature", "dew_point_temperature", "specific_humidity", "relative_humidity", "marine_air_temperature_anomalies", "dew_point_temperature_anomalies", "specific_humidity_anomalies", "relative_humidity_anomalies"]:
 
-                        plot_qc_diagnostics.values_vs_lat(variable, lats, raw_obs[:, variable.column], raw_qc, these_flags, settings.PLOT_LOCATION + "qc_actuals_{}_{}{:02d}_{}.png".format(variable.name, year, month, suffix), multiplier = variable.multiplier, doBC = doBC)
- 
+                        #plot_qc_diagnostics.values_vs_lat(variable, lats, raw_obs[:, variable.column], raw_qc, these_flags, settings.PLOT_LOCATION + "qc_actuals_{}_{}{:02d}_{}.png".format(variable.name, year, month, suffix), multiplier = variable.multiplier, doBC = doBC)
+                        plot_qc_diagnostics.values_vs_lat_dist(variable, lats, raw_obs[:, variable.column], raw_qc, these_flags, settings.PLOT_LOCATION + "qc_actuals_{}_{}{:02d}_{}.png".format(variable.name, year, month, suffix), multiplier = variable.multiplier, doBC = doBC)
 
             # QC sub-selection
 # KATE modified
@@ -290,6 +297,11 @@ def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = d
 # end
                 print "Using {} as flags".format(these_flags)
                 mask = utils.process_qc_flags(raw_qc, these_flags, doBC = doBC)
+		print "All Obs: ",len(mask)
+		print "Good Obs: ",len(mask[np.where(mask == 0)])
+		print "Bad Obs: ",len(mask[np.where(mask == 1)])
+		pdb.set_trace()
+		
 
                 complete_mask = np.zeros(raw_obs.shape)
                 for i in range(raw_obs.shape[1]):
