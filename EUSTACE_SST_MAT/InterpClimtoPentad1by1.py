@@ -1400,7 +1400,7 @@ def main(argv):
     for opt, arg in opts:
         if opt == "--doWHAT":
             try:
-                typee = arg
+                doWHAT = arg
             except:
                 sys.exit("Failed: typee not a string")
         if opt == "--varee":
@@ -1419,8 +1419,8 @@ def main(argv):
         typee = 'OBSclim2BC'
     if (doWHAT == 'noQC'):
         typee = 'OBSclim2noQC'
-    print(doWHAT, varee,typee, typee2)    
-#    pdb.set_trace()
+    print(doWHAT, varee,typee)    
+    #pdb.set_trace()
     			
     mdi=-1e30    
 
