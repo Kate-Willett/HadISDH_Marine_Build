@@ -459,15 +459,20 @@ def main(argv):
 
             syr = str(readyear)
             smn = "%02d" % (readmonth)
-    
-            filename = icoads_dir+'/R2.5.1.'+syr+'.'+smn+'.gz'
+
+# KW THIS BIT IS FOR 2.5.0/1    
+#            filename = icoads_dir+'/R2.5.1.'+syr+'.'+smn+'.gz'
 # KW FOUND A BUG - changed 'year' to 'readyear' below because it was trying to 
 # read R2.5.2.2007.12.gz because 'year'=2008, 'month'=1
 # KW Now added a catch for 'recent' years - at present this is anything from 2015 onwards - data only available in IMMA (not IMMA2) format - no UID!
-            if ((readyear > 2007) & (readyear < 2015)):
-                filename = icoads_dir+'/R2.5.2.'+syr+'.'+smn+'.gz'
+#            if ((readyear > 2007) & (readyear < 2015)):
+#                filename = icoads_dir+'/R2.5.2.'+syr+'.'+smn+'.gz'
+#            if (readyear >= 2015):
+#                filename = recent_icoads_dir+'/IMMA.'+syr+'.'+smn+'.gz'
+# KW THIS BIT IS FOR 3.0.0/1
+            filename = icoads_dir+'/IMMA1_R3.0.0_'+syr+'-'+smn+'.gz'
             if (readyear >= 2015):
-                filename = recent_icoads_dir+'/IMMA.'+syr+'.'+smn+'.gz'
+                filename = recent_icoads_dir+'/IMMA1_R3.0.1_'+syr+'-'+smn+'.gz'
     
             icoads_file = gzip.open(filename,"r")
 
@@ -497,6 +502,8 @@ def main(argv):
                 if not(rec.data['ID'] in ids_to_exclude):
 
 #strip everything out of the IMMA record except what we # KW (Kate Robert and John)# need
+# KW this should work for both IMMA and IMMA1 e.g. C4 (IMMA) and C7 (IMMA1) use same 'key's so it 'should' find
+# them because both are encoded in IMMA2.py
 		    keys = []
                     for key in rec.data:
                         keys.append(key)
@@ -540,7 +547,10 @@ def main(argv):
 # If HadISDHSwitch == True then the ob needs to pass the test else all obs are processed
 # No QC performed yet so cannot call get_qc - qc.value_check returns 0 if present and 1 if noval
 # Previously I had also pulled through PT=14 but this can be a coastal or island station - so not what we want.
-		    if (not (HadISDHSwitch)) | ((rep.data['PT']  in [0,1,2,3,4,5,6,8,9,10,15]) & 
+# KW Oct 2016 - I've now decided that future runs shoudl NOT include any platforms. We don't have height
+# info and they can vary from <10 to >200m so its just too screwy
+#		    if (not (HadISDHSwitch)) | ((rep.data['PT']  in [0,1,2,3,4,5,6,8,9,10,15]) & 
+		    if (not (HadISDHSwitch)) | ((rep.data['PT']  in [0,1,2,3,4,5,6,8]) & 
 		                                (qc.value_check(rep.getvar('AT')) == 0) & 
 						(qc.value_check(rep.getvar('DPT')) == 0)):
 

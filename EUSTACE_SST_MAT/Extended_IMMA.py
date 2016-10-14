@@ -631,7 +631,12 @@ class MarineReport:
         repout = repout + "{:8d}".format(self.data['DCK'])
         repout = repout + "{:8d}".format(self.data['SID'])
         repout = repout + "{:8d}".format(self.printvar('PT')) # seems to be present more than II
-#PT: 0=US Navy/unknown - usually ship, 1=merchant ship/foreign military, 2=ocean station vessel off station (or unknown loc), 3=ocean station vessel on station, 4=lightship, 5=ship, 6=moored buiy, 7=drifting buoy, 8=ice buoy, 9=ice station, 10=oceanographic station, 11=MBT (bathythermograph), 12=XBT (bathythermograph), 13=Coastal-Marine Automated Network (C-MAN), 14=other coastal/island station, 15=fixed ocean platoform, 16=tide guage, 17=hi res CTD, 18=profiling float, 19=undulating oceanographic recorder, 10=auonomous pinneped bathythermograph (seal?),  21=glider
+#PT: 0=US Navy/unknown - usually ship, 1=merchant ship/foreign military, 2=ocean station vessel off station (or unknown loc), 3=ocean station vessel on station, 4=lightship, 5=ship, 
+#6=moored buiy, 7=drifting buoy, 8=ice buoy, 
+#9=ice station, 10=oceanographic station, 
+#11=MBT (bathythermograph), 12=XBT (bathythermograph), 13=Coastal-Marine Automated Network (C-MAN), 
+#14=other coastal/island station, 15=fixed ocean platoform, 
+#16=tide guage, 17=hi res CTD, 18=profiling float, 19=undulating oceanographic recorder, 10=auonomous pinneped bathythermograph (seal?),  21=glider
         repout = repout + "{:8d}".format(self.printvar('SI'))
         repout = repout + " {:8.8}".format(self.printsim())
 
