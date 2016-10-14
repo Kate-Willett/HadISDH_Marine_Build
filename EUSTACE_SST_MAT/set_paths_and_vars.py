@@ -131,6 +131,17 @@ def set(doBC = False, doQC = True, doQC1it = False, doQC2it = False, doQC3it = F
 
     plots = True
     doMedian = False
+    
+# KATE MODIFIED TO BRING OUT COMMON DIR PATHS
+# ICOADS.2.5.1
+    ICOADS_DIR="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/"
+    DATA_DIR="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/"
+    PLOT_DIR="/project/hadobs2/hadisdh/marine/"
+# ICOADS 3.0.0    
+    ICOADS_DIR="/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/"
+    DATA_DIR="/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/"
+    PLOT_DIR="/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/"
+# end
 
     if doBC:
         # Constants in CAPS
@@ -139,10 +150,12 @@ def set(doBC = False, doQC = True, doQC1it = False, doQC2it = False, doQC3it = F
         #OUTROOT = "ERAclimBC"
 # end
 
-        ICOADS_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/{}/".format(OUTROOT)
-# *** KATE MODIFIED
-        DATA_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDSOBSclim2BC/"
-        PLOT_LOCATION="/project/hadobs2/hadisdh/marine/PLOTSOBSclim2BC/"
+# KATE MODIFIED - using common dir strings
+        ICOADS_LOCATION=ICOADS_DIR+"{}/".format(OUTROOT)
+        #ICOADS_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/{}/".format(OUTROOT)
+
+        DATA_LOCATION=DATA_DIR+"GRIDSOBSclim2BC/"
+        PLOT_LOCATION=PLOT_DIR+"PLOTSOBSclim2BC/"
         #DATA_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS_BC/"
         #PLOT_LOCATION="/project/hadobs2/hadisdh/marine/PLOTS_BC/"
 # end
@@ -151,45 +164,49 @@ def set(doBC = False, doQC = True, doQC1it = False, doQC2it = False, doQC3it = F
         # Constants in CAPS
         OUTROOT = "ERAclimNBC"
 
-        ICOADS_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/{}/".format(OUTROOT)
-        # KW Changed GRIDS to GRIDS2 adn PLOTS to PLOTS2 to make sure I don't write over what has been done already
-        DATA_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS3/"
-        PLOT_LOCATION="/project/hadobs2/hadisdh/marine/PLOTS3/"
+# KATE MODIFIED - using common dir strings
+        ICOADS_LOCATION=ICOADS_DIR+"{}/".format(OUTROOT)
+        DATA_LOCATION=DATA_DIR+"GRIDS3/"
+        PLOT_LOCATION=PLOT_DIR+"PLOTS3/"
+        #ICOADS_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/{}/".format(OUTROOT)
+        #DATA_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS3/"
+        #PLOT_LOCATION="/project/hadobs2/hadisdh/marine/PLOTS3/"
+# end
 
 # *** KATE MODIFIED
     elif doQC1it:
         # Constants in CAPS
         OUTROOT = "ERAclimNBC"
 
-        ICOADS_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/{}/".format(OUTROOT)
-        DATA_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDSERAclimNBC/"
-        PLOT_LOCATION="/project/hadobs2/hadisdh/marine/PLOTSERAclimNBC/"
+        ICOADS_LOCATION=ICOADS_DIR+"{}/".format(OUTROOT)
+        DATA_LOCATION=DATA_DIR+"GRIDSERAclimNBC/"
+        PLOT_LOCATION=PLOT_DIR+"PLOTSERAclimNBC/"
 
     elif doQC2it:
         # Constants in CAPS
         OUTROOT = "OBSclim1NBC"
 
-        ICOADS_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/{}/".format(OUTROOT)
-        DATA_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDSOBSclim1NBC/"
-        PLOT_LOCATION="/project/hadobs2/hadisdh/marine/PLOTSOBSclim1NBC/"
+        ICOADS_LOCATION=ICOADS_DIR+"{}/".format(OUTROOT)
+        DATA_LOCATION=DATA_DIR+"GRIDSOBSclim1NBC/"
+        PLOT_LOCATION=PLOT_DIR+"PLOTSOBSclim1NBC/"
 
     elif doQC3it:
         # Constants in CAPS
         OUTROOT = "OBSclim2NBC"
 
-        ICOADS_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/{}/".format(OUTROOT)
-        DATA_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDSOBSclim2NBC/"
-        PLOT_LOCATION="/project/hadobs2/hadisdh/marine/PLOTSOBSclim2NBC/"
+        ICOADS_LOCATION=ICOADS_DIR+"{}/".format(OUTROOT)
+        DATA_LOCATION=DATA_DIR+"GRIDSOBSclim2NBC/"
+        PLOT_LOCATION=PLOT_DIR+"PLOTSOBSclim2NBC/"
 
 # end
 # KATE modified
     else:
         # Constants in CAPS
-        OUTROOT = "OBSclim2NBC"
+        OUTROOT = "OBSclim2noQC"
 
-        ICOADS_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/{}/".format(OUTROOT)
-        DATA_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDSOBSclim2noQC/"
-        PLOT_LOCATION="/project/hadobs2/hadisdh/marine/PLOTSOBSclim2noQC/"
+        ICOADS_LOCATION=ICOADS_DIR+"{}/".format(OUTROOT)
+        DATA_LOCATION=DATA_DIR+"GRIDSOBSclim2noQC/"
+        PLOT_LOCATION=PLOT_DIR+"PLOTSOBSclim2noQC/"
     #else:
     #    # Constants in CAPS
     #    OUTROOT = "ERAclimNBC"

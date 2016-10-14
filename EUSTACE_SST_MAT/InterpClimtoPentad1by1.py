@@ -1460,13 +1460,15 @@ def main(argv):
 				['units','deg C']])]])
     
     					   
-    INDIR = '/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/'
+#    INDIR = '/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/'
+    INDIR = '/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/'
     InOBSclim = 'GRIDS'+typee+'/'+typee+'_5x5_monthly_climatology_from_daily_both_relax.nc'
     InOBSsd = 'GRIDS'+typee+'/'+typee+'_5x5_monthly_stdev_from_daily_both_relax.nc'
 #    InOBSclim = 'GRIDS_noQC/ERAclimNBC_5x5_monthly_climatology_from_daily_both_relax.nc'
 #    InOBSsd = 'GRIDS_noQC/ERAclimNBC_5x5_monthly_stdev_from_daily_both_relax.nc'
     
-    OUTDIR = '/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/'
+#    OUTDIR = '/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/'
+    OUTDIR = '/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/'
     OutOBS1 = 'GRIDS'+typee+'/'+VarDict[varee]['short_name']+'_'+typee+'_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
     OutOBS5 = 'GRIDS'+typee+'/'+VarDict[varee]['short_name']+'_'+typee+'_5x5_monthly_climatology_stdev_from_daily_both_relax_INFILLED.nc'
 #    OutOBS1 = 'GRIDS_noQC/'+VarDict[varee]['short_name']+'_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
