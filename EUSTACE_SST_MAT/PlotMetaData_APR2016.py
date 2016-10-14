@@ -25,9 +25,9 @@
 #  - prints, number and % of obs with HOB, HOT, HOA, HOP and LOV
 #  - plots, HOB, HOT, HOA, HOP, LOV histogram
 #  - prints, mean and standard deviation
-#  - plots, HOA vs HOT, HOA vs HOB, HOP vs HOB, HOP vs HOT with lines of best fit
-#  - prints, number and % where HOA and HOT present, HOA and HOB present, HOP and HOB present, HOP and HOT present, print equation for fit
-#  - plots, HOA - HOT, HOA - HOB, HOP - HOB and HOP - HOT with
+#  - plots, HOP vs HOA, HOA vs HOT, HOA vs HOB, HOP vs HOB, HOP vs HOT with lines of best fit
+#  - prints, number and % where HOP and HOA present, HOA and HOT present, HOA and HOB present, HOP and HOB present, HOP and HOT present, print equation for fit
+#  - plots, HOA - HOP, HOA - HOT, HOA - HOB, HOP - HOB and HOP - HOT with
 #  - prints, mean and standard deviation of difference series
 #  - plots, LOV vs HOT, LOV vs HOB with lines of best fit
 #  - prints, number and % where LOV and HOB present, where LOV and HOT present and equations for fit
@@ -57,7 +57,7 @@
 #
 # Kates:
 # from LinearTrends import MedianPairwise - fits linear trend using Median Pairwise
-# import MDS_basic_KATE as MDStool
+# import MDS_RWtools as MDStool
 #
 # -----------------------
 # DATA
@@ -70,7 +70,7 @@
 # set up date cluster choices
 # year1, year2, month1, month2
 #
-# python2.7 PLotMetaData_APR2016
+# python2.7 PLotMetaData_APR2016 --year1 2000 --year2 2000 --month1 01 --month2 12 --typee ERAclimNBC
 #
 # This runs the code, outputs the plots and stops mid-process so you can then interact with the
 # data. 
@@ -90,6 +90,18 @@
 # VERSION/RELEASE NOTES
 # -----------------------
 # 
+# Version 2 (13 October 2016)
+# ---------
+#  
+# Enhancements
+#  
+# Changes
+# Instrument Exposure
+# This now has A (aspirated) on its own and merges VS (ventilated screen) with S (screen) and SN (ships screen)
+#  
+# Bug fixes
+# The missing %) has been fixed 
+#
 # Version 1 (1 April 2016)
 # ---------
 #  
@@ -102,6 +114,12 @@
 # -----------------------
 # OTHER INFORMATION
 # -----------------------
+#
+# So there really isn't much information for buoys or platforms (or many ships other than PT=5)
+# A tiny number of buoys say they have height info - height = 74m - UNLIKELY!!!
+# No platforms have height info
+# Some buoys have exposure info - all info says US (unscreened) - therefore shouldn't need a bias correction?
+# No platgorms have exposure info
 #
 #************************************************************************
 #                                 START
@@ -124,7 +142,15 @@ import sys, getopt
 import pdb # pdb.set_trace() or c 
 
 #from LinearTrends import MedianPairwise 
-import MDS_basic_KATE as MDStool
+import MDS_RWtools as MDStool
+
+# changeable variables
+# Which month/year is this being run?
+nowmon = 'OCT'
+nowyear = '2016'
+
+# Which ICOADS source are you using - check MDS_RWtools.py!!!
+source = 'I300'
 
 #************************************************************************
 # Main
@@ -197,12 +223,12 @@ def main(argv):
 
 #    OUTDIR = '/data/local/hadkw/HADCRUH2/MARINE/'
     OUTDIR = ''
-    OutTypeFil = 'IMAGES/InstrTypeMetaDataDiags_'+switch+'_'+typee+'_'+year1+year2+month1+month2+'_APR2016'
-    OutInstrFil = 'IMAGES/InstrumentMetaDataDiags_'+switch+'_'+typee+'_'+year1+year2+month1+month2+'_APR2016'
-    OutHeightFil = 'IMAGES/HeightMetaDataDiags_'+switch+'_'+typee+'_'+year1+year2+month1+month2+'_APR2016'
-    OutTypeText = 'LISTS/InstrTypeMetaDataStats_'+switch+'_'+typee+'_APR2016.txt'
-    OutInstrumentText = 'LISTS/InstrumentMetaDataStats_'+switch+'_'+typee+'_APR2016.txt'
-    OutHeightText = 'LISTS/HeightMetaDataStats_'+switch+'_'+typee+'_APR2016.txt'
+    OutTypeFil = 'IMAGES/InstrTypeMetaDataDiags_'+switch+'_'+typee+'_'+year1+year2+month1+month2+'_'+source+'_'+nowmon+nowyear
+    OutInstrFil = 'IMAGES/InstrumentMetaDataDiags_'+switch+'_'+typee+'_'+year1+year2+month1+month2+'_'+source+'_'+nowmon+nowyear
+    OutHeightFil = 'IMAGES/HeightMetaDataDiags_'+switch+'_'+typee+'_'+year1+year2+month1+month2+'_'+source+'_'+nowmon+nowyear
+    OutTypeText = 'LISTS/InstrTypeMetaDataStats_'+switch+'_'+typee+'_'+source+'_'+nowmon+nowyear+'.txt'
+    OutInstrumentText = 'LISTS/InstrumentMetaDataStats_'+switch+'_'+typee+'_'+source+'_'+nowmon+nowyear+'.txt'
+    OutHeightText = 'LISTS/HeightMetaDataStats_'+switch+'_'+typee+'_'+source+'_'+nowmon+nowyear+'.txt'
     
     # create empty arrays for data bundles
     nobs=0 # we're looking at all obs, not just those with 'good' data
@@ -221,7 +247,7 @@ def main(argv):
         for mm in range((int(month2)+1)-int(month1)):
             print(str(yy+int(year1)),' ','{:02}'.format(mm+int(month1)))
 
-            MDSdict=MDStool.ReadMDSkate(str(yy+int(year1)),'{:02}'.format(mm+int(month1)), typee)
+            MDSdict=MDStool.ReadMDSstandard(str(yy+int(year1)),'{:02}'.format(mm+int(month1)), typee)
 
 	    if (nobs == 0):
 	        if (switch == 'all'):
@@ -353,31 +379,31 @@ def main(argv):
     HgotTspct = 0.
     Hgotspct = 0.
     if (nobs > 0):
-        Hgotspct = (len(gotTOHs)/float(nobs))*100
+	Hgotspct = (len(gotTOHs)/float(nobs))*100
     if (len(Hgot1s) > 0):
-        Hgot1spct = (len(Hgot1s)/float(len(gotTOHs)))*100
-        plt.scatter(np.repeat(1,len(Hgot1s)),LATbun[Hgot1s],c='grey',marker='o',linewidth=0.,s=12)
+	Hgot1spct = (len(Hgot1s)/float(len(gotTOHs)))*100
+	plt.scatter(np.repeat(1,len(Hgot1s)),LATbun[Hgot1s],c='grey',marker='o',linewidth=0.,s=12)
     if (len(Hgot2s) > 0):
-        Hgot2spct = (len(Hgot2s)/float(len(gotTOHs)))*100
-        plt.scatter(np.repeat(2,len(Hgot2s)),LATbun[Hgot2s],c='red',marker='o',linewidth=0.,s=12)
+	Hgot2spct = (len(Hgot2s)/float(len(gotTOHs)))*100
+	plt.scatter(np.repeat(2,len(Hgot2s)),LATbun[Hgot2s],c='red',marker='o',linewidth=0.,s=12)
     if (len(Hgot3s) > 0):
-        Hgot3spct = (len(Hgot3s)/float(len(gotTOHs)))*100
-        plt.scatter(np.repeat(3,len(Hgot3s)),LATbun[Hgot3s],c='orange',marker='o',linewidth=0.,s=12)
+	Hgot3spct = (len(Hgot3s)/float(len(gotTOHs)))*100
+	plt.scatter(np.repeat(3,len(Hgot3s)),LATbun[Hgot3s],c='orange',marker='o',linewidth=0.,s=12)
     if (len(HgotCs) > 0):
-        HgotCspct = (len(HgotCs)/float(len(gotTOHs)))*100
-        plt.scatter(np.repeat(4,len(HgotCs)),LATbun[HgotCs],c='gold',marker='o',linewidth=0.,s=12)
+	HgotCspct = (len(HgotCs)/float(len(gotTOHs)))*100
+	plt.scatter(np.repeat(4,len(HgotCs)),LATbun[HgotCs],c='gold',marker='o',linewidth=0.,s=12)
     if (len(HgotEs) > 0):
-        HgotEspct = (len(HgotEs)/float(len(gotTOHs)))*100
-        plt.scatter(np.repeat(5,len(HgotEs)),LATbun[HgotEs],c='green',marker='o',linewidth=0.,s=12)
+	HgotEspct = (len(HgotEs)/float(len(gotTOHs)))*100
+	plt.scatter(np.repeat(5,len(HgotEs)),LATbun[HgotEs],c='green',marker='o',linewidth=0.,s=12)
     if (len(HgotHs) > 0):
-        HgotHspct = (len(HgotHs)/float(len(gotTOHs)))*100
-        plt.scatter(np.repeat(6,len(HgotHs)),LATbun[HgotHs],c='blue',marker='o',linewidth=0.,s=12)
+	HgotHspct = (len(HgotHs)/float(len(gotTOHs)))*100
+	plt.scatter(np.repeat(6,len(HgotHs)),LATbun[HgotHs],c='blue',marker='o',linewidth=0.,s=12)
     if (len(HgotPs) > 0):
-        HgotPspct = (len(HgotPs)/float(len(gotTOHs)))*100
-        plt.scatter(np.repeat(7,len(HgotPs)),LATbun[HgotPs],c='indigo',marker='o',linewidth=0.,s=12)
+	HgotPspct = (len(HgotPs)/float(len(gotTOHs)))*100
+	plt.scatter(np.repeat(7,len(HgotPs)),LATbun[HgotPs],c='indigo',marker='o',linewidth=0.,s=12)
     if (len(HgotTs) > 0):
-        HgotTspct = (len(HgotTs)/float(len(gotTOHs)))*100
-        plt.scatter(np.repeat(8,len(HgotTs)),LATbun[HgotTs],c='violet',marker='o',linewidth=0.,s=12)
+	HgotTspct = (len(HgotTs)/float(len(gotTOHs)))*100
+	plt.scatter(np.repeat(8,len(HgotTs)),LATbun[HgotTs],c='violet',marker='o',linewidth=0.,s=12)
     plt.annotate('TOH: '+str(len(gotTOHs))+' ('+"{:5.2f}".format(Hgotspct)+'%)',xy=(0.05,1.21),xycoords='axes fraction',size=12,color='black')
     plt.annotate('1: '+str(len(Hgot1s))+' ('+"{:5.2f}".format(Hgot1spct)+'%)',xy=(0.05,1.16),xycoords='axes fraction',size=12,color='grey')
     plt.annotate('2: '+str(len(Hgot2s))+' ('+"{:5.2f}".format(Hgot2spct)+'%)',xy=(0.05,1.11),xycoords='axes fraction',size=12,color='red')
@@ -395,18 +421,18 @@ def main(argv):
     # Write out stats to file (append!)
     filee=open(OUTDIR+OutTypeText,'a+')
     filee.write(str(year1+' '+year2+' '+month1+' '+month2+' NOBS: '+'{:8d}'.format(nobs)+\
-                                                          ' TOH: '+'{:8d}'.format(len(gotTOHs))+' ('+"{:5.2f}".format(Hgotspct)+\
-                                                          '%) 1: '+'{:8d}'.format(len(Hgot1s))+' ('+"{:5.2f}".format(Hgot1spct)+\
-							  '%) 2: '+'{:8d}'.format(len(Hgot2s))+' ('+"{:5.2f}".format(Hgot2spct)+\
-							  '%) 3: '+'{:8d}'.format(len(Hgot3s))+' ('+"{:5.2f}".format(Hgot3spct)+\
-							  '%) C: '+'{:8d}'.format(len(HgotCs))+' ('+"{:5.2f}".format(HgotCspct)+\
-							  '%) E: '+'{:8d}'.format(len(HgotEs))+' ('+"{:5.2f}".format(HgotEspct)+\
-                                                          '%) H: '+'{:8d}'.format(len(HgotHs))+' ('+"{:5.2f}".format(HgotHspct)+\
-							  '%) P: '+'{:8d}'.format(len(HgotPs))+' ('+"{:5.2f}".format(HgotPspct)+\
-							  '%) T: '+'{:8d}'.format(len(HgotTs))+' ('+"{:5.2f}".format(HgotTspct)+\
-							  '%)\n'))
+							  ' TOH: '+'{:8d}'.format(len(gotTOHs))+' ('+"{:5.2f}".format(Hgotspct)+\
+							  '%) 1: '+'{:8d}'.format(len(Hgot1s))+' ('+"{:5.2f}".format(Hgot1spct)+\
+							 '%) 2: '+'{:8d}'.format(len(Hgot2s))+' ('+"{:5.2f}".format(Hgot2spct)+\
+							 '%) 3: '+'{:8d}'.format(len(Hgot3s))+' ('+"{:5.2f}".format(Hgot3spct)+\
+							 '%) C: '+'{:8d}'.format(len(HgotCs))+' ('+"{:5.2f}".format(HgotCspct)+\
+							 '%) E: '+'{:8d}'.format(len(HgotEs))+' ('+"{:5.2f}".format(HgotEspct)+\
+							  '%) H: '+'{:8d}'.format(len(HgotHs))+' ('+"{:5.2f}".format(HgotHspct)+\
+							 '%) P: '+'{:8d}'.format(len(HgotPs))+' ('+"{:5.2f}".format(HgotPspct)+\
+							 '%) T: '+'{:8d}'.format(len(HgotTs))+' ('+"{:5.2f}".format(HgotTspct)+\
+							 '%)\n'))
     filee.close()
-    pdb.set_trace()
+#    pdb.set_trace()
     
     #  - plots, EOT/EOH by latitude where 1 = none, 2 = aspirated/ventilated (A/VS), 3 = whirled (SG/SL/W), 4 = screen not aspirated (S/SN), 5 = unscreend (US)
     #  - prints, number and % of obs with EOT and EOH present, and in the categories
@@ -419,9 +445,9 @@ def main(argv):
     plt.ylabel('Latitude')
     gotEOTs = np.where(EOTbun != 'Non')[0]
     Tgot1s = np.where(EOTbun == 'Non')[0]
-    Tgot2s = np.where((EOTbun == 'A  ') | (EOTbun == 'VS '))[0]
+    Tgot2s = np.where((EOTbun == 'A  '))[0]
     Tgot3s = np.where((EOTbun == 'SG ') | (EOTbun == 'SL ') | (EOTbun == 'W  '))[0]
-    Tgot4s = np.where((EOTbun == 'S  ') | (EOTbun == 'SN '))[0]
+    Tgot4s = np.where((EOTbun == 'S  ') | (EOTbun == 'SN ') | (EOTbun == 'VS '))[0]
     Tgot5s = np.where(EOTbun == 'US ')[0]
     pctTgots = 0.
     pctTgot2s = 0.
@@ -429,15 +455,15 @@ def main(argv):
     pctTgot4s = 0.
     pctTgot5s = 0.    
     if (nobs > 0):
-        pctTgots = (len(gotEOTs)/float(nobs))*100
+	pctTgots = (len(gotEOTs)/float(nobs))*100
     if (len(Tgot2s) > 0):
-        pctTgot2s = (len(Tgot2s)/float(len(gotEOTs)))*100
+	pctTgot2s = (len(Tgot2s)/float(len(gotEOTs)))*100
     if (len(Tgot3s) > 0):
-        pctTgot3s = (len(Tgot3s)/float(len(gotEOTs)))*100
+	pctTgot3s = (len(Tgot3s)/float(len(gotEOTs)))*100
     if (len(Tgot4s) > 0):
-        pctTgot4s = (len(Tgot4s)/float(len(gotEOTs)))*100
+	pctTgot4s = (len(Tgot4s)/float(len(gotEOTs)))*100
     if (len(Tgot5s) > 0):
-        pctTgot5s = (len(Tgot5s)/float(len(gotEOTs)))*100    
+	pctTgot5s = (len(Tgot5s)/float(len(gotEOTs)))*100    
     plt.scatter(np.repeat(0.9,len(Tgot1s)),LATbun[Tgot1s],c='grey',marker='o',linewidth=0.,s=12)
     plt.scatter(np.repeat(1.9,len(Tgot2s)),LATbun[Tgot2s],c='red',marker='o',linewidth=0.,s=12)
     plt.scatter(np.repeat(2.9,len(Tgot3s)),LATbun[Tgot3s],c='orange',marker='o',linewidth=0.,s=12)
@@ -449,15 +475,15 @@ def main(argv):
     #plt.annotate('S/SN(4): '+str(len(Tgot4s))+' ('+"{:5.2f}".format((len(Tgot4s)/float(len(gotEOTs)))*100)+'%)',xy=(0.55,0.82),xycoords='axes fraction',size=10)
     #plt.annotate('US(5): '+str(len(Tgot5s))+' ('+"{:5.2f}".format((len(Tgot5s)/float(len(gotEOTs)))*100)+'%)',xy=(0.55,0.78),xycoords='axes fraction',size=10)
     plt.annotate('EOT: '+str(len(gotEOTs))+' ('+"{:5.2f}".format(pctTgots)+'%)',xy=(0.05,1.21),xycoords='axes fraction',size=12,color='grey')
-    plt.annotate('A/VS: '+str(len(Tgot2s))+' ('+"{:5.2f}".format(pctTgot2s)+'%)',xy=(0.05,1.16),xycoords='axes fraction',size=12,color='red')
+    plt.annotate('A: '+str(len(Tgot2s))+' ('+"{:5.2f}".format(pctTgot2s)+'%)',xy=(0.05,1.16),xycoords='axes fraction',size=12,color='red')
     plt.annotate('SG/SL/W: '+str(len(Tgot3s))+' ('+"{:5.2f}".format(pctTgot3s)+'%)',xy=(0.05,1.11),xycoords='axes fraction',size=12,color='orange')
-    plt.annotate('S/SN: '+str(len(Tgot4s))+' ('+"{:5.2f}".format(pctTgot4s)+'%)',xy=(0.05,1.06),xycoords='axes fraction',size=12,color='blue')
+    plt.annotate('S/SN/VS: '+str(len(Tgot4s))+' ('+"{:5.2f}".format(pctTgot4s)+'%)',xy=(0.05,1.06),xycoords='axes fraction',size=12,color='blue')
     plt.annotate('US: '+str(len(Tgot5s))+' ('+"{:5.2f}".format(pctTgot5s)+'%)',xy=(0.05,1.01),xycoords='axes fraction',size=12,color='violet')
     gotEOHs = np.where(EOHbun != 'Non')[0]
     Hgot1s = np.where(EOHbun == 'Non')[0]
-    Hgot2s = np.where((EOHbun == 'A  ') | (EOHbun == 'VS '))[0]
+    Hgot2s = np.where((EOHbun == 'A  '))[0]
     Hgot3s = np.where((EOHbun == 'SG ') | (EOHbun == 'SL ') | (EOHbun == 'W  '))[0]
-    Hgot4s = np.where((EOHbun == 'S  ') | (EOHbun == 'SN '))[0]
+    Hgot4s = np.where((EOHbun == 'S  ') | (EOHbun == 'SN ') | (EOHbun == 'VS '))[0]
     Hgot5s = np.where(EOHbun == 'US ')[0]
     pctHgots = 0.
     pctHgot2s = 0.
@@ -465,15 +491,15 @@ def main(argv):
     pctHgot4s = 0.
     pctHgot5s = 0.    
     if (nobs > 0):
-        pctHgots = (len(gotEOHs)/float(nobs))*100
+	pctHgots = (len(gotEOHs)/float(nobs))*100
     if (len(Hgot2s) > 0):
-        pctHgot2s = (len(Hgot2s)/float(len(gotEOHs)))*100
+	pctHgot2s = (len(Hgot2s)/float(len(gotEOHs)))*100
     if (len(Hgot3s) > 0):
-        pctHgot3s = (len(Hgot3s)/float(len(gotEOHs)))*100
+	pctHgot3s = (len(Hgot3s)/float(len(gotEOHs)))*100
     if (len(Hgot4s) > 0):
-        pctHgot4s = (len(Hgot4s)/float(len(gotEOHs)))*100
+	pctHgot4s = (len(Hgot4s)/float(len(gotEOHs)))*100
     if (len(Hgot5s) > 0):
-        pctHgot5s = (len(Hgot5s)/float(len(gotEOHs)))*100    
+	pctHgot5s = (len(Hgot5s)/float(len(gotEOHs)))*100    
     plt.scatter(np.repeat(1.1,len(Hgot1s)),LATbun[Hgot1s],c='grey',marker='o',linewidth=0.,s=12)
     plt.scatter(np.repeat(2.1,len(Hgot2s)),LATbun[Hgot2s],c='red',marker='o',linewidth=0.,s=12) 
     plt.scatter(np.repeat(3.1,len(Hgot3s)),LATbun[Hgot3s],c='orange',marker='o',linewidth=0.,s=12)
@@ -485,9 +511,9 @@ def main(argv):
     #plt.annotate('S/SN(4): '+str(len(Hgot4s))+' ('+"{:5.2f}".format((len(Hgot4s)/float(len(gotEOHs)))*100)+'%)',xy=(0.55,0.62),xycoords='axes fraction',size=10)
     #plt.annotate('US(5): '+str(len(Hgot5s))+' ('+"{:5.2f}".format((len(Hgot5s)/float(len(gotEOHs)))*100)+'%)',xy=(0.55,0.58),xycoords='axes fraction',size=10)
     plt.annotate('EOH: '+str(len(gotEOHs))+' ('+"{:5.2f}".format(pctHgots)+'%)',xy=(0.55,1.21),xycoords='axes fraction',size=12,color='grey')
-    plt.annotate('A/VS: '+str(len(Hgot2s))+' ('+"{:5.2f}".format(pctHgot2s)+'%)',xy=(0.55,1.16),xycoords='axes fraction',size=12,color='red')
+    plt.annotate('A: '+str(len(Hgot2s))+' ('+"{:5.2f}".format(pctHgot2s)+'%)',xy=(0.55,1.16),xycoords='axes fraction',size=12,color='red')
     plt.annotate('SG/SL/W: '+str(len(Hgot3s))+' ('+"{:5.2f}".format(pctHgot3s)+'%)',xy=(0.55,1.11),xycoords='axes fraction',size=12,color='orange')
-    plt.annotate('S/SN: '+str(len(Hgot4s))+' ('+"{:5.2f}".format(pctHgot4s)+'%)',xy=(0.55,1.06),xycoords='axes fraction',size=12,color='blue')
+    plt.annotate('S/SN/VS: '+str(len(Hgot4s))+' ('+"{:5.2f}".format(pctHgot4s)+'%)',xy=(0.55,1.06),xycoords='axes fraction',size=12,color='blue')
     plt.annotate('US: '+str(len(Hgot5s))+' ('+"{:5.2f}".format(pctHgot5s)+'%)',xy=(0.55,1.01),xycoords='axes fraction',size=12,color='violet')
     #plt.annotate('a)',xy=(0.03,0.94),xycoords='axes fraction',size=12)
 
@@ -497,17 +523,17 @@ def main(argv):
     # Write out stats to file (append!)
     filee=open(OUTDIR+OutInstrumentText,'a+')
     filee.write(str(year1+' '+year2+' '+month1+' '+month2+' NOBS: '+'{:8d}'.format(nobs)+\
-                                                          ' EOH: '+'{:8d}'.format(len(gotEOHs))+' ('+"{:5.2f}".format(pctHgots)+\
-                                                          '%) A/VS: '+'{:8d}'.format(len(Hgot2s))+' ('+"{:5.2f}".format(pctHgot2s)+\
-							  '%) SG/SL/W: '+'{:8d}'.format(len(Hgot3s))+' ('+"{:5.2f}".format(pctHgot3s)+\
-							  '%) S/SN: '+'{:8d}'.format(len(Hgot4s))+' ('+"{:5.2f}".format(pctHgot4s)+\
-							  '%) US: '+'{:8d}'.format(len(Hgot5s))+' ('+"{:5.2f}".format(pctHgot5s)+\
-							  '%) EOT: '+'{:8d}'.format(len(gotEOTs))+' ('+"{:5.2f}".format(pctTgots)+\
-                                                          '%) A/VS: '+'{:8d}'.format(len(Tgot2s))+' ('+"{:5.2f}".format(pctTgot2s)+\
-							  '%) SG/SL/W: '+'{:8d}'.format(len(Tgot3s))+' ('+"{:5.2f}".format(pctTgot3s)+\
-							  '%) S/SN: '+'{:8d}'.format(len(Tgot4s))+' ('+"{:5.2f}".format(pctTgot4s)+\
-							  '%) US: '+'{:8d}'.format(len(Tgot5s))+' ('+"{:5.2f}".format(pctTgot5s)+\
-							  '%)\n'))
+							  ' EOH: '+'{:8d}'.format(len(gotEOHs))+' ('+"{:5.2f}".format(pctHgots)+\
+							  '%) A: '+'{:8d}'.format(len(Hgot2s))+' ('+"{:5.2f}".format(pctHgot2s)+\
+							 '%) SG/SL/W: '+'{:8d}'.format(len(Hgot3s))+' ('+"{:5.2f}".format(pctHgot3s)+\
+							 '%) S/SN/VS: '+'{:8d}'.format(len(Hgot4s))+' ('+"{:5.2f}".format(pctHgot4s)+\
+							 '%) US: '+'{:8d}'.format(len(Hgot5s))+' ('+"{:5.2f}".format(pctHgot5s)+\
+							 '%) EOT: '+'{:8d}'.format(len(gotEOTs))+' ('+"{:5.2f}".format(pctTgots)+\
+							  '%) A: '+'{:8d}'.format(len(Tgot2s))+' ('+"{:5.2f}".format(pctTgot2s)+\
+							 '%) SG/SL/W: '+'{:8d}'.format(len(Tgot3s))+' ('+"{:5.2f}".format(pctTgot3s)+\
+							 '%) S/SN/VS: '+'{:8d}'.format(len(Tgot4s))+' ('+"{:5.2f}".format(pctTgot4s)+\
+							 '%) US: '+'{:8d}'.format(len(Tgot5s))+' ('+"{:5.2f}".format(pctTgot5s)+\
+							 '%)\n'))
     filee.close()
 
     xpos=[0.1, 0.6,0.1,0.6,0.1,0.6]
@@ -613,21 +639,33 @@ def main(argv):
     
     axarr[1].annotate('b)',xy=(0.03,0.94),xycoords='axes fraction',size=12)
 
-    #  - plots, HOA vs HOT, HOA vs HOB, HOP vs HOB, HOP vs HOT with lines of best fit
-    #  - prints, number and % where HOA and HOT present, HOA and HOB present, HOP and HOB present, HOP and HOT present, print equation for fit
+    #  - plots, HOA vs HOP, HOA vs HOT, HOA vs HOB, HOP vs HOB, HOP vs HOT with lines of best fit
+    #  - prints, number and % where HOA and HOP present, HOA and HOT present, HOA and HOB present, HOP and HOB present, HOP and HOT present, print equation for fit
     axarr[2].set_position([xpos[2],ypos[2],xfat[2],ytall[2]])
     axarr[2].set_xlim(0,60)
     axarr[2].set_ylim(0,60)
     axarr[2].set_ylabel('Thermometer/Barmometer Height (m)')
     axarr[2].set_xlabel('Anemometer/Visual Obs Platform Height (m)')
+    pctHOAPs = 0.
     pctHOABs = 0.
     pctHOATs = 0.
     pctHOPBs = 0.
     pctHOPTs = 0.
+    fitsAP = [-99.9,-99.9]
     fitsAB = [-99.9,-99.9]
     fitsAT = [-99.9,-99.9]
     fitsPB = [-99.9,-99.9]
     fitsPT = [-99.9,-99.9]    
+    gotHOAPs = np.where((HOAbun > 0) & (HOPbun > 0))[0]
+    if (len(gotHOAPs) > 0):
+        axarr[2].scatter(HOAbun[gotHOAPs],HOPbun[gotHOAPs],c='black',marker='o',linewidth=0.,s=2)
+        fitsAP = np.polyfit(HOAbun[gotHOAPs],HOPbun[gotHOAPs],1)
+	# Get RMSE of residuals from line of best fit
+	RMSE_AP = np.sqrt(np.mean((HOPbun[gotHOAPs] - fitsAP[0]*HOAbun[gotHOAPs]+fitsAP[1])**2))
+	pctHOAPs = (len(gotHOAPs)/float(nobs))*100
+        axarr[2].plot(HOAbun[gotHOAPs],fitsAP[0]*HOAbun[gotHOAPs]+fitsAP[1],c='black')
+        #axarr[2].annotate('HOBHOA: '+str(len(gotHOABs))+' ('+"{:5.2f}".format(pctHOABs)+'%), '+"{:5.2f}".format(fitsAB[0])+', '+"{:5.2f}".format(fitsAB[1])+' ('+"{:6.2f}".format(RMSE_AB)+')',xy=(0.1,0.94),xycoords='axes fraction',size=10,color='grey') 
+        axarr[2].annotate('HOPHOA: '+"{:5.2f}".format(pctHOAPs)+'%, '+"{:5.2f}".format(fitsAP[0])+', '+"{:5.2f}".format(fitsAP[1])+' ('+"{:6.2f}".format(RMSE_AP)+')',xy=(0.1,0.78),xycoords='axes fraction',size=10,color='black') 
     gotHOABs = np.where((HOAbun > 0) & (HOBbun > 0))[0]
     if (len(gotHOABs) > 0):
         axarr[2].scatter(HOAbun[gotHOABs],HOBbun[gotHOABs],c='grey',marker='o',linewidth=0.,s=2)
@@ -675,14 +713,21 @@ def main(argv):
     axarr[3].set_xlabel('Anemometer/Visual Obs Platform Height (m)')
     #axarr[3].set_xlabel('Thermometer/Barmometer Height (m)')
     axarr[3].set_ylabel('Height Difference (m)')
+    meanHOAPs = -99.9
     meanHOABs = -99.9
     meanHOATs = -99.9
     meanHOPBs = -99.9
     meanHOPTs = -99.9
+    sdHOAPs = -99.9
     sdHOABs = -99.9
     sdHOATs = -99.9
     sdHOPBs = -99.9
     sdHOPTs = -99.9    
+    if (len(gotHOAPs) > 0):
+        axarr[3].scatter(HOAbun[gotHOAPs],HOAbun[gotHOAPs]-HOPbun[gotHOAPs],c='black',marker='o',linewidth=0.,s=2)
+        meanHOAPs = np.mean(HOAbun[gotHOAPs]-HOPbun[gotHOAPs])
+	sdHOAPs = np.std(HOAbun[gotHOAPs]-HOPbun[gotHOAPs])
+	axarr[3].annotate('HOPHOA: '+"{:5.1f}".format(meanHOAPs)+', '+"{:5.1f}".format(sdHOAPs),xy=(0.5,0.78),xycoords='axes fraction',size=10,color='black')
     if (len(gotHOABs) > 0):
         axarr[3].scatter(HOAbun[gotHOABs],HOAbun[gotHOABs]-HOBbun[gotHOABs],c='grey',marker='o',linewidth=0.,s=2)
         meanHOABs = np.mean(HOAbun[gotHOABs]-HOBbun[gotHOABs])
@@ -772,6 +817,9 @@ def main(argv):
 							  ' HOA: '+'{:8d}'.format(len(gotHOAs))+' ('+"{:5.2f}".format(pctHOAs)+'%) '+"{:5.1f}".format(meanHOAs)+' '+"{:5.1f}".format(sdHOAs)+\
 							  ' HOP: '+'{:8d}'.format(len(gotHOPs))+' ('+"{:5.2f}".format(pctHOPs)+'%) '+"{:5.1f}".format(meanHOPs)+' '+"{:5.1f}".format(sdHOPs)+\
 							  ' LOV: '+'{:8d}'.format(len(gotLOVs))+' ('+"{:5.2f}".format(pctLOVs)+'%) '+"{:5.1f}".format(meanLOVs)+' '+"{:5.1f}".format(sdLOVs)+\
+                                                          ' HOPHOA: '+'{:8d}'.format(len(gotHOAPs))+' ('+"{:5.2f}".format(pctHOAPs)+'%) '+\
+							              "{:6.2f}".format(fitsAP[0])+' '+"{:6.2f}".format(fitsAP[1])+' '+\
+                                			              "{:5.1f}".format(meanHOAPs)+' '+"{:5.1f}".format(sdHOAPs)+\
                                                           ' HOBHOA: '+'{:8d}'.format(len(gotHOABs))+' ('+"{:5.2f}".format(pctHOABs)+'%) '+\
 							              "{:6.2f}".format(fitsAB[0])+' '+"{:6.2f}".format(fitsAB[1])+' '+\
                                 			              "{:5.1f}".format(meanHOABs)+' '+"{:5.1f}".format(sdHOABs)+\

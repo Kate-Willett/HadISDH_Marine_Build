@@ -52,7 +52,7 @@
 # -----------------------
 # make sure the file paths are ok - are we always using ERAclimNBC?
 #
-# python2.7 CompareERAOBSclims_APR2016
+# python2.7 CompareERAOBSclims_APR2016.py --typee ERAclimNBC
 #
 # This runs the code, outputs the plots and stops mid-process so you can then interact with the
 # data and then carries on.
@@ -116,7 +116,10 @@ innee1 = 'OBS' # 'ERA', 'OBS', 'OBS1'
 innee2 = 'OBS1' # 'OBS', 'OBS1', 'OBS2'
 
 # What threshold for clim/buddy?
-thresh = '35' # '35', '45', '55'	    					   
+thresh = '55' # '35', '45', '55'
+
+# What source?
+source = 'I300' # 'I251' or 'I300'	    					   
 
 #************************************************************************
 # Main
@@ -182,95 +185,95 @@ def main(argv):
     
     OUTDIR = '/data/local/hadkw/HADCRUH2/MARINE/'
     if ((innee1 == 'ERA') & (innee2 == 'OBS')):
-        OutLatsFilAT = 'IMAGES/ERAOBSclimdiffs_latdiffs_AT_'+typee+'_'+nowmon+nowyear
-        OutMapsFilAT = 'IMAGES/ERAOBSclimdiffs_mapdiffs_AT_'+typee+'_'+nowmon+nowyear
-        OutLatsFilDPT = 'IMAGES/ERAOBSclimdiffs_latdiffs_DPT_'+typee+'_'+nowmon+nowyear
-        OutMapsFilDPT = 'IMAGES/ERAOBSclimdiffs_mapdiffs_DPT_'+typee+'_'+nowmon+nowyear
-        OutLatsFilSHU = 'IMAGES/ERAOBSclimdiffs_latdiffs_SHU_'+typee+'_'+nowmon+nowyear
-        OutMapsFilSHU = 'IMAGES/ERAOBSclimdiffs_mapdiffs_SHU_'+typee+'_'+nowmon+nowyear
-        OutLatsFilVAP = 'IMAGES/ERAOBSclimdiffs_latdiffs_VAP_'+typee+'_'+nowmon+nowyear
-        OutMapsFilVAP = 'IMAGES/ERAOBSclimdiffs_mapdiffs_VAP_'+typee+'_'+nowmon+nowyear
-        OutLatsFilCRH = 'IMAGES/ERAOBSclimdiffs_latdiffs_CRH_'+typee+'_'+nowmon+nowyear
-        OutMapsFilCRH = 'IMAGES/ERAOBSclimdiffs_mapdiffs_CRH_'+typee+'_'+nowmon+nowyear
-        OutLatsFilCWB = 'IMAGES/ERAOBSclimdiffs_latdiffs_CWB_'+typee+'_'+nowmon+nowyear
-        OutMapsFilCWB = 'IMAGES/ERAOBSclimdiffs_mapdiffs_CWB_'+typee+'_'+nowmon+nowyear
-        OutLatsFilDPD = 'IMAGES/ERAOBSclimdiffs_latdiffs_DPD_'+typee+'_'+nowmon+nowyear
-        OutMapsFilDPD = 'IMAGES/ERAOBSclimdiffs_mapdiffs_DPD_'+typee+'_'+nowmon+nowyear
+        OutLatsFilAT = 'IMAGES/ERAOBSclimdiffs_'+source+'_'+thresh+'_latdiffs_AT_'+typee+'_'+nowmon+nowyear
+        OutMapsFilAT = 'IMAGES/ERAOBSclimdiffs_'+source+'_'+thresh+'_mapdiffs_AT_'+typee+'_'+nowmon+nowyear
+        OutLatsFilDPT = 'IMAGES/ERAOBSclimdiffs_'+source+'_'+thresh+'_latdiffs_DPT_'+typee+'_'+nowmon+nowyear
+        OutMapsFilDPT = 'IMAGES/ERAOBSclimdiffs_'+source+'_'+thresh+'_mapdiffs_DPT_'+typee+'_'+nowmon+nowyear
+        OutLatsFilSHU = 'IMAGES/ERAOBSclimdiffs_'+source+'_'+thresh+'_latdiffs_SHU_'+typee+'_'+nowmon+nowyear
+        OutMapsFilSHU = 'IMAGES/ERAOBSclimdiffs_'+source+'_'+thresh+'_mapdiffs_SHU_'+typee+'_'+nowmon+nowyear
+        OutLatsFilVAP = 'IMAGES/ERAOBSclimdiffs_'+source+'_'+thresh+'_latdiffs_VAP_'+typee+'_'+nowmon+nowyear
+        OutMapsFilVAP = 'IMAGES/ERAOBSclimdiffs_'+source+'_'+thresh+'_mapdiffs_VAP_'+typee+'_'+nowmon+nowyear
+        OutLatsFilCRH = 'IMAGES/ERAOBSclimdiffs_'+source+'_'+thresh+'_latdiffs_CRH_'+typee+'_'+nowmon+nowyear
+        OutMapsFilCRH = 'IMAGES/ERAOBSclimdiffs_'+source+'_'+thresh+'_mapdiffs_CRH_'+typee+'_'+nowmon+nowyear
+        OutLatsFilCWB = 'IMAGES/ERAOBSclimdiffs_'+source+'_'+thresh+'_latdiffs_CWB_'+typee+'_'+nowmon+nowyear
+        OutMapsFilCWB = 'IMAGES/ERAOBSclimdiffs_'+source+'_'+thresh+'_mapdiffs_CWB_'+typee+'_'+nowmon+nowyear
+        OutLatsFilDPD = 'IMAGES/ERAOBSclimdiffs_'+source+'_'+thresh+'_latdiffs_DPD_'+typee+'_'+nowmon+nowyear
+        OutMapsFilDPD = 'IMAGES/ERAOBSclimdiffs_'+source+'_'+thresh+'_mapdiffs_DPD_'+typee+'_'+nowmon+nowyear
 
-        OutSDLatsFilAT = 'IMAGES/ERAOBSclimSDdiffs_latdiffs_AT_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilAT = 'IMAGES/ERAOBSclimSDdiffs_mapdiffs_AT_'+typee+'_'+nowmon+nowyear
-        OutSDLatsFilDPT = 'IMAGES/ERAOBSclimSDdiffs_latdiffs_DPT_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilDPT = 'IMAGES/ERAOBSclimSDdiffs_mapdiffs_DPT_'+typee+'_'+nowmon+nowyear
-        OutSDLatsFilSHU = 'IMAGES/ERAOBSclimSDdiffs_latdiffs_SHU_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilSHU = 'IMAGES/ERAOBSclimSDdiffs_mapdiffs_SHU_'+typee+'_'+nowmon+nowyear
-        OutSDLatsFilVAP = 'IMAGES/ERAOBSclimSDdiffs_latdiffs_VAP_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilVAP = 'IMAGES/ERAOBSclimSDdiffs_mapdiffs_VAP_'+typee+'_'+nowmon+nowyear
-        OutSDLatsFilCRH = 'IMAGES/ERAOBSclimSDdiffs_latdiffs_CRH_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilCRH = 'IMAGES/ERAOBSclimSDdiffs_mapdiffs_CRH_'+typee+'_'+nowmon+nowyear
-        OutSDLatsFilCWB = 'IMAGES/ERAOBSclimSDdiffs_latdiffs_CWB_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilCWB = 'IMAGES/ERAOBSclimSDdiffs_mapdiffs_CWB_'+typee+'_'+nowmon+nowyear
-        OutSDLatsFilDPD = 'IMAGES/ERAOBSclimSDdiffs_latdiffs_DPD_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilDPD = 'IMAGES/ERAOBSclimSDdiffs_mapdiffs_DPD_'+typee+'_'+nowmon+nowyear
+        OutSDLatsFilAT = 'IMAGES/ERAOBSclimSDdiffs_'+source+'_'+thresh+'_latdiffs_AT_'+typee+'_'+nowmon+nowyear
+        OutSDMapsFilAT = 'IMAGES/ERAOBSclimSDdiffs_'+source+'_'+thresh+'_mapdiffs_AT_'+typee+'_'+nowmon+nowyear
+        OutSDLatsFilDPT = 'IMAGES/ERAOBSclimSDdiffs_'+source+'_'+thresh+'_latdiffs_DPT_'+typee+'_'+nowmon+nowyear
+        OutSDMapsFilDPT = 'IMAGES/ERAOBSclimSDdiffs_'+source+'_'+thresh+'_mapdiffs_DPT_'+typee+'_'+nowmon+nowyear
+        OutSDLatsFilSHU = 'IMAGES/ERAOBSclimSDdiffs_'+source+'_'+thresh+'_latdiffs_SHU_'+typee+'_'+nowmon+nowyear
+        OutSDMapsFilSHU = 'IMAGES/ERAOBSclimSDdiffs_'+source+'_'+thresh+'_mapdiffs_SHU_'+typee+'_'+nowmon+nowyear
+        OutSDLatsFilVAP = 'IMAGES/ERAOBSclimSDdiffs_'+source+'_'+thresh+'_latdiffs_VAP_'+typee+'_'+nowmon+nowyear
+        OutSDMapsFilVAP = 'IMAGES/ERAOBSclimSDdiffs_'+source+'_'+thresh+'_mapdiffs_VAP_'+typee+'_'+nowmon+nowyear
+        OutSDLatsFilCRH = 'IMAGES/ERAOBSclimSDdiffs_'+source+'_'+thresh+'_latdiffs_CRH_'+typee+'_'+nowmon+nowyear
+        OutSDMapsFilCRH = 'IMAGES/ERAOBSclimSDdiffs_'+source+'_'+thresh+'_mapdiffs_CRH_'+typee+'_'+nowmon+nowyear
+        OutSDLatsFilCWB = 'IMAGES/ERAOBSclimSDdiffs_'+source+'_'+thresh+'_latdiffs_CWB_'+typee+'_'+nowmon+nowyear
+        OutSDMapsFilCWB = 'IMAGES/ERAOBSclimSDdiffs_'+source+'_'+thresh+'_mapdiffs_CWB_'+typee+'_'+nowmon+nowyear
+        OutSDLatsFilDPD = 'IMAGES/ERAOBSclimSDdiffs_'+source+'_'+thresh+'_latdiffs_DPD_'+typee+'_'+nowmon+nowyear
+        OutSDMapsFilDPD = 'IMAGES/ERAOBSclimSDdiffs_'+source+'_'+thresh+'_mapdiffs_DPD_'+typee+'_'+nowmon+nowyear
     elif ((innee1 == 'OBS') & (innee2 == 'OBS1')):
-        OutLatsFilAT = 'IMAGES/OBSOBS1climdiffs_'+thresh+'_latdiffs_AT_'+typee+'_'+nowmon+nowyear
-        OutMapsFilAT = 'IMAGES/OBSOBS1climdiffs_'+thresh+'_mapdiffs_AT_'+typee+'_'+nowmon+nowyear
-        OutLatsFilDPT = 'IMAGES/OBSOBS1climdiffs_'+thresh+'_latdiffs_DPT_'+typee+'_'+nowmon+nowyear
-        OutMapsFilDPT = 'IMAGES/OBSOBS1climdiffs_'+thresh+'_mapdiffs_DPT_'+typee+'_'+nowmon+nowyear
-        OutLatsFilSHU = 'IMAGES/OBSOBS1climdiffs_'+thresh+'_latdiffs_SHU_'+typee+'_'+nowmon+nowyear
-        OutMapsFilSHU = 'IMAGES/OBSOBS1climdiffs_'+thresh+'_mapdiffs_SHU_'+typee+'_'+nowmon+nowyear
-        OutLatsFilVAP = 'IMAGES/OBSOBS1climdiffs_'+thresh+'_latdiffs_VAP_'+typee+'_'+nowmon+nowyear
-        OutMapsFilVAP = 'IMAGES/OBSOBS1climdiffs_'+thresh+'_mapdiffs_VAP_'+typee+'_'+nowmon+nowyear
-        OutLatsFilCRH = 'IMAGES/OBSOBS1climdiffs_'+thresh+'_latdiffs_CRH_'+typee+'_'+nowmon+nowyear
-        OutMapsFilCRH = 'IMAGES/OBSOBS1climdiffs_'+thresh+'_mapdiffs_CRH_'+typee+'_'+nowmon+nowyear
-        OutLatsFilCWB = 'IMAGES/OBSOBS1climdiffs_'+thresh+'_latdiffs_CWB_'+typee+'_'+nowmon+nowyear
-        OutMapsFilCWB = 'IMAGES/OBSOBS1climdiffs_'+thresh+'_mapdiffs_CWB_'+typee+'_'+nowmon+nowyear
-        OutLatsFilDPD = 'IMAGES/OBSOBS1climdiffs_'+thresh+'_latdiffs_DPD_'+typee+'_'+nowmon+nowyear
-        OutMapsFilDPD = 'IMAGES/OBSOBS1climdiffs_'+thresh+'_mapdiffs_DPD_'+typee+'_'+nowmon+nowyear
+        OutLatsFilAT = 'IMAGES/OBSOBS1climdiffs_'+source+'_'+thresh+'_latdiffs_AT_'+typee+'_'+nowmon+nowyear
+        OutMapsFilAT = 'IMAGES/OBSOBS1climdiffs_'+source+'_'+thresh+'_mapdiffs_AT_'+typee+'_'+nowmon+nowyear
+        OutLatsFilDPT = 'IMAGES/OBSOBS1climdiffs_'+source+'_'+thresh+'_latdiffs_DPT_'+typee+'_'+nowmon+nowyear
+        OutMapsFilDPT = 'IMAGES/OBSOBS1climdiffs_'+source+'_'+thresh+'_mapdiffs_DPT_'+typee+'_'+nowmon+nowyear
+        OutLatsFilSHU = 'IMAGES/OBSOBS1climdiffs_'+source+'_'+thresh+'_latdiffs_SHU_'+typee+'_'+nowmon+nowyear
+        OutMapsFilSHU = 'IMAGES/OBSOBS1climdiffs_'+source+'_'+thresh+'_mapdiffs_SHU_'+typee+'_'+nowmon+nowyear
+        OutLatsFilVAP = 'IMAGES/OBSOBS1climdiffs_'+source+'_'+thresh+'_latdiffs_VAP_'+typee+'_'+nowmon+nowyear
+        OutMapsFilVAP = 'IMAGES/OBSOBS1climdiffs_'+source+'_'+thresh+'_mapdiffs_VAP_'+typee+'_'+nowmon+nowyear
+        OutLatsFilCRH = 'IMAGES/OBSOBS1climdiffs_'+source+'_'+thresh+'_latdiffs_CRH_'+typee+'_'+nowmon+nowyear
+        OutMapsFilCRH = 'IMAGES/OBSOBS1climdiffs_'+source+'_'+thresh+'_mapdiffs_CRH_'+typee+'_'+nowmon+nowyear
+        OutLatsFilCWB = 'IMAGES/OBSOBS1climdiffs_'+source+'_'+thresh+'_latdiffs_CWB_'+typee+'_'+nowmon+nowyear
+        OutMapsFilCWB = 'IMAGES/OBSOBS1climdiffs_'+source+'_'+thresh+'_mapdiffs_CWB_'+typee+'_'+nowmon+nowyear
+        OutLatsFilDPD = 'IMAGES/OBSOBS1climdiffs_'+source+'_'+thresh+'_latdiffs_DPD_'+typee+'_'+nowmon+nowyear
+        OutMapsFilDPD = 'IMAGES/OBSOBS1climdiffs_'+source+'_'+thresh+'_mapdiffs_DPD_'+typee+'_'+nowmon+nowyear
 
-        OutSDLatsFilAT = 'IMAGES/OBSOBS1climSDdiffs_'+thresh+'_latdiffs_AT_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilAT = 'IMAGES/OBSOBS1climSDdiffs_'+thresh+'_mapdiffs_AT_'+typee+'_'+nowmon+nowyear
-        OutSDLatsFilDPT = 'IMAGES/OBSOBS1climSDdiffs_'+thresh+'_latdiffs_DPT_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilDPT = 'IMAGES/OBSOBS1climSDdiffs_'+thresh+'_mapdiffs_DPT_'+typee+'_'+nowmon+nowyear
-        OutSDLatsFilSHU = 'IMAGES/OBSOBS1climSDdiffs_'+thresh+'_latdiffs_SHU_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilSHU = 'IMAGES/OBSOBS1climSDdiffs_'+thresh+'_mapdiffs_SHU_'+typee+'_'+nowmon+nowyear
-        OutSDLatsFilVAP = 'IMAGES/OBSOBS1climSDdiffs_'+thresh+'_latdiffs_VAP_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilVAP = 'IMAGES/OBSOBS1climSDdiffs_'+thresh+'_mapdiffs_VAP_'+typee+'_'+nowmon+nowyear
-        OutSDLatsFilCRH = 'IMAGES/OBSOBS1climSDdiffs_'+thresh+'_latdiffs_CRH_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilCRH = 'IMAGES/OBSOBS1climSDdiffs_'+thresh+'_mapdiffs_CRH_'+typee+'_'+nowmon+nowyear
-        OutSDLatsFilCWB = 'IMAGES/OBSOBS1climSDdiffs_'+thresh+'_latdiffs_CWB_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilCWB = 'IMAGES/OBSOBS1climSDdiffs_'+thresh+'_mapdiffs_CWB_'+typee+'_'+nowmon+nowyear
-        OutSDLatsFilDPD = 'IMAGES/OBSOBS1climSDdiffs_'+thresh+'_latdiffs_DPD_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilDPD = 'IMAGES/OBSOBS1climSDdiffs_'+thresh+'_mapdiffs_DPD_'+typee+'_'+nowmon+nowyear
+        OutSDLatsFilAT = 'IMAGES/OBSOBS1climSDdiffs_'+source+'_'+thresh+'_latdiffs_AT_'+typee+'_'+nowmon+nowyear
+        OutSDMapsFilAT = 'IMAGES/OBSOBS1climSDdiffs_'+source+'_'+thresh+'_mapdiffs_AT_'+typee+'_'+nowmon+nowyear
+        OutSDLatsFilDPT = 'IMAGES/OBSOBS1climSDdiffs_'+source+'_'+thresh+'_latdiffs_DPT_'+typee+'_'+nowmon+nowyear
+        OutSDMapsFilDPT = 'IMAGES/OBSOBS1climSDdiffs_'+source+'_'+thresh+'_mapdiffs_DPT_'+typee+'_'+nowmon+nowyear
+        OutSDLatsFilSHU = 'IMAGES/OBSOBS1climSDdiffs_'+source+'_'+thresh+'_latdiffs_SHU_'+typee+'_'+nowmon+nowyear
+        OutSDMapsFilSHU = 'IMAGES/OBSOBS1climSDdiffs_'+source+'_'+thresh+'_mapdiffs_SHU_'+typee+'_'+nowmon+nowyear
+        OutSDLatsFilVAP = 'IMAGES/OBSOBS1climSDdiffs_'+source+'_'+thresh+'_latdiffs_VAP_'+typee+'_'+nowmon+nowyear
+        OutSDMapsFilVAP = 'IMAGES/OBSOBS1climSDdiffs_'+source+'_'+thresh+'_mapdiffs_VAP_'+typee+'_'+nowmon+nowyear
+        OutSDLatsFilCRH = 'IMAGES/OBSOBS1climSDdiffs_'+source+'_'+thresh+'_latdiffs_CRH_'+typee+'_'+nowmon+nowyear
+        OutSDMapsFilCRH = 'IMAGES/OBSOBS1climSDdiffs_'+source+'_'+thresh+'_mapdiffs_CRH_'+typee+'_'+nowmon+nowyear
+        OutSDLatsFilCWB = 'IMAGES/OBSOBS1climSDdiffs_'+source+'_'+thresh+'_latdiffs_CWB_'+typee+'_'+nowmon+nowyear
+        OutSDMapsFilCWB = 'IMAGES/OBSOBS1climSDdiffs_'+source+'_'+thresh+'_mapdiffs_CWB_'+typee+'_'+nowmon+nowyear
+        OutSDLatsFilDPD = 'IMAGES/OBSOBS1climSDdiffs_'+source+'_'+thresh+'_latdiffs_DPD_'+typee+'_'+nowmon+nowyear
+        OutSDMapsFilDPD = 'IMAGES/OBSOBS1climSDdiffs_'+source+'_'+thresh+'_mapdiffs_DPD_'+typee+'_'+nowmon+nowyear
     elif ((innee1 == 'OBS1') & (innee2 == 'OBS2')):
-        OutLatsFilAT = 'IMAGES/OBS1OBS2climdiffs_'+thresh+'_latdiffs_AT_'+typee+'_'+nowmon+nowyear
-        OutMapsFilAT = 'IMAGES/OBS1OBS2climdiffs_'+thresh+'_mapdiffs_AT_'+typee+'_'+nowmon+nowyear
-        OutLatsFilDPT = 'IMAGES/OBS1OBS2climdiffs_'+thresh+'_latdiffs_DPT_'+typee+'_'+nowmon+nowyear
-        OutMapsFilDPT = 'IMAGES/OBS1OBS2climdiffs_'+thresh+'_mapdiffs_DPT_'+typee+'_'+nowmon+nowyear
-        OutLatsFilSHU = 'IMAGES/OBS1OBS2climdiffs_'+thresh+'_latdiffs_SHU_'+typee+'_'+nowmon+nowyear
-        OutMapsFilSHU = 'IMAGES/OBS1OBS2climdiffs_'+thresh+'_mapdiffs_SHU_'+typee+'_'+nowmon+nowyear
-        OutLatsFilVAP = 'IMAGES/OBS1OBS2climdiffs_'+thresh+'_latdiffs_VAP_'+typee+'_'+nowmon+nowyear
-        OutMapsFilVAP = 'IMAGES/OBS1OBS2climdiffs_'+thresh+'_mapdiffs_VAP_'+typee+'_'+nowmon+nowyear
-        OutLatsFilCRH = 'IMAGES/OBS1OBS2climdiffs_'+thresh+'_latdiffs_CRH_'+typee+'_'+nowmon+nowyear
-        OutMapsFilCRH = 'IMAGES/OBS1OBS2climdiffs_'+thresh+'_mapdiffs_CRH_'+typee+'_'+nowmon+nowyear
-        OutLatsFilCWB = 'IMAGES/OBS1OBS2climdiffs_'+thresh+'_latdiffs_CWB_'+typee+'_'+nowmon+nowyear
-        OutMapsFilCWB = 'IMAGES/OBS1OBS2climdiffs_'+thresh+'_mapdiffs_CWB_'+typee+'_'+nowmon+nowyear
-        OutLatsFilDPD = 'IMAGES/OBS1OBS2climdiffs_'+thresh+'_latdiffs_DPD_'+typee+'_'+nowmon+nowyear
-        OutMapsFilDPD = 'IMAGES/OBS1OBS2climdiffs_'+thresh+'_mapdiffs_DPD_'+typee+'_'+nowmon+nowyear
+        OutLatsFilAT = 'IMAGES/OBS1OBS2climdiffs_'+source+'_'+thresh+'_latdiffs_AT_'+typee+'_'+nowmon+nowyear
+        OutMapsFilAT = 'IMAGES/OBS1OBS2climdiffs_'+source+'_'+thresh+'_mapdiffs_AT_'+typee+'_'+nowmon+nowyear
+        OutLatsFilDPT = 'IMAGES/OBS1OBS2climdiffs_'+source+'_'+thresh+'_latdiffs_DPT_'+typee+'_'+nowmon+nowyear
+        OutMapsFilDPT = 'IMAGES/OBS1OBS2climdiffs_'+source+'_'+thresh+'_mapdiffs_DPT_'+typee+'_'+nowmon+nowyear
+        OutLatsFilSHU = 'IMAGES/OBS1OBS2climdiffs_'+source+'_'+thresh+'_latdiffs_SHU_'+typee+'_'+nowmon+nowyear
+        OutMapsFilSHU = 'IMAGES/OBS1OBS2climdiffs_'+source+'_'+thresh+'_mapdiffs_SHU_'+typee+'_'+nowmon+nowyear
+        OutLatsFilVAP = 'IMAGES/OBS1OBS2climdiffs_'+source+'_'+thresh+'_latdiffs_VAP_'+typee+'_'+nowmon+nowyear
+        OutMapsFilVAP = 'IMAGES/OBS1OBS2climdiffs_'+source+'_'+thresh+'_mapdiffs_VAP_'+typee+'_'+nowmon+nowyear
+        OutLatsFilCRH = 'IMAGES/OBS1OBS2climdiffs_'+source+'_'+thresh+'_latdiffs_CRH_'+typee+'_'+nowmon+nowyear
+        OutMapsFilCRH = 'IMAGES/OBS1OBS2climdiffs_'+source+'_'+thresh+'_mapdiffs_CRH_'+typee+'_'+nowmon+nowyear
+        OutLatsFilCWB = 'IMAGES/OBS1OBS2climdiffs_'+source+'_'+thresh+'_latdiffs_CWB_'+typee+'_'+nowmon+nowyear
+        OutMapsFilCWB = 'IMAGES/OBS1OBS2climdiffs_'+source+'_'+thresh+'_mapdiffs_CWB_'+typee+'_'+nowmon+nowyear
+        OutLatsFilDPD = 'IMAGES/OBS1OBS2climdiffs_'+source+'_'+thresh+'_latdiffs_DPD_'+typee+'_'+nowmon+nowyear
+        OutMapsFilDPD = 'IMAGES/OBS1OBS2climdiffs_'+source+'_'+thresh+'_mapdiffs_DPD_'+typee+'_'+nowmon+nowyear
 
-        OutSDLatsFilAT = 'IMAGES/OBS1OBS2climSDdiffs_'+thresh+'_latdiffs_AT_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilAT = 'IMAGES/OBS1OBS2climSDdiffs_'+thresh+'_mapdiffs_AT_'+typee+'_'+nowmon+nowyear
-        OutSDLatsFilDPT = 'IMAGES/OBS1OBS2climSDdiffs_'+thresh+'_latdiffs_DPT_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilDPT = 'IMAGES/OBS1OBS2climSDdiffs_'+thresh+'_mapdiffs_DPT_'+typee+'_'+nowmon+nowyear
-        OutSDLatsFilSHU = 'IMAGES/OBS1OBS2climSDdiffs_'+thresh+'_latdiffs_SHU_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilSHU = 'IMAGES/OBS1OBS2climSDdiffs_'+thresh+'_mapdiffs_SHU_'+typee+'_'+nowmon+nowyear
-        OutSDLatsFilVAP = 'IMAGES/OBS1OBS2climSDdiffs_'+thresh+'_latdiffs_VAP_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilVAP = 'IMAGES/OBS1OBS2climSDdiffs_'+thresh+'_mapdiffs_VAP_'+typee+'_'+nowmon+nowyear
-        OutSDLatsFilCRH = 'IMAGES/OBS1OBS2climSDdiffs_'+thresh+'_latdiffs_CRH_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilCRH = 'IMAGES/OBS1OBS2climSDdiffs_'+thresh+'_mapdiffs_CRH_'+typee+'_'+nowmon+nowyear
-        OutSDLatsFilCWB = 'IMAGES/OBS1OBS2climSDdiffs_'+thresh+'_latdiffs_CWB_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilCWB = 'IMAGES/OBS1OBS2climSDdiffs_'+thresh+'_mapdiffs_CWB_'+typee+'_'+nowmon+nowyear
-        OutSDLatsFilDPD = 'IMAGES/OBS1OBS2climSDdiffs_'+thresh+'_latdiffs_DPD_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilDPD = 'IMAGES/OBS1OBS2climSDdiffs_'+thresh+'_mapdiffs_DPD_'+typee+'_'+nowmon+nowyear
+        OutSDLatsFilAT = 'IMAGES/OBS1OBS2climSDdiffs_'+source+'_'+thresh+'_latdiffs_AT_'+typee+'_'+nowmon+nowyear
+        OutSDMapsFilAT = 'IMAGES/OBS1OBS2climSDdiffs_'+source+'_'+thresh+'_mapdiffs_AT_'+typee+'_'+nowmon+nowyear
+        OutSDLatsFilDPT = 'IMAGES/OBS1OBS2climSDdiffs_'+source+'_'+thresh+'_latdiffs_DPT_'+typee+'_'+nowmon+nowyear
+        OutSDMapsFilDPT = 'IMAGES/OBS1OBS2climSDdiffs_'+source+'_'+thresh+'_mapdiffs_DPT_'+typee+'_'+nowmon+nowyear
+        OutSDLatsFilSHU = 'IMAGES/OBS1OBS2climSDdiffs_'+source+'_'+thresh+'_latdiffs_SHU_'+typee+'_'+nowmon+nowyear
+        OutSDMapsFilSHU = 'IMAGES/OBS1OBS2climSDdiffs_'+source+'_'+thresh+'_mapdiffs_SHU_'+typee+'_'+nowmon+nowyear
+        OutSDLatsFilVAP = 'IMAGES/OBS1OBS2climSDdiffs_'+source+'_'+thresh+'_latdiffs_VAP_'+typee+'_'+nowmon+nowyear
+        OutSDMapsFilVAP = 'IMAGES/OBS1OBS2climSDdiffs_'+source+'_'+thresh+'_mapdiffs_VAP_'+typee+'_'+nowmon+nowyear
+        OutSDLatsFilCRH = 'IMAGES/OBS1OBS2climSDdiffs_'+source+'_'+thresh+'_latdiffs_CRH_'+typee+'_'+nowmon+nowyear
+        OutSDMapsFilCRH = 'IMAGES/OBS1OBS2climSDdiffs_'+source+'_'+thresh+'_mapdiffs_CRH_'+typee+'_'+nowmon+nowyear
+        OutSDLatsFilCWB = 'IMAGES/OBS1OBS2climSDdiffs_'+source+'_'+thresh+'_latdiffs_CWB_'+typee+'_'+nowmon+nowyear
+        OutSDMapsFilCWB = 'IMAGES/OBS1OBS2climSDdiffs_'+source+'_'+thresh+'_mapdiffs_CWB_'+typee+'_'+nowmon+nowyear
+        OutSDLatsFilDPD = 'IMAGES/OBS1OBS2climSDdiffs_'+source+'_'+thresh+'_latdiffs_DPD_'+typee+'_'+nowmon+nowyear
+        OutSDMapsFilDPD = 'IMAGES/OBS1OBS2climSDdiffs_'+source+'_'+thresh+'_mapdiffs_DPD_'+typee+'_'+nowmon+nowyear
     
     # create empty arrays for lats
     lats = np.arange(180,0,-1)-90.5

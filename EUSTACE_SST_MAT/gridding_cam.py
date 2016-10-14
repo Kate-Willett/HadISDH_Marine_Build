@@ -300,7 +300,7 @@ def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = d
 		print "All Obs: ",len(mask)
 		print "Good Obs: ",len(mask[np.where(mask == 0)])
 		print "Bad Obs: ",len(mask[np.where(mask == 1)])
-		pdb.set_trace()
+		#pdb.set_trace()
 		
 
                 complete_mask = np.zeros(raw_obs.shape)
