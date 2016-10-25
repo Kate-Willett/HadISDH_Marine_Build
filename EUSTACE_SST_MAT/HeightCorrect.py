@@ -362,12 +362,14 @@ def run_heightcorrection_final(sst,at,shu,u,zu,zt,zq,dpt=(-99.9),vap=(-99.9),crh
       climp = -99.9 climatological mean sea level pressure for that ob (hPa)
 
     IF SST IS MISSING (test for sst < -60 or > 60) USE AT
-    IF U IS V SMALL OR MISSING (test for u < 0.5 then u = 0.5, or u < 0 or > 100 then u=3m/s
+    ( This may have been checked in calling code but check here too!)
+    IF U IS V SMALL OR MISSING (test for u < 0.5 then u = 0.5, or u < 0 or > 100 then u=6m/s
     IF RESULTING ADJ MAKES dpt_10m>at_10m or crh_10m>100%rh:
       at_10m is set to equal dpt_10m
       crh_10m is set to equal 100%rh 
       This results in cwb_10m, dpd_10m being recalculated.
     IF L does not converge - exits with VAR_10m = -99.99 if L is really silly (low and not converging), settling with L of last iteration if abs(L) > 500  
+    IF any values are silly (at_10m > 100 or a NaN or shu_10m < 0. or a NaN return at_10m = -99.9
     
     Returns:
       A dictionary of all adjusted values - if vap_10m etc are not calculate then they will be set to -99.9
@@ -436,15 +438,23 @@ def run_heightcorrection_final(sst,at,shu,u,zu,zt,zq,dpt=(-99.9),vap=(-99.9),crh
     z0q = 0.0012
     k = 0.41
     
-    # Check if sst is missing (it could be) - use at instead (NOT IDEAL!!!! - PROBABLY WANT TO FLAG FOR INCREASED UNCERTAINTY)
-    if ((sst < -60.) | (sst > 60.)):
+    # Check if sst is missing (it could be) - use AT instead 
+    # NOT IDEAL!!!! - PROBABLY WANT TO FLAG FOR INCREASED UNCERTAINTY - will add a check in calling routine
+    # Also AT may be WELL below -1.8 (freezing point of seawater) or possibly above 40deg so have a cutoff
+    if ((sst < -1.8) | (sst > 40.)):
         sst = at
-
+	if (sst < -1.8):
+	    sst = -1.8
+        elif (sst > 40.):
+	    sst = 40.
+	    
     # Check if u is missing or very small (it could be) - use 3 or 0.5m/s instead (NOT IDEAL!!!! - PROBABLY WANT TO FLAG FOR INCREASED UNCERTAINTY)
+    if (u < 0.0):
+        u = 6.
     if (u < 0.5):
         u = 0.5
     elif (u > 100):
-        u = 3.
+        u = 6. # was 3
     
     # Iterate to find L
     HeightDict = run_iterate_L(sst,at,shu,u,zu,zt,zq)
