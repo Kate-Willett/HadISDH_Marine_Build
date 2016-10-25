@@ -95,11 +95,28 @@
 # a text file of stats
 # /data/local/hadkw/HADCRUH2/MARINE/LISTS/InstrumentMetaDataStats_all_ERAclimNBC_APR2016.txt
 # /data/local/hadkw/HADCRUH2/MARINE/LISTS/HeightMetaDataStats_all_ERAclimNBC_APR2016.txt
+#
+# text files listing decks/years to include in ROUNDunc estimates
+# /data/local/hadkw/HADCRUH2/MARINE/LISTS/DeckStatsROUNDAT_2.0_I300_all_OBSclim2NBC_OCT2016.txt'
+# /data/local/hadkw/HADCRUH2/MARINE/LISTS/DeckStatsROUNDDPT_2.0_I300_all_OBSclim2NBC_OCT2016.txt'
+#
 # 
 # -----------------------
 # VERSION/RELEASE NOTES
 # -----------------------
 # 
+# Version 2 (24 October 2016)
+# ---------
+#  
+# Enhancements
+# Now outputs a list of decks by year where the frequency of .0s exceeds the mean frequency of other decimals
+# by a chosen amount DecMulti. THis can be almost directly used by MDS_make_Extended.py with a bit of faffing.
+#  
+# Changes
+#  
+# Bug fixes
+#
+#
 # Version 1 (1 April 2016)
 # ---------
 #  
@@ -134,7 +151,17 @@ import struct
 import pdb # pdb.set_trace() or c 
 
 #from LinearTrends import MedianPairwise 
-import MDS_basic_KATE as MDStool
+import MDS_RWtools as MDStool
+
+# ICOADS source
+source = 'I300'
+
+# Time stamps
+nowmon = 'OCT'
+nowyear = '2016'
+
+# Minimum frequency of 0s times the mean frequency for all non-zero decimals
+DecMulti = 2.0 # 1.25, 2.0
 
 #************************************************************************
 # Main
@@ -210,12 +237,14 @@ def main(argv):
 
     #OUTDIR = '/data/local/hadkw/HADCRUH2/MARINE/'
     OUTDIR = ''
-    OutRoundsPltAT = 'IMAGES/DecimalFreqDiagsAT_'+switch+'_'+typee+'_'+year1+year2+month1+month2+'_APR2016'
-    OutRoundsTxtAT = 'LISTS/DecimalFreqStatsAT_'+switch+'_'+typee+'_APR2016.txt'
-    OutRoundsPltDPT = 'IMAGES/DecimalFreqDiagsDPT_'+switch+'_'+typee+'_'+year1+year2+month1+month2+'_APR2016'
-    OutRoundsTxtDPT = 'LISTS/DecimalFreqStatsDPT_'+switch+'_'+typee+'_APR2016.txt'
+    OutRoundsPltAT = 'IMAGES/DecimalFreqDiagsAT_'+source+'_'+switch+'_'+typee+'_'+year1+year2+month1+month2+'_'+nowmon+nowyear
+    OutRoundsTxtAT = 'LISTS/DecimalFreqStatsAT_'+source+'_'+switch+'_'+typee+'_'+nowmon+nowyear+'.txt'
+    OutRoundsPltDPT = 'IMAGES/DecimalFreqDiagsDPT_'+source+'_'+switch+'_'+typee+'_'+year1+year2+month1+month2+'_'+nowmon+nowyear
+    OutRoundsTxtDPT = 'LISTS/DecimalFreqStatsDPT_'+source+'_'+switch+'_'+typee+'_'+nowmon+nowyear+'.txt'
 
-    OutDecksTxt = 'LISTS/DeckStats_'+switch+'_'+typee+'_APR2016.txt'
+    OutDecksTxt = 'LISTS/DeckStats_'+source+'_'+switch+'_'+typee+'_'+nowmon+nowyear+'.txt'
+    OutDecksATROUNDS = 'LISTS/DeckStatsROUNDAT_'+str(DecMulti)+'_'+source+'_'+switch+'_'+typee+'_'+nowmon+nowyear+'.txt'
+    OutDecksDPTROUNDS = 'LISTS/DeckStatsROUNDDPT_'+str(DecMulti)+'_'+source+'_'+switch+'_'+typee+'_'+nowmon+nowyear+'.txt'
     
     # create empty arrays for data bundles
     nobs=0 # we're looking at all obs, not just those with 'good' data
@@ -230,7 +259,7 @@ def main(argv):
         for mm in range((int(month2)+1)-int(month1)):
             print(str(yy+int(year1)),' ','{:02}'.format(mm+int(month1)))
 
-            MDSdict=MDStool.ReadMDSkate(str(yy+int(year1)),'{:02}'.format(mm+int(month1)), typee)
+            MDSdict=MDStool.ReadMDSstandard(str(yy+int(year1)),'{:02}'.format(mm+int(month1)), typee)
 
 	    if (nobs == 0):
 	        if (switch == 'all'):
@@ -317,6 +346,8 @@ def main(argv):
     lins = ['-','-','-','-','-','-','-','--','--','--','--','--','--','--',':',':',':',':',':',':',':','-.','-.','-.','-.','-.','-.','-.']
     linstext = ['solid','solid','solid','solid','solid','solid','solid','dashed','dashed','dashed','dashed','dashed','dashed','dashed','dotted','dotted','dotted','dotted','dotted','dotted','dotted','dotdash','dotdash','dotdash','dotdash','dotdash','dotdash','dotdash']
     
+    filee=open(OUTDIR+OutDecksDPTROUNDS,'a+')
+    output=''
     plt.clf()
     fig, ax1 = plt.subplots()
     ax1.plot(histeeALL[1][0:10]+0.05,histeeALL[0],c='black')
@@ -330,9 +361,18 @@ def main(argv):
         if (len(np.where((DCKbun == dck) & (DPTRbun == 1))[0]) > 0):
             PctRounds = (float(len(np.where((DCKbun == dck) & (DPTRbun == 1))[0]))/float(len(np.where(DCKbun == dck)[0])))*100.
         ax2.annotate("{:3d}".format(dck)+' '+linstext[i]+"{:6.2f}".format(PctRounds)+'%',xy=(0.65,0.96-(i*gap)),xycoords='axes fraction',size=10,color=cols[i])
-
+        # Is this deck/year a candidate for overly prevalant 0s? More 0s than all other numbers and at least 1.5* the mean amount for each decimal
+        if ((histee[0][0] > np.max(histee[0][1:10])) & (histee[0][0] >= (DecMulti * np.mean(histee[0][1:10])))):
+	    if (np.mean(histee[0][1:10]) > 0):
+	        PctOver = histee[0][0] / np.mean(histee[0][1:10])
+	    else:
+	        PctOver = -999.99
+	    output = output+' '+"{:3d}".format(int(dck))+"{:8.2f}".format(PctOver)
+  
     ax2.set_ylabel('No. of Obs (DECKS)', color='black')
     plt.tight_layout()
+    filee.write(str(year1+' '+year2+' '+month1+' '+month2+output+'\n'))
+    filee.close()
 
 #    plt.savefig(OUTDIR+OutRoundsPltDPT+".eps")
     plt.savefig(OUTDIR+OutRoundsPltDPT+".png")
@@ -387,6 +427,8 @@ def main(argv):
 
     histeeALL = np.histogram(ATbun-np.floor(ATbun),np.arange(-0.05,1.05,0.1)) # or np.linspace(-0.05,0.95,11)
 
+    filee=open(OUTDIR+OutDecksATROUNDS,'a+')
+    output=''
     plt.clf()
     fig, ax1 = plt.subplots()
     ax1.plot(histeeALL[1][0:10]+0.05,histeeALL[0],c='black')
@@ -400,9 +442,18 @@ def main(argv):
         if (len(np.where((DCKbun == dck) & (ATRbun == 1))[0]) > 0):
             PctRounds = (float(len(np.where((DCKbun == dck) & (ATRbun == 1))[0]))/float(len(np.where(DCKbun == dck)[0])))*100.
         ax2.annotate("{:3d}".format(dck)+' '+linstext[i]+"{:6.2f}".format(PctRounds)+'%',xy=(0.65,0.96-(i*gap)),xycoords='axes fraction',size=10,color=cols[i])
-
+        # Is this deck/year a candidate for overly prevalant 0s? More 0s than all other numbers and at least 1.5* the mean amount for each decimal
+        if ((histee[0][0] > np.max(histee[0][1:10])) & (histee[0][0] >= (DecMulti * np.mean(histee[0][1:10])))):
+	    if (np.mean(histee[0][1:10]) > 0):
+	        PctOver = histee[0][0] / np.mean(histee[0][1:10])
+	    else:
+	        PctOver = -999.99
+	    output = output+' '+"{:3d}".format(int(dck))+"{:8.2f}".format(PctOver)
+  
     ax2.set_ylabel('No. of Obs (DECKS)', color='black')
     plt.tight_layout()
+    filee.write(str(year1+' '+year2+' '+month1+' '+month2+output+'\n'))
+    filee.close()
 
 #    plt.savefig(OUTDIR+OutRoundsPltAT+".eps")
     plt.savefig(OUTDIR+OutRoundsPltAT+".png")
@@ -471,7 +522,7 @@ def main(argv):
 	        PctDck = (float(TotDck)/float(nobs))*100.
 	    output = output+' '+"{:3d}".format(int(dck))+': '+"{:8d}".format(TotDck)+' ('+"{:6.2f}".format(PctDck)+'%)'
 
-            filee.write(str(year1+' '+year2+' '+month1+' '+month2+' NOBS: '+'{:8d}'.format(nobs)+\
+        filee.write(str(year1+' '+year2+' '+month1+' '+month2+' NOBS: '+'{:8d}'.format(nobs)+\
                                                              output+\
 							     '\n'))
         filee.close()
