@@ -112,8 +112,8 @@ nowmon = 'OCT'
 nowyear = '2016'
 
 # What are we differencing?
-innee1 = 'OBS' # 'ERA', 'OBS', 'OBS1'
-innee2 = 'OBS1' # 'OBS', 'OBS1', 'OBS2'
+innee1 = 'OBS1' # 'ERA', 'OBS', 'OBS1'
+innee2 = 'OBS2' # 'OBS', 'OBS1', 'OBS2'
 
 # What threshold for clim/buddy?
 thresh = '55' # '35', '45', '55'
