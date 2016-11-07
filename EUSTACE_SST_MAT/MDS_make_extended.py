@@ -797,16 +797,21 @@ def ApplyScreenAdjUnc(ExtDict,UncDict,Counter,ClimP):
     return ExtDict, UncDict
 
 #************************************************************************************************************
-# ApplyHeightAdjUnc
+# EstimateHeight
 #************************************************************************************************************
-def ApplyHeightAdjUnc(ExtDict,UncDict,Counter,ClimP):
+def EstimateHeight(ExtDict,Counter):
 
     '''
-    ExtDict = dictionary of orig AND adjusted values
-    UncDict = dicitonary of uncertainty values
-    Counter = loop number for finding right original ob   
-    ClimP = climatological pentad mean SLP from nearest 1x1 gridbox to ob for humidity calculation 
-
+    This function is called from ApplyHeightAdjUnc.
+    It works out a height of hygrometer and returns it along with an uncertainty switch depending on the source of the height
+    INPUTS:
+    ExtDict = dictionary of all obs and metadata and adjustments to date
+    Counter = pointer to the ob of interest
+    OUTPUTS:
+    EstHeightH = estimated height of hygrometer
+    EstHeightA = estimated height of anemometer (or provided)
+    EstUnc = allocated uncertainty amount
+    
     If PT = ship (0,1,2,3,4,5) - only really 5 that we have both HOB/HOT and HOA/HOP info
     1) ESTH = HOT: height of thermomenter in m (preferred) UNLESS IT IS SILLY (e.g., < 2m) - unc = 0.1*adj
     2) ESTH = HOB: height of barometer in m (second choice) UNLESS IT IS SILLY (e.g., < 2m) - unc = 0.1*adj
@@ -819,6 +824,224 @@ def ApplyHeightAdjUnc(ExtDict,UncDict,Counter,ClimP):
     IF PT = buoy (6,8) no height info so assume 4m HOP and 5m HOA - unc = 0.85*adj
     ESTH = 4 (NBDC gives height as 4 for most listed) http://www.ndbc.noaa.gov/bht.shtml
     IF PT = platform (9,10,15) (no height info so do not apply adjustment - ESTH = 999 - unc = (T-SST)/2., (q-q0)/2
+    
+    IF adjustment cannot be calculated - unc = (T-SST)/2., (q-q0)/2
+    IF adjustment cannot be calculated and SST is not present/failed QC - 
+    unc = 0.1 for AT (10m at DALR), q*0.007 (7% per 1 deg so 0.7 per 0.1 deg)    
+    
+    '''
+
+    # Prescribed heights (of thermomenters and anemometers) for buoys and platforms
+    PBuoy = 4.
+    PBuoyHOA = 5.
+    PPlatform = 999.	# was 20 but now do not apply
+    PPlatformHOA = 999. # was 30 but now do not apply
+        
+    # Increments for estimating height by YR and MN 
+    StHeight = 17. # was 16
+    EdHeight = 22. # was 24
+    StYr = 1973 # assume January
+    EdYr = 2001 # assume December 2000 (was Dec 2006 so 2007)
+    MnInc = (EdHeight / StHeight) / (((EdYr) - StYr) * 12.) # should be 0.0149 - was ~0.02
+        
+    # proportion of adjustment to apply as uncertainty depending on estimate type:
+    calc_height = 1 # default is VERY UNCERTAIN!
+    actual_height = 0.1 # actual height
+    estimated_height =  0.85 # estimated height (ship) or prescribed height (buoy) was 0.5
+    no_adjustment = 999 # either its a platform or an adjustment can't be applied
+
+    # ENSURE THAT ESTH IS A FLOAT
+    # First check if its a buoy or platform
+    if (ExtDict['PT'][Counter] > 5):
+        # If its a buoy apply height of 4m http://www.ndbc.noaa.gov/bht.shtml
+	if ((ExtDict['PT'][Counter] == 6) | (ExtDict['PT'][Counter] == 8)):
+            # Fill in (append) the Estimated Height accordingly
+	    EstHeightH = float(PBuoy)
+	    EstHeightA = float(PBuoyHOA) # http://www.ndbc.noaa.gov/bht.shtml
+	    EstUnc = estimated_height
+    # Now check if its a platform (will be removed next time around)
+	else:
+            # Fill in (append) the Estimated Height accordingly
+	    EstHeightH = float(PPlatform)
+	    EstHeightA = float(PPlatformHOA)
+	    EstUnc = no_adjustment
+    # Or its a ship then get a height
+    else:
+        # Choice 1. If HOB or HOT exists then use this - UNLESS THEY ARE SILLY (< 2m)
+        if (ExtDict['HOT'][Counter] > 2.):
+            # Fill in (append) the Estimated Height accordingly
+	    EstHeightH = float(ExtDict['HOT'][Counter])
+	    EstUnc = actual_height
+        # Choice 2. If HOB or HOT exists then use this - UNLESS THEY ARE SILLY (< 2m)
+        elif (ExtDict['HOB'][Counter] > 2.):
+            # Fill in (append) the Estimated Height accordingly
+	    EstHeightH = float(ExtDict['HOB'][Counter])
+	    EstUnc = actual_height
+        # Choice 3. If HOP exists then use this - UNLESS THEY ARE SILLY (< 2m)
+        elif (ExtDict['HOP'][Counter] > 2.):
+            # Fill in (append) the Estimated Height accordingly
+	    EstHeightH = float(ExtDict['HOP'][Counter])
+	    EstUnc = actual_height
+        # Choice 4. If HOA is available then estimate - UNLESS THEY ARE SILLY (< 12m) 12 because 12-10 = 2!
+        elif (ExtDict['HOA'][Counter] > 12.):
+            EstHeightH = float(ExtDict['HOA'][Counter] - 10.)
+	    EstUnc = estimated_height
+        # Choice 5. Prescribe a height based on YR and MN (there should only be ships left by now
+        else:
+            # if YR >= 2001 (EdYr) then apply fixed height EdHeight
+	    if (ExtDict['YR'][Counter] >= EdYr):
+	        # Fill in (append) the Estimated Height accordingly
+	        EstHeightH = float(EdHeight)
+	        EstUnc = calc_height
+            # if YR < 1973 then apply fixed height StHeight
+	    elif (ExtDict['YR'][Counter] < StYr): # There aren't any years before this but maybe in the future?    
+	        # Fill in (append) the Estimated Height accordingly
+	        EstHeightH = float(StHeight)
+	        EstUnc = calc_height
+	    # Work out StHeight+MnInc depending on YR and MN
+	    else:
+	        NMonths = ((ExtDict['YR'][Counter] - StYr) * 12) + ExtDict['MO'][Counter]
+	        # Fill in (append) the Estimated Height accordingly
+	        EstHeightH = float(StHeight + (NMonths * MnInc))
+	        EstUnc = calc_height
+
+        # Check if HOA exists and is greater than 2m, if it does not then HOA = ESTH+10
+        if (ExtDict['HOA'][Counter] > 2.):
+            EstHeightA = float(ExtDict['HOA'][Counter])
+	# IF HOA does not exist or is <= than 2.
+	else:    
+	    EstHeightA = float(EstHeightH + 10.)
+
+    # Test output
+    print('Platform: ',ExtDict['PT'][Counter])
+    print('HOB/HOT/HOP/HOA: ',ExtDict['HOB'][Counter],ExtDict['HOT'][Counter],ExtDict['HOP'][Counter],ExtDict['HOA'][Counter])
+    print('ESTH/HOA/UNC: ',EstHeightH, EstHeightA, EstUnc)
+#    pdb.set_trace()
+
+    return EstheightH,EstHeightA,EstUnc
+#************************************************************************************************************
+# GetNOCSHeight
+#************************************************************************************************************
+def GetNOCSHeight(ExtDict,Counter):
+    '''
+    This function is called from ApplyHeightAdjUnc.
+    It matches the UID of the ob and pulls the prescribed height from NOCS
+
+    INPUTS:
+    ExtDict = dictionary of all obs and metadata and adjustments to date
+    Counter = pointer to the ob of interest
+    OUTPUTS:
+    EstHeightH = estimated height of hygrometer
+    EstHeightA = estimated height of anemometer (or provided)
+    EstUnc = allocated uncertainty amount
+
+    I don't think NOCS includes buoys or platforms so we only do this for ships
+    Buoys are treated as in EstimateHeight - ESTH = 4, HOA = 5, unc = 0.85*adj
+    Platforms are treated as in EstimateHeight - ESTH = 999, no adj applied, unc = (T-SST)/2., (q-q0)/2
+    Uncertainty is associated as follows:
+    
+    If PT = ship (0,1,2,3,4,5) - only really 5 that we have both HOB/HOT and HOA/HOP info
+    1) ESTH = HOT: height of thermomenter in m (preferred) UNLESS IT IS SILLY (e.g., < 2m) - unc = 0.1*adj
+    2) ESTH = HOB: height of barometer in m (second choice) UNLESS IT IS SILLY (e.g., < 2m) - unc = 0.1*adj
+    3) ESTH = HOP: height of visual obs platform in m (third choice) UNLESS IT IS SILLY (e.g., < 2m) - unc = 0.1*adj   
+       THERE ARE SOME IN JAN 1973 at 1m (~106200-106220)
+    4) ESTH = HOA-10: height of anemometer in m converted UNLESS IT IS SILLY (e.g., < 2m) - unc = 0.85*adj
+    5) ESTH = 17-22m so 17. + (nmonths*0.0149m) from Jan 1973 to Dec 2000 - based on HOB reaching and mostly staying above 22m - HOP missing 
+       Maxes out at 22m / January 2001!!!
+       Kent et al., 2007, Berry and Kent, 2011 say 16 to 24m but that most likely covers from 1971-2007 so 17 is consistent
+    IF PT = buoy (6,8) no height info so assume 4m HOP and 5m HOA - unc = 0.85*adj
+    ESTH = 4 (NBDC gives height as 4 for most listed) http://www.ndbc.noaa.gov/bht.shtml
+    IF PT = platform (9,10,15) (no height info so do not apply adjustment - ESTH = 999 - unc = (T-SST)/2., (q-q0)/2
+    
+    IF adjustment cannot be calculated - unc = (T-SST)/2., (q-q0)/2
+    IF adjustment cannot be calculated and SST is not present/failed QC - 
+    unc = 0.1 for AT (10m at DALR), q*0.007 (7% per 1 deg so 0.7 per 0.1 deg)
+    
+    
+    '''
+    MonArr = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec']
+
+    # Prescribed heights (of thermomenters and anemometers) for buoys and platforms
+    PBuoy = 4.
+    PBuoyHOA = 5.
+    PPlatform = 999.	# was 20 but now do not apply
+    PPlatformHOA = 999. # was 30 but now do not apply
+                
+    # proportion of adjustment to apply as uncertainty depending on estimate type:
+    calc_height = 1 # default is VERY UNCERTAIN!
+    actual_height = 0.1 # actual height
+    estimated_height =  0.85 # estimated height (ship) or prescribed height (buoy) was 0.5
+    no_adjustment = 999 # either its a platform or an adjustment can't be applied
+
+    # ENSURE THAT ESTH IS A FLOAT
+    # First check if its a buoy or platform
+    if (ExtDict['PT'][Counter] > 5):
+        # If its a buoy apply height of 4m http://www.ndbc.noaa.gov/bht.shtml
+	if ((ExtDict['PT'][Counter] == 6) | (ExtDict['PT'][Counter] == 8)):
+            # Fill in (append) the Estimated Height accordingly
+	    EstHeightH = float(PBuoy)
+	    EstHeightA = float(PBuoyHOA) # http://www.ndbc.noaa.gov/bht.shtml
+	    EstUnc = estimated_height
+    # Now check if its a platform (will be removed next time around)
+	else:
+            # Fill in (append) the Estimated Height accordingly
+	    EstHeightH = float(PPlatform)
+	    EstHeightA = float(PPlatformHOA)
+	    EstUnc = no_adjustment
+    # Or its a ship then get a height from NOCS
+    else:
+        # Look up the NOCS file for this YR and MN
+	    EstHeightH = float(ExtDict['HOT'][Counter])
+	    EstUnc = actual_height
+	    EstUnc = estimated_height
+	    EstUnc = calc_height
+
+        # Check if HOA exists and is greater than 2m, if it does not then HOA = ESTH+10
+        if (ExtDict['HOA'][Counter] > 2.):
+            EstHeightA = float(ExtDict['HOA'][Counter])
+	# IF HOA does not exist or is <= than 2.
+	else:    
+	    EstHeightA = float(EstHeightH + 10.)
+
+    # Test output
+    print('Platform: ',ExtDict['PT'][Counter])
+    print('HOB/HOT/HOP/HOA: ',ExtDict['HOB'][Counter],ExtDict['HOT'][Counter],ExtDict['HOP'][Counter],ExtDict['HOA'][Counter])
+    print('ESTH/HOA/UNC: ',EstHeightH, EstHeightA, EstUnc)
+#    pdb.set_trace()
+
+    return EstheightH,EstHeightA,EstUnc
+#************************************************************************************************************
+# ApplyHeightAdjUnc
+#************************************************************************************************************
+def ApplyHeightAdjUnc(ExtDict,UncDict,Counter,ClimP,ChooseLocal):
+
+    '''
+    ExtDict = dictionary of orig AND adjusted values
+    UncDict = dicitonary of uncertainty values
+    Counter = loop number for finding right original ob   
+    ClimP = climatological pentad mean SLP from nearest 1x1 gridbox to ob for humidity calculation 
+    
+    This function calls for either an estimated height from EstimateHeight or a NOCS provided Height from GetNOCSHeight
+    
+    For EstimateHeight:
+    If PT = ship (0,1,2,3,4,5) - only really 5 that we have both HOB/HOT and HOA/HOP info
+    1) ESTH = HOT: height of thermomenter in m (preferred) UNLESS IT IS SILLY (e.g., < 2m) - unc = 0.1*adj
+    2) ESTH = HOB: height of barometer in m (second choice) UNLESS IT IS SILLY (e.g., < 2m) - unc = 0.1*adj
+    3) ESTH = HOP: height of visual obs platform in m (third choice) UNLESS IT IS SILLY (e.g., < 2m) - unc = 0.1*adj   
+       THERE ARE SOME IN JAN 1973 at 1m (~106200-106220)
+    4) ESTH = HOA-10: height of anemometer in m converted UNLESS IT IS SILLY (e.g., < 2m) - unc = 0.85*adj
+    5) ESTH = 17-22m so 17. + (nmonths*0.0149m) from Jan 1973 to Dec 2000 - based on HOB reaching and mostly staying above 22m - HOP missing 
+       Maxes out at 22m / January 2001!!!
+       Kent et al., 2007, Berry and Kent, 2011 say 16 to 24m but that most likely covers from 1971-2007 so 17 is consistent
+    IF PT = buoy (6,8) no height info so assume 4m HOP and 5m HOA - unc = 0.85*adj
+    ESTH = 4 (NBDC gives height as 4 for most listed) http://www.ndbc.noaa.gov/bht.shtml
+    IF PT = platform (9,10,15) (no height info so do not apply adjustment - ESTH = 999 - unc = (T-SST)/2., (q-q0)/2
+    
+    For GetNOCSHeight:
+    Matches up the UIDs and uses the NOCS prescribed heights from
+    1) METADATA ? - unc = 
+    2) Linear height estimate 17-24m? - unc = 
+    
     
     IF adjustment cannot be calculated - unc = (T-SST)/2., (q-q0)/2
     IF adjustment cannot be calculated and SST is not present/failed QC - 
@@ -852,112 +1075,134 @@ def ApplyHeightAdjUnc(ExtDict,UncDict,Counter,ClimP):
      See HeightMetaDataStats_ships_OBSclim2NBC_I300_OCT2016.txt
     '''
     
-    # Prescribed heights (of thermomenters and anemometers) for buoys and platforms
-    PBuoy = 4.
-    PBuoyHOA = 5.
-    PPlatform = 999.	# was 20 but now do not apply
-    PPlatformHOA = 999. # was 30 but now do not apply
-        
-    # Increments for estimating height by YR and MN 
-    StHeight = 17. # was 16
-    EdHeight = 22. # was 24
-    StYr = 1973 # assume January
-    EdYr = 2001 # assume December 2000 (was Dec 2006 so 2007)
-    MnInc = (EdHeight / StHeight) / (((EdYr) - StYr) * 12.) # should be 0.0149 - was ~0.02
-    
-    # FIRST SORT OUT THE HEIGHT (m) OR ESTIMATED HEIGHT
- #   # We also need to estimate HOA if it doesn't exist
- #   HOA = ExtDict['HOA'][Counter] # This could well be zero at this point
-    
-    # proportion of adjustment to apply as uncertainty depending on estimate type:
-    unc_estimate = 1 # default is VERY UNCERTAIN!
-    actual_height = 0.1 # actual height
-    estimated_height =  0.85 # estimated height (ship) or prescribed height (buoy) was 0.5
-    no_adjustment = 999 # either its a platform or an adjustment can't be applied
+#    # Prescribed heights (of thermomenters and anemometers) for buoys and platforms
+#    PBuoy = 4.
+#    PBuoyHOA = 5.
+#    PPlatform = 999.	# was 20 but now do not apply
+#    PPlatformHOA = 999. # was 30 but now do not apply
+#        
+#    # Increments for estimating height by YR and MN 
+#    StHeight = 17. # was 16
+#    EdHeight = 22. # was 24
+#    StYr = 1973 # assume January
+#    EdYr = 2001 # assume December 2000 (was Dec 2006 so 2007)
+#    MnInc = (EdHeight / StHeight) / (((EdYr) - StYr) * 12.) # should be 0.0149 - was ~0.02
+#    
+#    # FIRST SORT OUT THE HEIGHT (m) OR ESTIMATED HEIGHT
+# #   # We also need to estimate HOA if it doesn't exist
+# #   HOA = ExtDict['HOA'][Counter] # This could well be zero at this point
+#    
+#    # proportion of adjustment to apply as uncertainty depending on estimate type:
+#    unc_estimate = 1 # default is VERY UNCERTAIN!
+#    actual_height = 0.1 # actual height
+#    estimated_height =  0.85 # estimated height (ship) or prescribed height (buoy) was 0.5
+#    no_adjustment = 999 # either its a platform or an adjustment can't be applied
 
     # Catch to ensure larger unceratinty when there is no valid SST
     noSST_estimate = False # no valid SST so AT or forced limits (-2.0, 40) used
     # If no valid SST then SST = AT so no adjustment applied to AT and v uncertain to q etc
 
-    # ENSURE THAT ESTH IS A FLOAT
-    # First check if its a buoy or platform
-    if (ExtDict['PT'][Counter] > 5):
-        # If its a buoy apply height of 4m http://www.ndbc.noaa.gov/bht.shtml
-	if ((ExtDict['PT'][Counter] == 6) | (ExtDict['PT'][Counter] == 8)):
-            # Fill in (append) the Estimated Height accordingly
-	    ExtDict['ESTH'].append(float(PBuoy))
-	    UncDict['ESTH'].append(float(PBuoy))
-	    HOA = float(PBuoyHOA) # http://www.ndbc.noaa.gov/bht.shtml
-	    unc_estimate = estimated_height
-    # Now check if its a platform (will be removed next time around)
-	else:
-            # Fill in (append) the Estimated Height accordingly
-	    ExtDict['ESTH'].append(float(PPlatform))
-	    UncDict['ESTH'].append(float(PPlatform))
-	    HOA = float(PPlatformHOA)
-	    unc_estimate = no_adjustment
-    # Or its a ship then get a height
-    else:
-        # Choice 1. If HOB or HOT exists then use this - UNLESS THEY ARE SILLY (< 2m)
-        if (ExtDict['HOT'][Counter] > 2.):
-            # Fill in (append) the Estimated Height accordingly
-	    ExtDict['ESTH'].append(float(ExtDict['HOT'][Counter]))
-	    UncDict['ESTH'].append(float(ExtDict['HOT'][Counter]))
-	    unc_estimate = actual_height
-        # Choice 2. If HOB or HOT exists then use this - UNLESS THEY ARE SILLY (< 2m)
-        elif (ExtDict['HOB'][Counter] > 2.):
-            # Fill in (append) the Estimated Height accordingly
-	    ExtDict['ESTH'].append(float(ExtDict['HOB'][Counter]))
-	    UncDict['ESTH'].append(float(ExtDict['HOB'][Counter]))
-	    unc_estimate = actual_height
-        # Choice 3. If HOP exists then use this - UNLESS THEY ARE SILLY (< 2m)
-        elif (ExtDict['HOP'][Counter] > 2.):
-            # Fill in (append) the Estimated Height accordingly
-	    ExtDict['ESTH'].append(float(ExtDict['HOP'][Counter]))
-	    UncDict['ESTH'].append(float(ExtDict['HOP'][Counter]))
-	    unc_estimate = actual_height
-        # Choice 4. If HOA is available then estimate - UNLESS THEY ARE SILLY (< 12m) 12 because 12-10 = 2!
-        elif (ExtDict['HOA'][Counter] > 12.):
-            ExtDict['ESTH'].append(float(ExtDict['HOA'][Counter] - 10.))
-	    UncDict['ESTH'].append(float(ExtDict['HOA'][Counter] - 10.))
-	    unc_estimate = estimated_height
-        # Choice 5. Prescribe a height based on YR and MN (there should only be ships left by now
-        else:
-            # if YR >= 2001 (EdYr) then apply fixed height EdHeight
-	    if (ExtDict['YR'][Counter] >= EdYr):
-	        # Fill in (append) the Estimated Height accordingly
-	        ExtDict['ESTH'].append(float(EdHeight))
-	        UncDict['ESTH'].append(float(EdHeight))
-	        #unc_estimate = unc_estimate
-            # if YR < 1973 then apply fixed height StHeight
-	    elif (ExtDict['YR'][Counter] < StYr): # There aren't any years before this but maybe in the future?    
-	        # Fill in (append) the Estimated Height accordingly
-	        ExtDict['ESTH'].append(float(StHeight))
-	        UncDict['ESTH'].append(float(StHeight))
-	        #unc_estimate = unc_estimate
-	    # Work out StHeight+MnInc depending on YR and MN
-	    else:
-	        NMonths = ((ExtDict['YR'][Counter] - StYr) * 12) + ExtDict['MO'][Counter]
-	        # Fill in (append) the Estimated Height accordingly
-	        ExtDict['ESTH'].append(float(StHeight + (NMonths * MnInc)))
-	        UncDict['ESTH'].append(float(StHeight + (NMonths * MnInc)))
-	        #unc_estimate = unc_estimate
-
-        # Check if HOA exists and is greater than 2m, if it does not then HOA = ESTH+10
-        if (ExtDict['HOA'][Counter] > 2.):
-            HOA = float(ExtDict['HOA'][Counter])
-	# IF HOA does not exist or is <= than 2.
-	else:    
-	    HOA = float(ExtDict['ESTH'][Counter] + 10.)
-
-    # Test output
-    print('Platform: ',ExtDict['PT'][Counter])
-    print('HOB/HOT/HOP/HOA: ',ExtDict['HOB'][Counter],ExtDict['HOT'][Counter],ExtDict['HOP'][Counter],ExtDict['HOA'][Counter])
-    print('ESTH/HOA: ',ExtDict['ESTH'][Counter], HOA)
-#    pdb.set_trace()
+#    # ENSURE THAT ESTH IS A FLOAT
+#    # First check if its a buoy or platform
+#    if (ExtDict['PT'][Counter] > 5):
+#        # If its a buoy apply height of 4m http://www.ndbc.noaa.gov/bht.shtml
+#	if ((ExtDict['PT'][Counter] == 6) | (ExtDict['PT'][Counter] == 8)):
+#            # Fill in (append) the Estimated Height accordingly
+#	    ExtDict['ESTH'].append(float(PBuoy))
+#	    UncDict['ESTH'].append(float(PBuoy))
+#	    HOA = float(PBuoyHOA) # http://www.ndbc.noaa.gov/bht.shtml
+#	    unc_estimate = estimated_height
+#    # Now check if its a platform (will be removed next time around)
+#	else:
+#            # Fill in (append) the Estimated Height accordingly
+#	    ExtDict['ESTH'].append(float(PPlatform))
+#	    UncDict['ESTH'].append(float(PPlatform))
+#	    HOA = float(PPlatformHOA)
+#	    unc_estimate = no_adjustment
+#    # Or its a ship then get a height
+#    else:
+#        # Choice 1. If HOB or HOT exists then use this - UNLESS THEY ARE SILLY (< 2m)
+#        if (ExtDict['HOT'][Counter] > 2.):
+#            # Fill in (append) the Estimated Height accordingly
+#	    ExtDict['ESTH'].append(float(ExtDict['HOT'][Counter]))
+#	    UncDict['ESTH'].append(float(ExtDict['HOT'][Counter]))
+#	    unc_estimate = actual_height
+#        # Choice 2. If HOB or HOT exists then use this - UNLESS THEY ARE SILLY (< 2m)
+#        elif (ExtDict['HOB'][Counter] > 2.):
+#            # Fill in (append) the Estimated Height accordingly
+#	    ExtDict['ESTH'].append(float(ExtDict['HOB'][Counter]))
+#	    UncDict['ESTH'].append(float(ExtDict['HOB'][Counter]))
+#	    unc_estimate = actual_height
+#        # Choice 3. If HOP exists then use this - UNLESS THEY ARE SILLY (< 2m)
+#        elif (ExtDict['HOP'][Counter] > 2.):
+#            # Fill in (append) the Estimated Height accordingly
+#	    ExtDict['ESTH'].append(float(ExtDict['HOP'][Counter]))
+#	    UncDict['ESTH'].append(float(ExtDict['HOP'][Counter]))
+#	    unc_estimate = actual_height
+#        # Choice 4. If HOA is available then estimate - UNLESS THEY ARE SILLY (< 12m) 12 because 12-10 = 2!
+#        elif (ExtDict['HOA'][Counter] > 12.):
+#            ExtDict['ESTH'].append(float(ExtDict['HOA'][Counter] - 10.))
+#	    UncDict['ESTH'].append(float(ExtDict['HOA'][Counter] - 10.))
+#	    unc_estimate = estimated_height
+#        # Choice 5. Prescribe a height based on YR and MN (there should only be ships left by now
+#        else:
+#            # if YR >= 2001 (EdYr) then apply fixed height EdHeight
+#	    if (ExtDict['YR'][Counter] >= EdYr):
+#	        # Fill in (append) the Estimated Height accordingly
+#	        ExtDict['ESTH'].append(float(EdHeight))
+#	        UncDict['ESTH'].append(float(EdHeight))
+#	        #unc_estimate = unc_estimate
+#            # if YR < 1973 then apply fixed height StHeight
+#	    elif (ExtDict['YR'][Counter] < StYr): # There aren't any years before this but maybe in the future?    
+#	        # Fill in (append) the Estimated Height accordingly
+#	        ExtDict['ESTH'].append(float(StHeight))
+#	        UncDict['ESTH'].append(float(StHeight))
+#	        #unc_estimate = unc_estimate
+#	    # Work out StHeight+MnInc depending on YR and MN
+#	    else:
+#	        NMonths = ((ExtDict['YR'][Counter] - StYr) * 12) + ExtDict['MO'][Counter]
+#	        # Fill in (append) the Estimated Height accordingly
+#	        ExtDict['ESTH'].append(float(StHeight + (NMonths * MnInc)))
+#	        UncDict['ESTH'].append(float(StHeight + (NMonths * MnInc)))
+#	        #unc_estimate = unc_estimate
+#
+#        # Check if HOA exists and is greater than 2m, if it does not then HOA = ESTH+10
+#        if (ExtDict['HOA'][Counter] > 2.):
+#            HOA = float(ExtDict['HOA'][Counter])
+#	# IF HOA does not exist or is <= than 2.
+#	else:    
+#	    HOA = float(ExtDict['ESTH'][Counter] + 10.)
+#
+#    # Test output
+#    print('Platform: ',ExtDict['PT'][Counter])
+#    print('HOB/HOT/HOP/HOA: ',ExtDict['HOB'][Counter],ExtDict['HOT'][Counter],ExtDict['HOP'][Counter],ExtDict['HOA'][Counter])
+#    print('ESTH/HOA: ',ExtDict['ESTH'][Counter], HOA)
+##    pdb.set_trace()
+ 
+    # If ChooseHeight == 'local' then call EstimateHeight
+    if (ChooseHeight == 'local'):
+        EstHeightH,EstHeightA,EstUnc = EstimateHeight(ExtDict,Counter)
+	ExtDict['ESTH'].append(EstHeightH)
+	UncDict['ESTH'].append(EstHeightH)
+	HOA = EstHeightA
+	unc_estimate = EstUnc
     
+    # Else if ChooseHeight == 'localNOCS' then call GetNOCSHeight
+    elif (ChooseHeight == 'localNOCS'):
+        EstHeightH,EstHeightA,EstUnc = GetNOCSHeight(ExtDict,Counter)
+	ExtDict['ESTH'].append(EstHeightH)
+	UncDict['ESTH'].append(EstHeightH)
+	HOA = EstHeightA
+	unc_estimate = EstUnc    
+    
+    # Else something is amiss
+    else:
+        print('No ChooseLocal/LocalType info!')
+	pdb.set_trace()
+       
     # NOW obtain the height correction for AT and SHU (USING SST, U, ClimP and ESTH) and also for the other variables
     # Do not need to pull through the HeightDict so use _
+ 
     # Order of vars: sst,at,shu,u,zu,zt,zq,dpt=(-99.9),vap=(-99.9),crh=(-99.9),cwb=(-99.9),dpd=(-99.9),climp=(-99.9)
     # The derived adjustments for other variables also include a check for supersaturation and an adjustment to AT=DPT if that happens
 
@@ -2177,7 +2422,7 @@ def main(argv):
 #		    print(TheExtDict['SST'][oo],TheExtDict['AT'][oo],TheExtDict['SHU'][oo],TheExtDict['W'][oo],TheExtDict['HOA'][oo],TheExtDict['HOB'][oo],TheExtDict['HOT'][oo],TheExtDict['DPT'][oo],TheExtDict['VAP'][oo],TheExtDict['CRH'][oo],TheExtDict['CWB'][oo],TheExtDict['DPD'][oo],ClimP)
 #		    print(TheExtDict['SST'][oo],TheExtDict['ATtbc'][oo],TheExtDict['SHUtbc'][oo],TheExtDict['W'][oo],TheExtDict['HOA'][oo],TheExtDict['HOB'][oo],TheExtDict['HOT'][oo],TheExtDict['DPTtbc'][oo],TheExtDict['VAPtbc'][oo],TheExtDict['CRHtbc'][oo],TheExtDict['CWBtbc'][oo],TheExtDict['DPDtbc'][oo],ClimP)
 #                    pdb.set_trace()
-		TheExtDict,TheUncDict = ApplyHeightAdjUnc(TheExtDict,TheUncDict,oo,ClimP)
+		TheExtDict,TheUncDict = ApplyHeightAdjUnc(TheExtDict,TheUncDict,oo,ClimP,LocalType)
 		# TEST
 		print("Test Output HGT: ",oo)
 #		print('Original SLR SCN HGT TBC uncHGT')
