@@ -50,7 +50,8 @@ Version 2 (29 September 2016) Kate Willett
 ---------
  
 Enhancements
-Can now cope with the three iteration approach
+Can now cope with the three iteration approach - in addition to doQC and doBC
+Can also cope with doBCtotal, doBChgt and doBCscn bias corrected versions
 Look for # KATE modified
          ...
 	 # end
@@ -172,7 +173,8 @@ def write_ncdf_ts(times, OBS_ORDER, filename, annual = False, monthly = False, d
 #***************************************
 #***************************************
 # KATE modified
-def make_timeseries(suffix = "relax", doQC = False, doQC1it = False, doQC2it = False, doQC3it = False, doBC = False):
+def make_timeseries(suffix = "relax", doQC = False, doQC1it = False, doQC2it = False, doQC3it = False, 
+                    doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False):
 #def make_timeseries(suffix = "relax", doQC = False, doBC = False):
 # end
     '''
@@ -186,11 +188,16 @@ def make_timeseries(suffix = "relax", doQC = False, doQC1it = False, doQC2it = F
     :param bool doQC3it: incorporate the third iteration QC flags or not
 # end
     :param bool doBC: work on the bias corrected data
+# KATE modified
+    :param bool doBCtotal: work on the bias corrected data
+    :param bool doBChgt: work on the bias corrected data
+    :param bool doBCscn: work on the bias corrected data
+# end
 
     :returns:
     '''
 # KATE modified
-    settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC, doQC1it = doQC1it, doQC2it = doQC2it, doQC3it = doQC3it)
+    settings = set_paths_and_vars.set(doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn, doQC = doQC, doQC1it = doQC1it, doQC2it = doQC2it, doQC3it = doQC3it)
     #settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC)
 # end
 
@@ -201,6 +208,11 @@ def make_timeseries(suffix = "relax", doQC = False, doQC1it = False, doQC2it = F
     print "Do QC3it = {}".format(doQC3it)
 # end
     print "Do BC = {}".format(doBC)
+# KATE modified
+    print "Do BCtotal = {}".format(doBCtotal)
+    print "Do BChgt = {}".format(doBChgt)
+    print "Do BCscn = {}".format(doBCscn)
+# end
 
 
     # monthly -> annual
@@ -425,11 +437,20 @@ if __name__=="__main__":
 # end
     parser.add_argument('--doBC', dest='doBC', action='store_true', default = False,
                         help='process the bias corrected data, default = False')
+# KATE modified
+    parser.add_argument('--doBCtotal', dest='doBCtotal', action='store_true', default = False,
+                        help='process the bias corrected data, default = False')
+    parser.add_argument('--doBChgt', dest='doBChgt', action='store_true', default = False,
+                        help='process the height only bias corrected data, default = False')
+    parser.add_argument('--doBCscn', dest='doBCscn', action='store_true', default = False,
+                        help='process the screen only bias corrected data, default = False')
+# end
     args = parser.parse_args()
 
 
 # KATE modified
-    make_timeseries(suffix = str(args.suffix), doQC = args.doQC, doQC1it = args.doQC1it, doQC2it = args.doQC2it, doQC3it = args.doQC3it, doBC = args.doBC)
+    make_timeseries(suffix = str(args.suffix), doQC = args.doQC, doQC1it = args.doQC1it, doQC2it = args.doQC2it, doQC3it = args.doQC3it, \
+                    doBC = args.doBC, doBCtotal = args.doBCtotal, doBChgt = args.doBChgt, doBCscn = args.doBCscn)
     #make_timeseries(suffix = str(args.suffix), doQC = args.doQC, doBC = args.doBC)
 # end
 

@@ -50,6 +50,9 @@ This can now cope with additional options for an iterative approach
 --doQCit2 - OBSclim1NBC, all QC ex. no buddy check
 --doQCit3 - OBSclim2NBC, all QC inc buddy check
 --doBC - as previously but reads in from OBSclim2BC
+--doBCtotal - as previously but reads in from OBSclim2BClocal
+--doBChgt - as previously but reads in from OBSclim2BClocal and out to GRIDSOBSclim2BClocalHGT
+--doBCscn - as previously but reads in from OBSclim2BClocal and out to GRIDSOBSclim2BClocalSCN
 if neither doQC... or doBC are set then this is a raw run from OBSclim2NBC data
 
 still has original --doQC option!
@@ -111,13 +114,18 @@ class Settings(object):
 
 #*********************************************
 # *** KATE MODIFIED
-def set(doBC = False, doQC = True, doQC1it = False, doQC2it = False, doQC3it = False):
+def set(doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doQC = True, doQC1it = False, doQC2it = False, doQC3it = False):
 #def set(doBC = False, doQC = True):
 # end
     '''
     Create a settings object and return
 
     :param bool doBC: set up for bias correction
+# *** KATE MODIFIED
+    :param bool doBCtotal: set up for full bias correction
+    :param bool doBChgt: set up for height only bias correction
+    :param bool doBCscn: set up for screen only bias correction
+# end
     :param bool doQC: set up for quality control
 # *** KATE MODIFIED
     :param bool doQC1it: set up for 1st iteration quality control with no buddy check
@@ -129,14 +137,14 @@ def set(doBC = False, doQC = True, doQC1it = False, doQC2it = False, doQC3it = F
     '''
 
 
-    plots = True
+    plots = False
     doMedian = False
     
 # KATE MODIFIED TO BRING OUT COMMON DIR PATHS
-# ICOADS.2.5.1
-    ICOADS_DIR="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/"
-    DATA_DIR="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/"
-    PLOT_DIR="/project/hadobs2/hadisdh/marine/"
+## ICOADS.2.5.1
+#    ICOADS_DIR="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/"
+#    DATA_DIR="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/"
+#    PLOT_DIR="/project/hadobs2/hadisdh/marine/"
 # ICOADS 3.0.0    
     ICOADS_DIR="/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/"
     DATA_DIR="/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/"
@@ -146,7 +154,7 @@ def set(doBC = False, doQC = True, doQC1it = False, doQC2it = False, doQC3it = F
     if doBC:
         # Constants in CAPS
 # *** KATE MODIFIED
-        OUTROOT = "OBSclim2BC"
+        OUTROOT = "OBSclim2BClocal"
         #OUTROOT = "ERAclimBC"
 # end
 
@@ -154,10 +162,39 @@ def set(doBC = False, doQC = True, doQC1it = False, doQC2it = False, doQC3it = F
         ICOADS_LOCATION=ICOADS_DIR+"{}/".format(OUTROOT)
         #ICOADS_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/{}/".format(OUTROOT)
 
-        DATA_LOCATION=DATA_DIR+"GRIDSOBSclim2BC/"
-        PLOT_LOCATION=PLOT_DIR+"PLOTSOBSclim2BC/"
+        DATA_LOCATION=DATA_DIR+"GRIDSOBSclim2BClocal/"
+        PLOT_LOCATION=PLOT_DIR+"PLOTSOBSclim2BClocal/"
         #DATA_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS_BC/"
         #PLOT_LOCATION="/project/hadobs2/hadisdh/marine/PLOTS_BC/"
+# end
+
+# KATE MODIFIED - othe BC options
+    elif doBCtotal:
+        # Constants in CAPS
+        OUTROOT = "OBSclim2BClocal"
+
+        ICOADS_LOCATION=ICOADS_DIR+"{}/".format(OUTROOT)
+
+        DATA_LOCATION=DATA_DIR+"GRIDSOBSclim2BClocal/"
+        PLOT_LOCATION=PLOT_DIR+"PLOTSOBSclim2BClocal/"
+
+    elif doBChgt:
+        # Constants in CAPS
+        OUTROOT = "OBSclim2BClocal"
+
+        ICOADS_LOCATION=ICOADS_DIR+"{}/".format(OUTROOT)
+
+        DATA_LOCATION=DATA_DIR+"GRIDSOBSclim2BClocalHGT/"
+        PLOT_LOCATION=PLOT_DIR+"PLOTSOBSclim2BClocalHGT/"
+
+    elif doBCscn:
+        # Constants in CAPS
+        OUTROOT = "OBSclim2BClocal"
+
+        ICOADS_LOCATION=ICOADS_DIR+"{}/".format(OUTROOT)
+
+        DATA_LOCATION=DATA_DIR+"GRIDSOBSclim2BClocalINST/"
+        PLOT_LOCATION=PLOT_DIR+"PLOTSOBSclim2BClocalINST/"
 # end
 
     elif doQC:
@@ -202,7 +239,7 @@ def set(doBC = False, doQC = True, doQC1it = False, doQC2it = False, doQC3it = F
 # KATE modified
     else:
         # Constants in CAPS
-        OUTROOT = "OBSclim2noQC"
+        OUTROOT = "OBSclim2NBC"
 
         ICOADS_LOCATION=ICOADS_DIR+"{}/".format(OUTROOT)
         DATA_LOCATION=DATA_DIR+"GRIDSOBSclim2noQC/"

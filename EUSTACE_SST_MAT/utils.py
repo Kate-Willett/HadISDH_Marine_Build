@@ -44,6 +44,7 @@ Version 2 (26 Sep 2016) Kate Willett
 ---------
  
 Enhancements
+This can now work with the 3 QC iterations and BC options
  
 Changes
  
@@ -118,7 +119,10 @@ class TimeVar(object):
   
 
 #*****************************************************
-def set_qc_flag_list(doBC = False, doUncert = False):
+# KATE modified - added BC options
+#def set_qc_flag_list(doBC = False, doUncert = False):
+def set_qc_flag_list(doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doUncert = False):
+# end 
     '''
     Set the QC flags present in the raw data
 
@@ -129,7 +133,10 @@ def set_qc_flag_list(doBC = False, doUncert = False):
     '''
 
 
-    if doBC:
+# KATE modified - added BC options
+#    if doBC:
+    if doBC | doBCtotal | doBChgt | doBCscn:
+# end
         # reduced number of QC flags.
         return np.array(["day","land","trk","date1","date2","pos","blklst","dup",\
 "SSTbud","SSTclim","SSTnonorm","SSTfreez","SSTrep",\
@@ -160,7 +167,10 @@ def set_qc_flag_list(doBC = False, doUncert = False):
 #"few","ntrk","DUMblank1","DUMblank2","DUMblank3","DUMblank4","DUMblank5","DUMblank6"])
 
 #*****************************************************
-def read_qc_data(filename, location, fieldwidths, doBC = False):
+# KATE modified - added BC options
+#def read_qc_data(filename, location, fieldwidths, doBC = False):
+def read_qc_data(filename, location, fieldwidths, doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False):
+# end
     """
     Read in the QC'd data and return
     Expects fixed field format
@@ -172,6 +182,11 @@ def read_qc_data(filename, location, fieldwidths, doBC = False):
     :param str location: location of file
     :param str fieldwidths: fixed field widths to use
     :param bool doBC: run on the bias corrected data
+# KATE modified - added BC options
+    :param bool doBCtotal: run on the full bias corrected data
+    :param bool doBChgt: run on the height only bias corrected data
+    :param bool doBCscn: run on the screen only bias corrected data
+# end
 
     :returns: data - np.array of string data
     """
@@ -202,6 +217,51 @@ def read_qc_data(filename, location, fieldwidths, doBC = False):
                     dummy_obs = [fields[8+18+14: 8+18+14+14+14+14]] # ditto
                     platform_meta += [fields[8+18+14+14+14+14: 8+18+14+14+14+14+12]]
                     platform_qc += [fields[8+18+14+14+14+14+12:]]
+
+# KATE modified - added BC options
+                elif doBCtotal:
+                    # some lines might not be the correct length
+                    assert len(line) == 751
+                
+                    fields = parse(line)
+                
+                    # now unpack and process
+                    platform_data += [fields[: 8]]
+                    dummy_obs = [fields[8: 8+18]] # used to help counting the fields
+                    platform_obs += [fields[8+18: 8+18+14]] # the ???tbc fields
+                    dummy_obs = [fields[8+18+14: 8+18+14+14+14+14]] # ditto
+                    platform_meta += [fields[8+18+14+14+14+14: 8+18+14+14+14+14+12]]
+                    platform_qc += [fields[8+18+14+14+14+14+12:]]
+
+                elif doBChgt:
+                    # some lines might not be the correct length
+                    assert len(line) == 751
+                
+                    fields = parse(line)
+                
+                    # now unpack and process
+                    platform_data += [fields[: 8]]
+                    dummy_obs = [fields[8: 8+18+14]] # used to help counting the fields
+                    platform_obs += [fields[8+18+14: 8+18+14+14]] # the ???tbc fields
+                    dummy_obs = [fields[8+18+14+14: 8+18+14+14+14+14]] # ditto
+                    platform_meta += [fields[8+18+14+14+14+14: 8+18+14+14+14+14+12]]
+                    platform_qc += [fields[8+18+14+14+14+14+12:]]
+
+                elif doBCscn:
+                    # some lines might not be the correct length
+                    assert len(line) == 751
+                
+                    fields = parse(line)
+                
+                    # now unpack and process
+                    platform_data += [fields[: 8]]
+                    dummy_obs = [fields[8: 8+18+14+14]] # used to help counting the fields
+                    platform_obs += [fields[8+18+14+14: 8+18+14+14+14]] # the ???tbc fields
+                    dummy_obs = [fields[8+18+14+14+14: 8+18+14+14+14+14]] # ditto
+                    platform_meta += [fields[8+18+14+14+14+14: 8+18+14+14+14+14+12]]
+                    platform_qc += [fields[8+18+14+14+14+14+12:]]
+# end
+
                 else:
                     # some lines might not be the correct length
                     assert len(line) == 410
@@ -499,7 +559,10 @@ def set_MetVar_attributes(name, long_name, standard_name, units, mdi, dtype, col
     return new_var # set_MetVar_attributes
  
 #*****************************************************
-def make_MetVars(mdi, doSST_SLP = False, multiplier = False, doBC = False):
+# KATE modified - BC options
+#def make_MetVars(mdi, doSST_SLP = False, multiplier = False, doBC = False):
+def make_MetVars(mdi, doSST_SLP = False, multiplier = False, doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False):
+# end
     '''
     Set up the MetVars and return a list.  
     Had hard-coded columns for the input files.
@@ -508,6 +571,11 @@ def make_MetVars(mdi, doSST_SLP = False, multiplier = False, doBC = False):
     :param bool doSST_SLP: do the extra variables
     :param bool multiplier: add a non-unity multiplier
     :param bool doBC: run on bias corrected data (adjusts the columns to read in from data array)
+# KATE modified - BC optiosn
+    :param bool doBCtotal: run on full bias corrected data (adjusts the columns to read in from data array)
+    :param bool doBChgt: run on height only bias corrected data (adjusts the columns to read in from data array)
+    :param bool doBCscn: run on screen only bias corrected data (adjusts the columns to read in from data array)
+# end
    
     :returns: list [mat, mat_an, dpt, dpt_an, shu, shu_an, vap, vap_an, crh, crh_an, cwb, cwb_an, dpd, dpd_an]
       if doSST_SLP:
@@ -517,7 +585,10 @@ def make_MetVars(mdi, doSST_SLP = False, multiplier = False, doBC = False):
     if doBC and doSST_SLP:
         raise RuntimeError("Cannot have doBC and doSST_SLP set at the same tiem")
 
-    if doBC:
+# KATE modified - BC options
+#    if doBC:
+    if doBC | doBCtotal | doBChgt | doBCscn:
+# end    
         mat = set_MetVar_attributes("marine_air_temperature", "Marine Air Temperature", "marine air temperature", "degrees C", mdi, np.dtype('float64'), 0, multiplier = multiplier)
         mat_an = set_MetVar_attributes("marine_air_temperature_anomalies", "Marine Air Temperature Anomalies", "marine air temperature anomalies", "degrees C", mdi, np.dtype('float64'), 1, multiplier = multiplier)
 
@@ -600,11 +671,19 @@ def PlotFirstField(filename, variable = "Marine Air Temperature", vmin = None,vm
     return # PlotFirstField
 
 #*********************************************************
-def process_qc_flags(qc_flags, these_flags, doBC = False):
+# KATE modified - added BC options
+#def process_qc_flags(qc_flags, these_flags, doBC = False):
+def process_qc_flags(qc_flags, these_flags, doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False):
+# end
     '''
     :param array qc_flags: names of QC flags in column order
     :param dict these_flags: names and values of QC flags to test.
     :param bool doBC: work on the bias corrected QC flag definitions
+# KATE modified - BC optiosn
+    :param bool doBCtotal: run on full bias corrected data (adjusts the columns to read in from data array)
+    :param bool doBChgt: run on height only bias corrected data (adjusts the columns to read in from data array)
+    :param bool doBCscn: run on screen only bias corrected data (adjusts the columns to read in from data array)
+# end
 
     Test values
     0 - pass
@@ -613,7 +692,10 @@ def process_qc_flags(qc_flags, these_flags, doBC = False):
     9 - not run (failure further up chain?)
     '''
 
-    QC_FLAGS = set_qc_flag_list(doBC = doBC)
+# KATE modified - BC options
+#    QC_FLAGS = set_qc_flag_list(doBC = doBC)
+    QC_FLAGS = set_qc_flag_list(doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn)
+# end
 
     # set up a mask with every point set
     mask = np.ones((qc_flags.shape[0], len(these_flags.keys())))
@@ -639,16 +721,27 @@ def process_qc_flags(qc_flags, these_flags, doBC = False):
 
 
 #*********************************************************
-def day_or_night(qc_flags, doBC = False):
+# KATE modified - added BC options
+#def day_or_night(qc_flags, doBC = False):
+def day_or_night(qc_flags, doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False):
+# end
     '''
     Return locations of observations which are day or night
     
     :param array qc_flags: array of QC flags (0 --> 9)
     :param bool doBC: work on the bias corrected QC flag definitions
+# KATE modified - BC optiosn
+    :param bool doBCtotal: run on full bias corrected data (adjusts the columns to read in from data array)
+    :param bool doBChgt: run on height only bias corrected data (adjusts the columns to read in from data array)
+    :param bool doBCscn: run on screen only bias corrected data (adjusts the columns to read in from data array)
+# end
 
     :returns: day_locs, night_locs - locations of day/night obs
     '''
-    QC_FLAGS = set_qc_flag_list(doBC = doBC)
+# KATE modified - BC options
+#    QC_FLAGS = set_qc_flag_list(doBC = doBC)
+    QC_FLAGS = set_qc_flag_list(doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn)
+# end
       
     daycol = np.where(QC_FLAGS == "day")
 
@@ -658,7 +751,10 @@ def day_or_night(qc_flags, doBC = False):
     return day_locs, night_locs # day_or_night
 
 #*********************************************************
-def grid_1by1_cam(clean_data, raw_qc, hours_since, lat_index, lon_index, grid_hours, grid_lats, grid_lons, OBS_ORDER, mdi, doMedian = True, doBC = False):
+# KATE modified - added BC options
+#def grid_1by1_cam(clean_data, raw_qc, hours_since, lat_index, lon_index, grid_hours, grid_lats, grid_lons, OBS_ORDER, mdi, doMedian = True, doBC = False):
+def grid_1by1_cam(clean_data, raw_qc, hours_since, lat_index, lon_index, grid_hours, grid_lats, grid_lons, OBS_ORDER, mdi, doMedian = True, doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False):
+# end
     '''
     Grid using the Climate Anomaly Method on 1x1 degree for each month
 
@@ -673,9 +769,17 @@ def grid_1by1_cam(clean_data, raw_qc, hours_since, lat_index, lon_index, grid_ho
     :param float mdi: missing data indicator
     :param bool doMedian: use the median (default) instead of the mean
     :param bool doBC: work on the bias corrected QC flag definitions
+# KATE modified - BC optiosn
+    :param bool doBCtotal: run on full bias corrected data (adjusts the columns to read in from data array)
+    :param bool doBChgt: run on height only bias corrected data (adjusts the columns to read in from data array)
+    :param bool doBCscn: run on screen only bias corrected data (adjusts the columns to read in from data array)
+# end
     '''
 
-    QC_FLAGS = set_qc_flag_list(doBC = doBC)
+# KATE modified - BC options
+#    QC_FLAGS = set_qc_flag_list(doBC = doBC)
+    QC_FLAGS = set_qc_flag_list(doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn)
+# end
 
     day_flag_loc, = np.where(QC_FLAGS == 'day')[0]
 

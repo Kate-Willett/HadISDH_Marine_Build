@@ -54,6 +54,7 @@ Version 2 (26 Sep 2016) Kate Willett
  
 Enhancements
 This can now work with the iterative approach which requires doQCit1, doQCit2 and doQCit3 to set the correct filepaths
+It can also work with bias corrected grids which requires --doBCtotal, --doBChgt or --doBCscn
 Look for:
 # KATE modified
 ...
@@ -254,7 +255,7 @@ def get_fileroot(settings, climatology = False, pentads = False, months = [], do
 #************************************************************************
 # KATE modified
 def set_up_merge(suffix = "relax", clims = False, months = False, pentads = False, start_year = defaults.START_YEAR, end_year = defaults.END_YEAR, start_month = 1, end_month = 12, 
-                 doQC = False, doQC1it = False, doQC2it = False, doQC3it = False, doBC = False):
+                 doQC = False, doQC1it = False, doQC2it = False, doQC3it = False, doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False):
 #def set_up_merge(suffix = "relax", clims = False, months = False, pentads = False, start_year = defaults.START_YEAR, end_year = defaults.END_YEAR, start_month = 1, end_month = 12, doQC = False, doBC = False):
 # end
     '''
@@ -282,7 +283,7 @@ def set_up_merge(suffix = "relax", clims = False, months = False, pentads = Fals
     '''
     
 # KATE modified
-    settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC, doQC1it = doQC1it, doQC2it = doQC2it, doQC3it = doQC3it)
+    settings = set_paths_and_vars.set(doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn, doQC = doQC, doQC1it = doQC1it, doQC2it = doQC2it, doQC3it = doQC3it)
     #settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC)
 # end
     if clims:
@@ -383,6 +384,14 @@ if __name__=="__main__":
 # end
     parser.add_argument('--doBC', dest='doBC', action='store_true', default = False,
                         help='process the bias corrected data, default = False')
+# KATE modified
+    parser.add_argument('--doBCtotal', dest='doBCtotal', action='store_true', default = False,
+                        help='process the bias corrected data, default = False')
+    parser.add_argument('--doBChgt', dest='doBChgt', action='store_true', default = False,
+                        help='process the height only bias corrected data, default = False')
+    parser.add_argument('--doBCscn', dest='doBCscn', action='store_true', default = False,
+                        help='process the height only bias corrected data, default = False')
+# end
     args = parser.parse_args()
 
 
@@ -390,7 +399,8 @@ if __name__=="__main__":
     set_up_merge(suffix = str(args.suffix), clims = args.clims, months = args.months, pentads = args.pentads, \
                      start_year = int(args.start_year), end_year = int(args.end_year), \
                      start_month = int(args.start_month), end_month = int(args.end_month), \
-		     doQC = args.doQC, doQC1it = args.doQC1it, doQC2it = args.doQC2it, doQC3it = args.doQC3it, doBC = args.doBC)
+		     doQC = args.doQC, doQC1it = args.doQC1it, doQC2it = args.doQC2it, doQC3it = args.doQC3it, \
+		     doBC = args.doBC, doBCtotal = args.doBCtotal, doBChgt = args.doBChgt, doBCscn = args.doBCscn)
     #set_up_merge(suffix = str(args.suffix), clims = args.clims, months = args.months, pentads = args.pentads, \
     #                 start_year = int(args.start_year), end_year = int(args.end_year), \
     #                 start_month = int(args.start_month), end_month = int(args.end_month), doQC = args.doQC, doBC = args.doBC)

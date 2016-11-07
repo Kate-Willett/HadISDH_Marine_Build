@@ -92,8 +92,12 @@ Version 2 (26 Sep 2016) Kate Willett
 ---------
  
 Enhancements
-This can now cope with three different types of QC in addition:
+This can now cope with three different types of QC in addition to existing:
 doQC1it, doQC2it and doQC3it - for working with ERA, then OBS clims versions
+It can also work with: 
+  the full BC version - now doBCtotal,
+  the height correction only - now doBCght
+  the screen correction only - now doBCscn
 Look for # KATE modified
          ...
 	 # end
@@ -186,7 +190,8 @@ SwitchOutput = 0
 #************************************************************************
 # KATE modified    
 def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = defaults.END_YEAR, start_month = 1, end_month = 12, 
-                doQC = False, doQC1it = False, doQC2it = False, doQC3it = False, doSST_SLP = False, doBC = False, doUncert = False):
+                doQC = False, doQC1it = False, doQC2it = False, doQC3it = False, doSST_SLP = False, 
+		doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doUncert = False):
 #def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = defaults.END_YEAR, start_month = 1, end_month = 12, doQC = False, doSST_SLP = False, doBC = False, doUncert = False):
 # end
     '''
@@ -198,23 +203,36 @@ def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = d
     :param int start_month: start month to process
     :param int end_month: end month to process
     :param bool doQC: incorporate the QC flags or not
+    :param bool doQC1it: incorporate the first iteration (no buddy) QC flags or not
+    :param bool doQC2it: incorporate the second iteration (no buddy) QC flags or not
+    :param bool doQC3it: incorporate the third iteration (buddy) QC flags or not
     :param bool doSST_SLP: process additional variables or not
     :param bool doBC: work on the bias corrected data
+    :param bool doBCtotal: work on the full bias corrected data
+    :param bool doBChgt: work on the height only bias corrected data
+    :param bool doBCscn: work on the screen only bias corrected data
     :param bool doUncert: work on files with uncertainty information (not currently used)
 
     :returns:
     '''
 # KATE modified    
-    settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC, doQC1it = doQC1it, doQC2it = doQC2it, doQC3it = doQC3it)
+    settings = set_paths_and_vars.set(doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn, doQC = doQC, doQC1it = doQC1it, doQC2it = doQC2it, doQC3it = doQC3it)
     #settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC)
 # end
 
-    if doBC:
+
+# KATE modified  - added other BC options  
+#    if doBC:
+    if doBC | doBCtotal | doBChgt | doBCscn:
+# end
         fields = mds.TheDelimitersExt # extended (BC)
     else:
         fields = mds.TheDelimitersStd # Standard
 
-    OBS_ORDER = utils.make_MetVars(settings.mdi, doSST_SLP = doSST_SLP, multiplier = True, doBC = doBC) # ensure that convert from raw format at writing stage with multiplier
+# KATE modified  - added other BC options  
+#    OBS_ORDER = utils.make_MetVars(settings.mdi, doSST_SLP = doSST_SLP, multiplier = True, doBC = doBC) # ensure that convert from raw format at writing stage with multiplier
+    OBS_ORDER = utils.make_MetVars(settings.mdi, doSST_SLP = doSST_SLP, multiplier = True, doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn) # ensure that convert from raw format at writing stage with multiplier
+# end
 
     # KW switching between 4 ('_strict') for climatology build and 2 for anomaly buily ('_relax') - added subscripts to files
     if suffix == "relax":
@@ -247,12 +265,18 @@ def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = d
             times.data = grid_hours
 
             # process the monthly file
-            if doBC:
+# KATE modified  - added other BC options  
+#            if doBC:
+            if doBC | doBCtotal | doBChgt | doBCscn:
+# end
                 filename = "new_suite_{}{:02d}_{}_extended.txt".format(year, month, settings.OUTROOT)
             else:
                 filename = "new_suite_{}{:02d}_{}.txt".format(year, month, settings.OUTROOT)
 
-            raw_platform_data, raw_obs, raw_meta, raw_qc = utils.read_qc_data(filename, settings.ICOADS_LOCATION, fields, doBC = doBC)
+# KATE modified  - added other BC options  
+#            raw_platform_data, raw_obs, raw_meta, raw_qc = utils.read_qc_data(filename, settings.ICOADS_LOCATION, fields, doBC = doBC)
+            raw_platform_data, raw_obs, raw_meta, raw_qc = utils.read_qc_data(filename, settings.ICOADS_LOCATION, fields, doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn)
+# end
 
             # extract observation details
             lats, lons, years, months, days, hours = utils.process_platform_obs(raw_platform_data)
@@ -288,15 +312,24 @@ def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = d
                     if variable.name in ["marine_air_temperature", "dew_point_temperature", "specific_humidity", "relative_humidity", "marine_air_temperature_anomalies", "dew_point_temperature_anomalies", "specific_humidity_anomalies", "relative_humidity_anomalies"]:
 
                         #plot_qc_diagnostics.values_vs_lat(variable, lats, raw_obs[:, variable.column], raw_qc, these_flags, settings.PLOT_LOCATION + "qc_actuals_{}_{}{:02d}_{}.png".format(variable.name, year, month, suffix), multiplier = variable.multiplier, doBC = doBC)
-                        plot_qc_diagnostics.values_vs_lat_dist(variable, lats, raw_obs[:, variable.column], raw_qc, these_flags, settings.PLOT_LOCATION + "qc_actuals_{}_{}{:02d}_{}.png".format(variable.name, year, month, suffix), multiplier = variable.multiplier, doBC = doBC)
+                        plot_qc_diagnostics.values_vs_lat_dist(variable, lats, raw_obs[:, variable.column], raw_qc, these_flags, \
+			        settings.PLOT_LOCATION + "qc_actuals_{}_{}{:02d}_{}.png".format(variable.name, year, month, suffix), multiplier = variable.multiplier, \
+# KATE modified  - added other BC options  
+				doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn)
+# end
 
             # QC sub-selection
-# KATE modified
-            if doQC | doQC1it | doQC2it | doQC3it:
+	    
+# KATE modified - added QC iterations but also think this needs to include the bias corrected versions because the QC flags need to be applied to those too.
+# Not sure what was happening previously with the doBC run - any masking to QC'd obs?
+            if doQC | doQC1it | doQC2it | doQC3it | doBC | doBCtotal | doBChgt | doBCscn:
             #if doQC:
 # end
                 print "Using {} as flags".format(these_flags)
-                mask = utils.process_qc_flags(raw_qc, these_flags, doBC = doBC)
+# KATE modified - BC options
+#                mask = utils.process_qc_flags(raw_qc, these_flags, doBC = doBC)
+                mask = utils.process_qc_flags(raw_qc, these_flags, doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn)
+# end
 		print "All Obs: ",len(mask)
 		print "Good Obs: ",len(mask[np.where(mask == 0)])
 		print "Bad Obs: ",len(mask[np.where(mask == 1)])
@@ -331,8 +364,10 @@ def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = d
             # do the gridding
             # extract the full grid, number of obs, and day/night flag
 # KATE MEDIAN WATCH This is hard coded to doMedian (rather than settings.doMedian) - OK WITH MEDIAN HERE!!!
-# KATE modified - to add settings.doMedian instead of just doMedian which seems to be consistent with the other bits and 
-	    raw_month_grid, raw_month_n_obs, this_month_period = utils.grid_1by1_cam(clean_data, raw_qc, hours_since, lat_index, lon_index, grid_hours, grid_lats, grid_lons, OBS_ORDER, settings.mdi, doMedian = settings.doMedian, doBC = doBC)
+# KATE modified - to add settings.doMedian instead of just doMedian which seems to be consistent with the other bits and BC options
+	    raw_month_grid, raw_month_n_obs, this_month_period = utils.grid_1by1_cam(clean_data, raw_qc, hours_since, lat_index, lon_index, \
+	              grid_hours, grid_lats, grid_lons, OBS_ORDER, settings.mdi, doMedian = settings.doMedian, \
+		      doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn)
 	    #raw_month_grid, raw_month_n_obs, this_month_period = utils.grid_1by1_cam(clean_data, raw_qc, hours_since, lat_index, lon_index, grid_hours, grid_lats, grid_lons, OBS_ORDER, settings.mdi, doMedian = True, doBC = doBC)
 # end
             print "successfully read data into 1x1 3hrly grids"
@@ -587,13 +622,22 @@ if __name__=="__main__":
 # end
     parser.add_argument('--doBC', dest='doBC', action='store_true', default = False,
                         help='process the bias corrected data, default = False')
+# KATE modified
+    parser.add_argument('--doBCtotal', dest='doBCtotal', action='store_true', default = False,
+                        help='process the full bias corrected data, default = False')
+    parser.add_argument('--doBChgt', dest='doBChgt', action='store_true', default = False,
+                        help='process the height bias corrected data only, default = False')
+    parser.add_argument('--doBCscn', dest='doBCscn', action='store_true', default = False,
+                        help='process the screen bias corrected data only, default = False')
+# end
     args = parser.parse_args()
 
 
     do_gridding(suffix = str(args.suffix), start_year = int(args.start_year), end_year = int(args.end_year), \
                     start_month = int(args.start_month), end_month = int(args.end_month), \
 # KATE modified
-                    doQC = args.doQC, doQC1it = args.doQC1it, doQC2it = args.doQC2it, doQC3it = args.doQC3it, doBC = args.doBC)
+                    doQC = args.doQC, doQC1it = args.doQC1it, doQC2it = args.doQC2it, doQC3it = args.doQC3it, \
+		    doBC = args.doBC, doBCtotal = args.doBCtotal, doBChgt = args.doBChgt, doBCscn = args.doBCscn)
                     #doQC = args.doQC, doBC = args.doBC)
 # end
 
