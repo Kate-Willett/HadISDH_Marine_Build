@@ -55,6 +55,7 @@ Version 2 (26 Sep 2016) Kate Willett
 Enhancements
 This can now work with the iterative approach which requires doQCit1, doQCit2 and doQCit3 to set the correct filepaths
 It can also work with bias corrected grids which requires --doBCtotal, --doBChgt or --doBCscn
+It can also work with --ShipOnly
 Look for:
 # KATE modified
 ...
@@ -255,7 +256,7 @@ def get_fileroot(settings, climatology = False, pentads = False, months = [], do
 #************************************************************************
 # KATE modified
 def set_up_merge(suffix = "relax", clims = False, months = False, pentads = False, start_year = defaults.START_YEAR, end_year = defaults.END_YEAR, start_month = 1, end_month = 12, 
-                 doQC = False, doQC1it = False, doQC2it = False, doQC3it = False, doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False):
+                 doQC = False, doQC1it = False, doQC2it = False, doQC3it = False, doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, ShipOnly = False):
 #def set_up_merge(suffix = "relax", clims = False, months = False, pentads = False, start_year = defaults.START_YEAR, end_year = defaults.END_YEAR, start_month = 1, end_month = 12, doQC = False, doBC = False):
 # end
     '''
@@ -275,7 +276,15 @@ def set_up_merge(suffix = "relax", clims = False, months = False, pentads = Fals
     :param bool doQC2it: incorporate the QC flags or not
     :param bool doQC3it: incorporate the QC flags or not
 # end
+# KATE modified
+    :param bool doBCtotal: work on the total bias corrected data
+    :param bool doBChgt: work on the height only bias corrected data
+    :param bool doBCscn: work on the screen only bias corrected data
+# end
     :param bool doBC: work on the bias corrected data
+# KATE modified
+    :param bool ShipOnly: work on the ship only data
+# end
 
 # KATE modified    
     NOTE THAT I HAVE OVERWRITTEN settings.doMedian to force MEAN instead
@@ -283,7 +292,7 @@ def set_up_merge(suffix = "relax", clims = False, months = False, pentads = Fals
     '''
     
 # KATE modified
-    settings = set_paths_and_vars.set(doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn, doQC = doQC, doQC1it = doQC1it, doQC2it = doQC2it, doQC3it = doQC3it)
+    settings = set_paths_and_vars.set(doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn, doQC = doQC, doQC1it = doQC1it, doQC2it = doQC2it, doQC3it = doQC3it, ShipOnly = ShipOnly)
     #settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC)
 # end
     if clims:
@@ -392,6 +401,10 @@ if __name__=="__main__":
     parser.add_argument('--doBCscn', dest='doBCscn', action='store_true', default = False,
                         help='process the height only bias corrected data, default = False')
 # end
+# KATE modified
+    parser.add_argument('--ShipOnly', dest='ShipOnly', action='store_true', default = False,
+                        help='process the ship platform type only data, default = False')
+# end
     args = parser.parse_args()
 
 
@@ -400,7 +413,8 @@ if __name__=="__main__":
                      start_year = int(args.start_year), end_year = int(args.end_year), \
                      start_month = int(args.start_month), end_month = int(args.end_month), \
 		     doQC = args.doQC, doQC1it = args.doQC1it, doQC2it = args.doQC2it, doQC3it = args.doQC3it, \
-		     doBC = args.doBC, doBCtotal = args.doBCtotal, doBChgt = args.doBChgt, doBCscn = args.doBCscn)
+		     doBC = args.doBC, doBCtotal = args.doBCtotal, doBChgt = args.doBChgt, doBCscn = args.doBCscn, \
+		     ShipOnly = args.ShipOnly)
     #set_up_merge(suffix = str(args.suffix), clims = args.clims, months = args.months, pentads = args.pentads, \
     #                 start_year = int(args.start_year), end_year = int(args.end_year), \
     #                 start_month = int(args.start_month), end_month = int(args.end_month), doQC = args.doQC, doBC = args.doBC)

@@ -98,6 +98,7 @@ It can also work with:
   the full BC version - now doBCtotal,
   the height correction only - now doBCght
   the screen correction only - now doBCscn
+I have also set this up to work with ship only data which required changes to utils.py and set_paths_and_vars.py
 Look for # KATE modified
          ...
 	 # end
@@ -191,7 +192,8 @@ SwitchOutput = 0
 # KATE modified    
 def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = defaults.END_YEAR, start_month = 1, end_month = 12, 
                 doQC = False, doQC1it = False, doQC2it = False, doQC3it = False, doSST_SLP = False, 
-		doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doUncert = False):
+		doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, 
+		ShipOnly = False, doUncert = False):
 #def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = defaults.END_YEAR, start_month = 1, end_month = 12, doQC = False, doSST_SLP = False, doBC = False, doUncert = False):
 # end
     '''
@@ -203,20 +205,27 @@ def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = d
     :param int start_month: start month to process
     :param int end_month: end month to process
     :param bool doQC: incorporate the QC flags or not
+# KATE modified    
     :param bool doQC1it: incorporate the first iteration (no buddy) QC flags or not
     :param bool doQC2it: incorporate the second iteration (no buddy) QC flags or not
     :param bool doQC3it: incorporate the third iteration (buddy) QC flags or not
+# end
     :param bool doSST_SLP: process additional variables or not
     :param bool doBC: work on the bias corrected data
+# KATE modified    
     :param bool doBCtotal: work on the full bias corrected data
     :param bool doBChgt: work on the height only bias corrected data
     :param bool doBCscn: work on the screen only bias corrected data
+# end
+# KATE modified    
+    :param bool ShipOnly: work on the ship platform type only data
+# end
     :param bool doUncert: work on files with uncertainty information (not currently used)
 
     :returns:
     '''
 # KATE modified    
-    settings = set_paths_and_vars.set(doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn, doQC = doQC, doQC1it = doQC1it, doQC2it = doQC2it, doQC3it = doQC3it)
+    settings = set_paths_and_vars.set(doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn, doQC = doQC, doQC1it = doQC1it, doQC2it = doQC2it, doQC3it = doQC3it, ShipOnly = ShipOnly)
     #settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC)
 # end
 
@@ -275,7 +284,8 @@ def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = d
 
 # KATE modified  - added other BC options  
 #            raw_platform_data, raw_obs, raw_meta, raw_qc = utils.read_qc_data(filename, settings.ICOADS_LOCATION, fields, doBC = doBC)
-            raw_platform_data, raw_obs, raw_meta, raw_qc = utils.read_qc_data(filename, settings.ICOADS_LOCATION, fields, doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn)
+            raw_platform_data, raw_obs, raw_meta, raw_qc = utils.read_qc_data(filename, settings.ICOADS_LOCATION, fields, doBC = doBC, 
+	                                                   doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn, ShipOnly = ShipOnly)
 # end
 
             # extract observation details
@@ -630,6 +640,10 @@ if __name__=="__main__":
     parser.add_argument('--doBCscn', dest='doBCscn', action='store_true', default = False,
                         help='process the screen bias corrected data only, default = False')
 # end
+# KATE modified
+    parser.add_argument('--ShipOnly', dest='ShipOnly', action='store_true', default = False,
+                        help='process the ship only platform type data, default = False')
+# end
     args = parser.parse_args()
 
 
@@ -637,7 +651,8 @@ if __name__=="__main__":
                     start_month = int(args.start_month), end_month = int(args.end_month), \
 # KATE modified
                     doQC = args.doQC, doQC1it = args.doQC1it, doQC2it = args.doQC2it, doQC3it = args.doQC3it, \
-		    doBC = args.doBC, doBCtotal = args.doBCtotal, doBChgt = args.doBChgt, doBCscn = args.doBCscn)
+		    doBC = args.doBC, doBCtotal = args.doBCtotal, doBChgt = args.doBChgt, doBCscn = args.doBCscn, \
+		    ShipOnly = args.ShipOnly)
                     #doQC = args.doQC, doBC = args.doBC)
 # end
 

@@ -63,6 +63,7 @@ Version 2 (26 Sep 2016) Kate Willett
 Enhancements
 This can now cope with the iterative approach (doQC1it, doQC2it, doQC3it in addition to doQC and doBC),
 It can also cope with doBCtotal, doBChgt and doBCscn
+It can also be run for ShipOnly
 In reality we should only need to run it for the first iteration.
 Look for # KATE modified
          ...
@@ -129,7 +130,8 @@ grid_lons = np.arange(-180 + DELTA_LAT, 180 + DELTA_LON, DELTA_LON)
 # KATE modified
 def apply_climatology(suffix = "relax", period = "both", daily = False, 
                       doQC = False, doQC1it = False, doQC2it = False, doQC3it = False, 
-		      doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False):
+		      doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False,
+		      ShipOnly = False):
                       #doQC = False, doBC = False):
 # end
     '''
@@ -150,11 +152,16 @@ def apply_climatology(suffix = "relax", period = "both", daily = False,
     :param bool doBChgt: work on the hieght only bias corrected data
     :param bool doBCscn: work on the screen only bias corrected data
 # end
+# KATE modified
+    :param bool ShipOnly: work on the ship platform type only data
+# end
 
     :returns:
     '''
 # KATE modified
-    settings = set_paths_and_vars.set(doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn, doQC = doQC, doQC1it = doQC1it, doQC2it = doQC2it, doQC3it = doQC3it)
+    settings = set_paths_and_vars.set(doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn, 
+                                      doQC = doQC, doQC1it = doQC1it, doQC2it = doQC2it, doQC3it = doQC3it,
+				      ShipOnly = ShipOnly)
     #settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC)
 # end
 
@@ -259,13 +266,18 @@ if __name__=="__main__":
     parser.add_argument('--doQC3it', dest='doQC3it', action='store_true', default = False,
                         help='process the third iteration QC information, default = False')
 # end
+# KATE modified
+    parser.add_argument('--ShipOnly', dest='ShipOnly', action='store_true', default = False,
+                        help='process the ship platform type only data, default = False')
+# end
     args = parser.parse_args()
 
 
     apply_climatology(suffix = str(args.suffix), period = str(args.period), daily = args.daily, \
 # KATE modified
                           doQC = args.doQC, doQC1it = args.doQC1it, doQC2it = args.doQC2it, doQC3it = args.doQC3it, 
-			  doBC = args.doBC, doBCtotal = args.doBCtotal, doBCscn = args.doBCscn, doBChgt = args.doBChgt)
+			  doBC = args.doBC, doBCtotal = args.doBCtotal, doBCscn = args.doBCscn, doBChgt = args.doBChgt,
+			  ShipOnly = args.ShipOnly)
                       #doQC = args.doQC, doBC = args.doBC)
 # end
 # END

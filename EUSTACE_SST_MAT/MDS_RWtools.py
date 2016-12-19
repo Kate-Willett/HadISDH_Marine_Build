@@ -833,7 +833,7 @@ def WriteMDSextended(TheYear,TheMonth,TheType,MDSDict):
     filee=open(TheFilee,'a+')
     
     for linee in range(nobs):
-        print(linee)
+#        print(linee)
         filee.write(str("{:9.9} ".format(MDSDict['shipid'][linee])+\
 	                "{:8.8}".format(MDSDict['UID'][linee])+\
                         "{:8d}".format(int(round(MDSDict['LAT'][linee]*100.,0)))+\

@@ -45,6 +45,7 @@ Version 2 (26 Sep 2016) Kate Willett
  
 Enhancements
 This can now work with the 3 QC iterations and BC options
+This has a ShipOnly option in read_qc_data to pull through only ship data --ShipOnly
  
 Changes
  
@@ -169,7 +170,7 @@ def set_qc_flag_list(doBC = False, doBCtotal = False, doBChgt = False, doBCscn =
 #*****************************************************
 # KATE modified - added BC options
 #def read_qc_data(filename, location, fieldwidths, doBC = False):
-def read_qc_data(filename, location, fieldwidths, doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False):
+def read_qc_data(filename, location, fieldwidths, doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, ShipOnly = False):
 # end
     """
     Read in the QC'd data and return
@@ -186,6 +187,9 @@ def read_qc_data(filename, location, fieldwidths, doBC = False, doBCtotal = Fals
     :param bool doBCtotal: run on the full bias corrected data
     :param bool doBChgt: run on the height only bias corrected data
     :param bool doBCscn: run on the screen only bias corrected data
+# end
+# KATE modified - added BC options
+    :param bool ShipOnly: select only ship platform (0:5) data
 # end
 
     :returns: data - np.array of string data
@@ -292,17 +296,40 @@ def read_qc_data(filename, location, fieldwidths, doBC = False, doBCtotal = Fals
     platform_data = np.array(platform_data)
 
 
-    # filter PT=14
-    PT = np.array([int(x) for x in platform_meta[:,2]])
+# KATE modified - copied out as no longer needed for I300 run - already removed PT = 14 in make_and_full_qc.py
+# SHOULD HAVE BEEN platform_meta[:,3] anyway!!! so we have accidentally removed any SIDs of 14 - there are some!!!
+#    # filter PT=14
+#    PT = np.array([int(x) for x in platform_meta[:,2]])
+#
+#    goods, = np.where(PT != 14)
+#    # should no longer be needed but retained for completeness
+# end
 
-    goods, = np.where(PT != 14)
-    # should no longer be needed but retained for completeness
+# KATE modified - if ShipOnly is set then pull out only ship data
+    if ShipOnly:
 
-    return platform_data[goods], \
-        platform_obs[goods].astype(int), \
-        platform_meta[goods], \
-        platform_qc[goods].astype(int) # read_qc_data
+        # filter PT=0:5 only
+        PT = np.array([int(x) for x in platform_meta[:,3]])
+        goods, = np.where(PT <= 5)
+	print("Pulling out SHIPS only ",len(goods))
+        return platform_data[goods], \
+            platform_obs[goods].astype(int), \
+            platform_meta[goods], \
+            platform_qc[goods].astype(int) # read_qc_data
+	
+    else:
+        return platform_data, \
+            platform_obs.astype(int), \
+            platform_meta, \
+            platform_qc.astype(int) # read_qc_data
+# end    
 
+# KATE modified - copmmented out because above loops make this redundant
+#    return platform_data[goods], \
+#        platform_obs[goods].astype(int), \
+#        platform_meta[goods], \
+#        platform_qc[goods].astype(int) # read_qc_data
+# end
 
 #*****************************************************
 def process_platform_obs(raw_data):

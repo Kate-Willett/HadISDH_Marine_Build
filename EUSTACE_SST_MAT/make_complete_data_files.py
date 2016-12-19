@@ -59,6 +59,7 @@ Version 2 (26 Sep 2016) Kate Willett
 Enhancements
 This can now cope with the iterative approach (doQC1it, doQC2it, doQC3it in addition to doQC and doBC)
 It can also cope with doBCtotal, doBChgt and doBCscn
+It can cope with --ShipOnly options too.
 Look for # KATE modified
          ...
 	 # end
@@ -106,7 +107,7 @@ defaults = set_paths_and_vars.set()
 #************************************************************************
 # KATE modified
 def combine_files(suffix = "relax", pentads = False, do3hr = False, months = False, daily = False, start_year = defaults.START_YEAR, end_year = defaults.END_YEAR, start_month = 1, end_month = 12, period = "both", 
-                  doQC = False, doQC1it = False, doQC2it = False, doQC3it = False, doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False):
+                  doQC = False, doQC1it = False, doQC2it = False, doQC3it = False, doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, ShipOnly = False):
 #def combine_files(suffix = "relax", pentads = False, do3hr = False, months = False, daily = False, start_year = defaults.START_YEAR, end_year = defaults.END_YEAR, start_month = 1, end_month = 12, period = "both", doQC = False, doBC = False):
 # end
     '''
@@ -134,12 +135,15 @@ def combine_files(suffix = "relax", pentads = False, do3hr = False, months = Fal
     :param bool doBChgt: work on the hieght only bias corrected data
     :param bool doBCscn: work on the screen only bias corrected data
 # end
+# KATE modified
+    :param bool ShipOnly: work on the sship platform type only data
+# end
 
     :returns:
     '''
 
 # KATE modified
-    settings = set_paths_and_vars.set(doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn, doQC = doQC, doQC1it = doQC1it, doQC2it = doQC2it, doQC3it = doQC3it)
+    settings = set_paths_and_vars.set(doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn, doQC = doQC, doQC1it = doQC1it, doQC2it = doQC2it, doQC3it = doQC3it, ShipOnly = ShipOnly)
     #settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC)
 # end
     # pentads
@@ -396,6 +400,10 @@ if __name__=="__main__":
     parser.add_argument('--doBCscn', dest='doBCscn', action='store_true', default = False,
                         help='process the screen only bias corrected data, default = False')
 # end
+# KATE modified
+    parser.add_argument('--ShipOnly', dest='ShipOnly', action='store_true', default = False,
+                        help='process the ship platform type data only, default = False')
+# end
     args = parser.parse_args()
 
 
@@ -404,6 +412,7 @@ if __name__=="__main__":
                       start_month = int(args.start_month), end_month = int(args.end_month), period = str(args.period),\
 # KATE modified
                       doQC = args.doQC, doQC1it = args.doQC1it, doQC2it = args.doQC2it, doQC3it = args.doQC3it, \
-		      doBC = args.doBC, doBCtotal = args.doBCtotal, doBChgt = args.doBChgt, doBCscn = args.doBCscn)
+		      doBC = args.doBC, doBCtotal = args.doBCtotal, doBChgt = args.doBChgt, doBCscn = args.doBCscn, \
+		      ShipOnly = args.ShipOnly)
                       #doQC = args.doQC, doBC = args.doBC)
 # end

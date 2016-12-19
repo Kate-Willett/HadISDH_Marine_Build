@@ -16,16 +16,17 @@
 
 # Pretend to apply a solar corrections - this may be applied later.
 
-# Obtain exposure information from EOH or EOT or esimate exposure - assume Buoys and platforma are unventilated screens, use the
+# Obtain exposure information from EOH or EOT or esimate exposure - assume Buoys and platforma are unventilated screens, previously used the
 # Josey et al., 1999 apply 30% of adjustment to ships with no info to represent that ~3rd of obs are not ventilated.
 
-# Apply 3.4% q adjustment to all obs with a screened/unventilated exposure (VS, S and SN) (NOT TO BUOYS!) and a 30% of 3.4% to obs with no exposure or
+# Apply 3.4% q adjustment to all obs with a screened/unventilated exposure (VS, S and SN) (NOT TO BUOYS!) and a ??% of 3.4% to obs with no exposure or
 # estimated exposure and convert across other humidity variables. DO this to orig and solar corrected obs.
+# We have explored various different ??% to modify the 3.4% in the case of unknown observations (InstrumentMetaDAtaStats_ships_OBSclim2NBC_I300_OCT2016.xlsx 
+# and hadisdh.blogspot.co.uk. I'm now going with 55% and a growth factor for 2015 where there are no metadata
 
-# Obtain height info from HOB/HOT or estimate height from HOP (almost the same!??? - linear equation) or estimate height from 
-# HOA (linear equation) or estimate height based on platform (ship = 16 to 24 scaling linearly every month between ~16m in 
-# 1973 to ~24m by 2006 (Kent et al., 2007 in: Berry and Kent, 2011), buoy = assume 4m instrument height (howmany?, platform 
-# = 30m?)
+# Obtain height info from HOB/HOT/HOP or HOA-10 orestimate height based on platform (ship = 17 to 22.5 scaling linearly every month between ~16m in 
+# 1973 to ~24m by 2006 (Kent et al., 2007 in: Berry and Kent, 2011 used 16 to 24 from Jan 1973 to Dec 2006), buoy = assume 4m instrument height (howmany?, platform 
+# = no adjustment - LARGE uncertaintyu)
 
 # Use height info, SST (or AT), SLP (or climP), u (or 0.5m if < 0.5, ~6 if missing or > 100m/s) to create an estimated height adjusted 
 # value. Do this to orig and solar/screen corrected obs. (fix SST to be between -1.8 and 40. or AT between -1.8 adn 40.)
@@ -150,6 +151,7 @@
 # Instrument Adjustments
 #   We now include VS in the list of exposures to have the adjustment applied
 #   We now do not apply adjustments to buoys and platforms
+#   We now apply 55% of the 3.4% reduction in the case of unknown ship exposures and a growth factor for 2015 where there are no metadata
 #
 # Height Adjustments
 #  We now have two options:
@@ -580,15 +582,18 @@ def ApplyScreenAdjUnc(ExtDict,UncDict,Counter,ClimP):
      - Ship's Sling = SG
      - Unscreened = US 
     PT:
-    ships = 0, 1, 2, 3, 4, 5 = U30
+    ships = 0, 1, 2, 3, 4, 5 = U55
     buoys = 6(moored), 8(ice) = ASP
     platforms = 9(ice), 10(oceanographic), 15 (fixed ocean) = ASP
     
-    Obtain exposure information from EOH or EOT or estimate exposure - assume Buoys and platforma are suitably ventilated screens, use the
+    Obtain exposure information from EOH or EOT or estimate exposure - assume Buoys and platforma are suitably ventilated screens, previously used the
     Josey et al., 1999 apply 30% of adjustment to ships with no info to represent that ~3rd of obs are not ventilated.
 
-    Apply 3.4% q adjustment to all obs with a screened/unventilated exposure and a 30% of 3.4% to obs with no exposure or
-    estimated exposure and convert across other humidity variables. DO this to orig and solar corrected obs. Berry and Kent 2011.
+    Apply 3.4% q adjustment to all obs with a screened/unventilated exposure and
+    Apply a 55% of 3.4% q adjustment to obs with no exposure information
+    If its 2015 (a period with NO metadata) then grow the (3.4*0.55)*1.14 to account for unavoidable shift in adjustment
+    (this is the ratio of the mean adjustment to 2014 (lots of metadata) / mean adjustment to 2015 (no metadata))
+    Convert across other humidity variables. DO this to orig and solar corrected obs. Berry and Kent 2011.
     
     Residual Uncertainty in the adjustment is 0.2 g/kg according to Berry and Kent 2011. Strange that its not a percentage too.
     Geographical and Temporal differences remain: 
@@ -597,6 +602,21 @@ def ApplyScreenAdjUnc(ExtDict,UncDict,Counter,ClimP):
 	 ~-0.1 g/kg -ve bias 40-60N, 20S and below, ~0.1 g/kg +ve bias 0 to 20S 
     
     '''
+    # Set the values to adjust 
+    # Use the 3.4 % reduction in q documented adjustment factor from Berry and Kent 2011
+    ScnAdjustment = 3.4
+    FullAdjFactor = (100. - ScnAdjustment) / 100. # should be 0.966
+    # Use 55% as the average percentage of ships with EOH metadata that are poorly ventilated
+    PctPoorlyAsp = 0.55
+    UnkAdjFactor = (100. - (ScnAdjustment * PctPoorlyAsp)) / 100. # should be 0.9813
+    
+    # Set the values for when the metadata drop out
+    # First year where there are no metadata
+    EndofMetaData = 2015
+    # Factor to grow the adjustments (last year of metadata mean adjustment / first year of no metadata mean adjustment)
+    GrowFactor = 1.14
+    GrowUnkAdjFactor = (100. - ((ScnAdjustment * PctPoorlyAsp) * GrowFactor)) / 100. # should be 0.9787
+    
     # FIRST SORT OUT THE EXPOSURE OR ESTIMATED EXPOSURE
     
     # Choice 1. If EOH exists then use this
@@ -625,19 +645,19 @@ def ApplyScreenAdjUnc(ExtDict,UncDict,Counter,ClimP):
 	    ExtDict['ESTE'].append('ASP')
 	    UncDict['ESTE'].append('ASP')
 	    
-    # Choice 3a. If neither EOH or EOT exists then base it on the PT (buoys and platforms = UNA)
+    # Choice 3a. If neither EOH or EOT exists then base it on the PT (buoys and platforms = ASP)
     elif (ExtDict['PT'][Counter] > 5):
         # if its a buoy or platform then it needs an adjustment
 	# Fill in (append) the Estimated Exposure accordingly
 	ExtDict['ESTE'].append('ASP')
 	UncDict['ESTE'].append('ASP')
 	
-    # Choice 3b. If neight EOH or EOT exists then base it on the PT (ships have 30% adjustment applied = U30)	
+    # Choice 3b. If neither EOH or EOT exists then base it on the PT (ships have 55% adjustment applied = U55)	
     else:
-	ExtDict['ESTE'].append('U30')
-	UncDict['ESTE'].append('U30')
+	ExtDict['ESTE'].append('U55')
+	UncDict['ESTE'].append('U55')
 	
-    # Now for ESTE = UNA or U30 apply 3.4% decrease to SHU and roll out to anomalies and other variables already solar adjusted
+    # Now for ESTE = UNA or U55 apply 3.4% decrease to SHU and roll out to anomalies and other variables already solar adjusted
 
     # NO CHANGE TO AT so append VARscn with original, no need to add anything to VARtbc
     ExtDict['ATscn'].append(ExtDict['AT'][Counter])
@@ -676,20 +696,29 @@ def ApplyScreenAdjUnc(ExtDict,UncDict,Counter,ClimP):
     else:
     # APPLY!   
     # In these cases we need to apply to original value to fill in VARscn and also apply to VARtbc
-    # NOTE: The uncSCN is the amount assess for its part of tbc!!! So the final value that we will most likely use
+    # NOTE: The uncSCN is the amount assessed for its part of tbc!!! So the final value that we will most likely use
     # I could save a second uncertainty for just the scn applied to the original data but its getting VERY BIG already 
     # NOTE: We need to establish the change in DPT first - Td can be calculated from vap
         t = ExtDict['ATtbc'][Counter]
         t_orig = ExtDict['AT'][Counter]
 	if (ExtDict['ESTE'][Counter] == 'UNA'):
 	    # Apply full adjustment 100 - 3.4 = 96.6
-	    q_adj = ExtDict['SHUtbc'][Counter]*0.966
-	    q_adj_orig = ExtDict['SHU'][Counter]*0.966
+	    q_adj = ExtDict['SHUtbc'][Counter] * FullAdjFactor
+	    q_adj_orig = ExtDict['SHU'][Counter] * FullAdjFactor
         else:
-	    # Apply 30% of adjustment
-	    # 3.4* 0.3 = 1.02, 100 - 1.02 = 98.8
-	    q_adj = ExtDict['SHUtbc'][Counter]*0.988
-	    q_adj_orig = ExtDict['SHU'][Counter]*0.988
+	    # For values up to 2015 where there are metadata - WILL NEED TO CHANGE IN FUTURE!!!
+	    if (ExtDict['YR'][Counter] < EndofMetaData):
+	        # Apply 55% of adjustment
+	        # 3.4 * 0.55 = 1.87, 100 - 1.87 = 98.13
+	        q_adj = ExtDict['SHUtbc'][Counter] * UnkAdjFactor
+	        q_adj_orig = ExtDict['SHU'][Counter] * UnkAdjFactor
+	    
+	    # Catch any values from 2015 where there are no metadata - WILL NEED TO CHANGE IN FUTURE!!!
+	    else:
+	        # Apply 55% * growfactor of adjustment
+	        # 3.4 * 0.55 * 1.14 = 2.1318, 100 - 2.1318 = 97.87
+	        q_adj = ExtDict['SHUtbc'][Counter] * GrowUnkAdjFactor
+	        q_adj_orig = ExtDict['SHU'][Counter] * GrowUnkAdjFactor
 	
 	ExtDict['SHUscn'].append(q_adj_orig)
         ExtDict['SHUAscn'].append(ExtDict['SHUA'][Counter] - (ExtDict['SHU'][Counter] - q_adj_orig))
@@ -913,12 +942,12 @@ def EstimateHeight(ExtDict,Counter):
 	    EstHeightA = float(EstHeightH + 10.)
 
     # Test output
-    print('Platform: ',ExtDict['PT'][Counter])
-    print('HOB/HOT/HOP/HOA: ',ExtDict['HOB'][Counter],ExtDict['HOT'][Counter],ExtDict['HOP'][Counter],ExtDict['HOA'][Counter])
-    print('ESTH/HOA/UNC: ',EstHeightH, EstHeightA, EstUnc)
+#    print('Platform: ',ExtDict['PT'][Counter])
+#    print('HOB/HOT/HOP/HOA: ',ExtDict['HOB'][Counter],ExtDict['HOT'][Counter],ExtDict['HOP'][Counter],ExtDict['HOA'][Counter])
+#    print('ESTH/HOA/UNC: ',EstHeightH, EstHeightA, EstUnc)
 #    pdb.set_trace()
 
-    return EstheightH,EstHeightA,EstUnc
+    return EstHeightH,EstHeightA,EstUnc
 #************************************************************************************************************
 # GetNOCSHeight
 #************************************************************************************************************
@@ -991,10 +1020,10 @@ def GetNOCSHeight(ExtDict,Counter):
     # Or its a ship then get a height from NOCS
     else:
         # Look up the NOCS file for this YR and MN
-	    EstHeightH = float(ExtDict['HOT'][Counter])
-	    EstUnc = actual_height
-	    EstUnc = estimated_height
-	    EstUnc = calc_height
+	EstHeightH = float(ExtDict['HOT'][Counter])
+	EstUnc = actual_height
+	EstUnc = estimated_height
+	EstUnc = calc_height
 
         # Check if HOA exists and is greater than 2m, if it does not then HOA = ESTH+10
         if (ExtDict['HOA'][Counter] > 2.):
@@ -1004,12 +1033,12 @@ def GetNOCSHeight(ExtDict,Counter):
 	    EstHeightA = float(EstHeightH + 10.)
 
     # Test output
-    print('Platform: ',ExtDict['PT'][Counter])
-    print('HOB/HOT/HOP/HOA: ',ExtDict['HOB'][Counter],ExtDict['HOT'][Counter],ExtDict['HOP'][Counter],ExtDict['HOA'][Counter])
-    print('ESTH/HOA/UNC: ',EstHeightH, EstHeightA, EstUnc)
+#    print('Platform: ',ExtDict['PT'][Counter])
+#    print('HOB/HOT/HOP/HOA: ',ExtDict['HOB'][Counter],ExtDict['HOT'][Counter],ExtDict['HOP'][Counter],ExtDict['HOA'][Counter])
+#    print('ESTH/HOA/UNC: ',EstHeightH, EstHeightA, EstUnc)
 #    pdb.set_trace()
 
-    return EstheightH,EstHeightA,EstUnc
+    return EstHeightH,EstHeightA,EstUnc
 #************************************************************************************************************
 # ApplyHeightAdjUnc
 #************************************************************************************************************
@@ -1101,6 +1130,8 @@ def ApplyHeightAdjUnc(ExtDict,UncDict,Counter,ClimP,ChooseLocal):
     # Catch to ensure larger unceratinty when there is no valid SST
     noSST_estimate = False # no valid SST so AT or forced limits (-2.0, 40) used
     # If no valid SST then SST = AT so no adjustment applied to AT and v uncertain to q etc
+    # Extra variable to apply large uncertainties when no adjustment can be made
+    no_adjustment = 999 # either its a platform or an adjustment can't be applied
 
 #    # ENSURE THAT ESTH IS A FLOAT
 #    # First check if its a buoy or platform
@@ -1180,15 +1211,15 @@ def ApplyHeightAdjUnc(ExtDict,UncDict,Counter,ClimP,ChooseLocal):
 ##    pdb.set_trace()
  
     # If ChooseHeight == 'local' then call EstimateHeight
-    if (ChooseHeight == 'local'):
+    if (ChooseLocal == 'local'):
         EstHeightH,EstHeightA,EstUnc = EstimateHeight(ExtDict,Counter)
 	ExtDict['ESTH'].append(EstHeightH)
 	UncDict['ESTH'].append(EstHeightH)
 	HOA = EstHeightA
 	unc_estimate = EstUnc
     
-    # Else if ChooseHeight == 'localNOCS' then call GetNOCSHeight
-    elif (ChooseHeight == 'localNOCS'):
+    # Else if ChooseLocal == 'localNOCS' then call GetNOCSHeight
+    elif (ChooseLocal == 'localNOCS'):
         EstHeightH,EstHeightA,EstUnc = GetNOCSHeight(ExtDict,Counter)
 	ExtDict['ESTH'].append(EstHeightH)
 	UncDict['ESTH'].append(EstHeightH)
@@ -1317,7 +1348,7 @@ def ApplyHeightAdjUnc(ExtDict,UncDict,Counter,ClimP,ChooseLocal):
 	    # NOTE UNCERTAINTIES ARE ALREADY SET SO USE COUNTER RATHER THAN APPEND!!!
 	    if (noSST_estimate):
 	    
-	        print('SILLY SST: ',ExtDict['SST'][Counter],ExtDict['SSTclim'][Counter],MySSTtbc, MySSTorig)
+#	        print('SILLY SST: ',ExtDict['SST'][Counter],ExtDict['SSTclim'][Counter],MySSTtbc, MySSTorig)
 	        
 		# Test AT
 		if (abs(ATdiff) >= 0.1):    
@@ -1423,7 +1454,7 @@ def ApplyHeightAdjUnc(ExtDict,UncDict,Counter,ClimP,ChooseLocal):
                 ExtDict['DPDAhc'].append(ExtDict['DPDA'][Counter] - (ExtDict['DPD'][Counter] - AdjDict['dpd_10m']))
             else:
 	    
-                print('SILLY ORIG VALUES')
+#                print('SILLY ORIG VALUES')
 	        #pdb.set_trace()
 
                 # Then append the original variables, apply to the anomalies 
@@ -1444,7 +1475,7 @@ def ApplyHeightAdjUnc(ExtDict,UncDict,Counter,ClimP,ChooseLocal):
 	    
         else:
                
-	    print('SILLY TBC VALUES')
+#	    print('SILLY TBC VALUES')
 	    #pdb.set_trace()
             
 	    # If no adjustment can be applied then still apply uncertainty in value. 
@@ -2394,10 +2425,13 @@ def main(argv):
 #		print(TheExtDict['SHU'][oo],TheExtDict['SHUslr'][oo],TheExtDict['SHUtbc'][oo],TheUncDict['SHUuncSLR'][oo])
 #		print(TheExtDict['SHUA'][oo],TheExtDict['SHUAslr'][oo],TheExtDict['SHUAtbc'][oo],TheUncDict['SHUAuncSLR'][oo])
 
-                # Obtain exposure information from EOH or EOT or estimate exposure - assume Buoys and platforma are unventilated screens, use the
-                # Josey et al., 1999 apply 30% of adjustment to ships with no info to represent that ~3rd of obs are not ventilated.
-                # Apply 3.4% q adjustment to all obs with a screened/unventilated exposure and a 30% of 3.4% to obs with no exposure or
+                # Obtain exposure information from EOH or EOT or estimate exposure - assume Buoys and platforma are unventilated screens, 
+		# Could use the Josey et al., 1999 apply 30% of adjustment to ships with no info to represent that ~3rd of obs are not ventilated.
+		# HOWEVER, assessment of I300 looks more lik 55% of all obs with EOH info are poorly ventilated
+                # Apply 3.4% q adjustment to all obs with a screened/unventilated exposure and a 55% of 3.4% to obs with no exposure or
                 # estimated exposure and convert across other humidity variables. DO this to orig and solar corrected obs.
+		# Apply a catch for 2015 where ALL metadata drops out to avoid big jump in adjustment - grow (3.4*0.55)*1.14
+		# This is the ratio of 2014 mean adjustment (with metadata) / 2015 mean adjustment (no metadata)
 		# Apply to VARscn and add to VARtbc
                 TheExtDict,TheUncDict = ApplyScreenAdjUnc(TheExtDict,TheUncDict,oo,ClimP)
 		# TEST
@@ -2424,7 +2458,7 @@ def main(argv):
 #                    pdb.set_trace()
 		TheExtDict,TheUncDict = ApplyHeightAdjUnc(TheExtDict,TheUncDict,oo,ClimP,LocalType)
 		# TEST
-		print("Test Output HGT: ",oo)
+#		print("Test Output HGT: ",oo)
 #		print('Original SLR SCN HGT TBC uncHGT')
 #		print('SHU: ',TheExtDict['SHU'][oo],TheExtDict['SHUslr'][oo],TheExtDict['SHUscn'][oo],TheExtDict['SHUhc'][oo],TheExtDict['SHUtbc'][oo],TheUncDict['SHUuncHGT'][oo])
 #		print('SHUA: ',TheExtDict['SHUA'][oo],TheExtDict['SHUAslr'][oo],TheExtDict['SHUAscn'][oo],TheExtDict['SHUAhc'][oo],TheExtDict['SHUAtbc'][oo],TheUncDict['SHUAuncHGT'][oo])
@@ -2498,8 +2532,8 @@ def main(argv):
 #	        if (oo == 145621):
 #		    pdb.set_trace()
 
-#                if (TheExtDict['ESTE'][oo] != 'U30'):
-#                if ((TheExtDict['ESTE'][oo] != 'U30') & (TheExtDict['ESTE'][oo] != 'ASP')):
+#                if (TheExtDict['ESTE'][oo] != 'U55'):
+#                if ((TheExtDict['ESTE'][oo] != 'U55') & (TheExtDict['ESTE'][oo] != 'ASP')):
 #                if ((TheExtDict['HOB'][oo] < 0) & ((TheExtDict['HOT'][oo] > 0) | (TheExtDict['HOP'][oo] > 0) | (TheExtDict['HOA'][oo] > 0))):
 #                if ((TheExtDict['HOB'][oo] < 0) & ((TheExtDict['HOT'][oo] > 0) | (TheExtDict['HOP'][oo] > 0))):
 #                if ((TheExtDict['HOT'][oo] > 0) | (TheExtDict['HOP'][oo] > 0)):

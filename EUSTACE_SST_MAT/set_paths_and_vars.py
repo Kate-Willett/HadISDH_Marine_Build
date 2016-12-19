@@ -56,6 +56,8 @@ This can now cope with additional options for an iterative approach
 if neither doQC... or doBC are set then this is a raw run from OBSclim2NBC data
 
 still has original --doQC option!
+
+This also has a --ShipOnly option to work with only ship platform data
  
 Changes
  
@@ -114,7 +116,7 @@ class Settings(object):
 
 #*********************************************
 # *** KATE MODIFIED
-def set(doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doQC = True, doQC1it = False, doQC2it = False, doQC3it = False):
+def set(doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doQC = True, doQC1it = False, doQC2it = False, doQC3it = False, ShipOnly = False):
 #def set(doBC = False, doQC = True):
 # end
     '''
@@ -131,6 +133,9 @@ def set(doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doQC 
     :param bool doQC1it: set up for 1st iteration quality control with no buddy check
     :param bool doQC2it: set up for 2nd iteration quality control with no buddy check
     :param bool doQC3it: set up for 3rd iteration quality control with buddy check
+# end
+# *** KATE MODIFIED
+    :param bool ShipOnly: set up for working with ship data only
 # end
 
     :returns: Settings object
@@ -166,6 +171,12 @@ def set(doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doQC 
         PLOT_LOCATION=PLOT_DIR+"PLOTSOBSclim2BClocal/"
         #DATA_LOCATION="/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS_BC/"
         #PLOT_LOCATION="/project/hadobs2/hadisdh/marine/PLOTS_BC/"
+
+        if ShipOnly:
+	    OUTROOT = "OBSclim2BClocal"
+            ICOADS_LOCATION=ICOADS_DIR+"{}/".format(OUTROOT)
+            DATA_LOCATION=DATA_DIR+"GRIDSOBSclim2BClocalship/"
+            PLOT_LOCATION=PLOT_DIR+"PLOTSOBSclim2BClocalship/"
 # end
 
 # KATE MODIFIED - othe BC options
@@ -178,6 +189,12 @@ def set(doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doQC 
         DATA_LOCATION=DATA_DIR+"GRIDSOBSclim2BClocal/"
         PLOT_LOCATION=PLOT_DIR+"PLOTSOBSclim2BClocal/"
 
+        if ShipOnly:
+	    OUTROOT = "OBSclim2BClocal"
+            ICOADS_LOCATION=ICOADS_DIR+"{}/".format(OUTROOT)
+            DATA_LOCATION=DATA_DIR+"GRIDSOBSclim2BClocalship/"
+            PLOT_LOCATION=PLOT_DIR+"PLOTSOBSclim2BClocalship/"
+
     elif doBChgt:
         # Constants in CAPS
         OUTROOT = "OBSclim2BClocal"
@@ -187,6 +204,12 @@ def set(doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doQC 
         DATA_LOCATION=DATA_DIR+"GRIDSOBSclim2BClocalHGT/"
         PLOT_LOCATION=PLOT_DIR+"PLOTSOBSclim2BClocalHGT/"
 
+        if ShipOnly:
+	    OUTROOT = "OBSclim2BClocal"
+            ICOADS_LOCATION=ICOADS_DIR+"{}/".format(OUTROOT)
+            DATA_LOCATION=DATA_DIR+"GRIDSOBSclim2BClocalHGTship/"
+            PLOT_LOCATION=PLOT_DIR+"PLOTSOBSclim2BClocalHGTship/"
+
     elif doBCscn:
         # Constants in CAPS
         OUTROOT = "OBSclim2BClocal"
@@ -195,6 +218,13 @@ def set(doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doQC 
 
         DATA_LOCATION=DATA_DIR+"GRIDSOBSclim2BClocalINST/"
         PLOT_LOCATION=PLOT_DIR+"PLOTSOBSclim2BClocalINST/"
+
+        if ShipOnly:
+	    OUTROOT = "OBSclim2BClocal"
+            ICOADS_LOCATION=ICOADS_DIR+"{}/".format(OUTROOT)
+            DATA_LOCATION=DATA_DIR+"GRIDSOBSclim2BClocalINSTship/"
+            PLOT_LOCATION=PLOT_DIR+"PLOTSOBSclim2BClocalINSTship/"
+
 # end
 
     elif doQC:
@@ -219,6 +249,12 @@ def set(doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doQC 
         DATA_LOCATION=DATA_DIR+"GRIDSERAclimNBC/"
         PLOT_LOCATION=PLOT_DIR+"PLOTSERAclimNBC/"
 
+        if ShipOnly:
+	    OUTROOT = "ERAclimNBC"
+            ICOADS_LOCATION=ICOADS_DIR+"{}/".format(OUTROOT)
+            DATA_LOCATION=DATA_DIR+"GRIDSERAclimNBCship/"
+            PLOT_LOCATION=PLOT_DIR+"PLOTSERAclimNBCship/"
+
     elif doQC2it:
         # Constants in CAPS
         OUTROOT = "OBSclim1NBC"
@@ -227,6 +263,12 @@ def set(doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doQC 
         DATA_LOCATION=DATA_DIR+"GRIDSOBSclim1NBC/"
         PLOT_LOCATION=PLOT_DIR+"PLOTSOBSclim1NBC/"
 
+        if ShipOnly:
+	    OUTROOT = "OBSclim1NBC"
+            ICOADS_LOCATION=ICOADS_DIR+"{}/".format(OUTROOT)
+            DATA_LOCATION=DATA_DIR+"GRIDSOBSclim1NBCship/"
+            PLOT_LOCATION=PLOT_DIR+"PLOTSOBSclim1NBCship/"
+
     elif doQC3it:
         # Constants in CAPS
         OUTROOT = "OBSclim2NBC"
@@ -234,6 +276,12 @@ def set(doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doQC 
         ICOADS_LOCATION=ICOADS_DIR+"{}/".format(OUTROOT)
         DATA_LOCATION=DATA_DIR+"GRIDSOBSclim2NBC/"
         PLOT_LOCATION=PLOT_DIR+"PLOTSOBSclim2NBC/"
+
+        if ShipOnly:
+	    OUTROOT = "OBSclim2NBC"
+            ICOADS_LOCATION=ICOADS_DIR+"{}/".format(OUTROOT)
+            DATA_LOCATION=DATA_DIR+"GRIDSOBSclim2NBCship/"
+            PLOT_LOCATION=PLOT_DIR+"PLOTSOBSclim2NBCship/"
 
 # end
 # KATE modified
@@ -244,6 +292,13 @@ def set(doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doQC 
         ICOADS_LOCATION=ICOADS_DIR+"{}/".format(OUTROOT)
         DATA_LOCATION=DATA_DIR+"GRIDSOBSclim2noQC/"
         PLOT_LOCATION=PLOT_DIR+"PLOTSOBSclim2noQC/"
+
+        if ShipOnly:
+	    OUTROOT = "OBSclim2noQC"
+            ICOADS_LOCATION=ICOADS_DIR+"{}/".format(OUTROOT)
+            DATA_LOCATION=DATA_DIR+"GRIDSOBSclim2noQCship/"
+            PLOT_LOCATION=PLOT_DIR+"PLOTSOBSclim2noQCship/"
+
     #else:
     #    # Constants in CAPS
     #    OUTROOT = "ERAclimNBC"
