@@ -46,6 +46,7 @@ Version 2 (26 Sep 2016) Kate Willett
 Enhancements
 This can now work with the 3 QC iterations and BC options
 This has a ShipOnly option in read_qc_data to pull through only ship data --ShipOnly
+Bug fixed to work with ship only bias corrected data - platform_meta[:,2] rather than the QConly platform_meta[:,3]
  
 Changes
  
@@ -234,7 +235,7 @@ def read_qc_data(filename, location, fieldwidths, doBC = False, doBCtotal = Fals
                     dummy_obs = [fields[8: 8+18]] # used to help counting the fields
                     platform_obs += [fields[8+18: 8+18+14]] # the ???tbc fields
                     dummy_obs = [fields[8+18+14: 8+18+14+14+14+14]] # ditto
-                    platform_meta += [fields[8+18+14+14+14+14: 8+18+14+14+14+14+12]]
+                    platform_meta += [fields[8+18+14+14+14+14: 8+18+14+14+14+14+12]] # 3rd element is PT
                     platform_qc += [fields[8+18+14+14+14+14+12:]]
 
                 elif doBChgt:
@@ -248,7 +249,7 @@ def read_qc_data(filename, location, fieldwidths, doBC = False, doBCtotal = Fals
                     dummy_obs = [fields[8: 8+18+14]] # used to help counting the fields
                     platform_obs += [fields[8+18+14: 8+18+14+14]] # the ???tbc fields
                     dummy_obs = [fields[8+18+14+14: 8+18+14+14+14+14]] # ditto
-                    platform_meta += [fields[8+18+14+14+14+14: 8+18+14+14+14+14+12]]
+                    platform_meta += [fields[8+18+14+14+14+14: 8+18+14+14+14+14+12]] # 3rd element is PT
                     platform_qc += [fields[8+18+14+14+14+14+12:]]
 
                 elif doBCscn:
@@ -262,7 +263,7 @@ def read_qc_data(filename, location, fieldwidths, doBC = False, doBCtotal = Fals
                     dummy_obs = [fields[8: 8+18+14+14]] # used to help counting the fields
                     platform_obs += [fields[8+18+14+14: 8+18+14+14+14]] # the ???tbc fields
                     dummy_obs = [fields[8+18+14+14+14: 8+18+14+14+14+14]] # ditto
-                    platform_meta += [fields[8+18+14+14+14+14: 8+18+14+14+14+14+12]]
+                    platform_meta += [fields[8+18+14+14+14+14: 8+18+14+14+14+14+12]] # 3rd element is PT
                     platform_qc += [fields[8+18+14+14+14+14+12:]]
 # end
 
@@ -276,7 +277,7 @@ def read_qc_data(filename, location, fieldwidths, doBC = False, doBCtotal = Fals
                     platform_data += [fields[: 8]]
                     platform_obs += [fields[8: 8+17]]
 # KATE modified - this seems to be wrong
-                    platform_meta += [fields[8+17: 8+17+30]]
+                    platform_meta += [fields[8+17: 8+17+30]] # 4th element is PT
                     platform_qc += [fields[8+17+30:]]
                     #platform_meta += [fields[8+17: 8+17+20]]
                     #platform_qc += [fields[8+17+20:]]
@@ -309,8 +310,13 @@ def read_qc_data(filename, location, fieldwidths, doBC = False, doBCtotal = Fals
     if ShipOnly:
 
         # filter PT=0:5 only
-        PT = np.array([int(x) for x in platform_meta[:,3]])
-        goods, = np.where(PT <= 5)
+	# If its a BC run then PT is element 2 (3rd) but if its QC only then PT is element 3 (4th)
+        if doBC | doBCtotal | doBChgt | doBCscn:
+	    PT = np.array([int(x) for x in platform_meta[:,2]])
+	else:
+	    PT = np.array([int(x) for x in platform_meta[:,3]])
+        
+	goods, = np.where(PT <= 5)
 	print("Pulling out SHIPS only ",len(goods))
         return platform_data[goods], \
             platform_obs[goods].astype(int), \
