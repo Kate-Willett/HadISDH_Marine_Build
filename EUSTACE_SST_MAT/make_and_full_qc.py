@@ -36,6 +36,8 @@ import time
 import pdb # pdb.set_trace() or c
 # KW Added to convert a string to float
 import numpy as np
+# KW Added to search for files - prevent falling over
+import os.path
 
 def base_qc_report(rep,HardLimit):
     '''
@@ -474,7 +476,15 @@ def main(argv):
             if (readyear >= 2015):
                 filename = recent_icoads_dir+'/IMMA1_R3.0.1_'+syr+'-'+smn+'.gz'
     
-            icoads_file = gzip.open(filename,"r")
+# KW Added a catch to stop the program trying to read in files that aren't yet there - if it can't find a file but its not THE candidate month then 
+# its ok to proceed - just won't be as good a buddy checker - a 'provisional' month!!!   
+# Requires import os.path so I have added this at the top    
+# Test if file is not there and its not a candidate file - then continue without reading in that file - or it will crash when it tries to read in the file that isn't there
+# in which case - something is up! 
+	    if ((os.path.exists(filename) == False) & (readyear == next_year) & (readmonth == next_month)):
+	        continue
+            
+	    icoads_file = gzip.open(filename,"r")
 
 # KW Noted that this creates an object of whole month of IMMA data separated into all available parameters from all available attachments
 # The rec.read bit later could be speeded up by ignoring the attachments we are not interested in in the first place?    
