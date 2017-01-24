@@ -706,6 +706,7 @@ def ApplyScreenAdjUnc(ExtDict,UncDict,Counter,ClimP):
 	    q_adj = ExtDict['SHUtbc'][Counter] * FullAdjFactor
 	    q_adj_orig = ExtDict['SHU'][Counter] * FullAdjFactor
         else:
+	    # These should now be all of the U55 obs
 	    # For values up to 2015 where there are metadata - WILL NEED TO CHANGE IN FUTURE!!!
 	    if (ExtDict['YR'][Counter] < EndofMetaData):
 	        # Apply 55% of adjustment
@@ -2435,15 +2436,16 @@ def main(argv):
 		# Apply to VARscn and add to VARtbc
                 TheExtDict,TheUncDict = ApplyScreenAdjUnc(TheExtDict,TheUncDict,oo,ClimP)
 		# TEST
-#		print("Test Output SCN: ",oo, TheExtDict['ESTE'][oo])
-#		print('Original SLR SCN HGT TBC uncSCN')
-#		print('SHU: ',TheExtDict['SHU'][oo],TheExtDict['SHUslr'][oo],TheExtDict['SHUscn'][oo],TheExtDict['SHUtbc'][oo],TheUncDict['SHUuncSCN'][oo])
-#		print('SHUA: ',TheExtDict['SHUA'][oo],TheExtDict['SHUAslr'][oo],TheExtDict['SHUAscn'][oo],TheExtDict['SHUAtbc'][oo],TheUncDict['SHUAuncSCN'][oo])
-#		print('CRH: ',TheExtDict['CRH'][oo],TheExtDict['CRHslr'][oo],TheExtDict['CRHscn'][oo],TheExtDict['CRHtbc'][oo],TheUncDict['CRHuncSCN'][oo])
-#		print('CRHA: ',TheExtDict['CRHA'][oo],TheExtDict['CRHAslr'][oo],TheExtDict['CRHAscn'][oo],TheExtDict['CRHAtbc'][oo],TheUncDict['CRHAuncSCN'][oo])
-#		print('DPT: ',TheExtDict['DPT'][oo],TheExtDict['DPTslr'][oo],TheExtDict['DPTscn'][oo],TheExtDict['DPTtbc'][oo],TheUncDict['DPTuncSCN'][oo])
-#		print('DPTA: ',TheExtDict['DPTA'][oo],TheExtDict['DPTAslr'][oo],TheExtDict['DPTAscn'][oo],TheExtDict['DPTAtbc'][oo],TheUncDict['DPTAuncSCN'][oo])
-#	        pdb.set_trace()
+#		if (TheExtDict['ESTE'][oo] == 'U55'):
+#		    print("Test Output SCN: ",oo, TheExtDict['ESTE'][oo])
+#		    print('Original SLR SCN TBC uncSCN')
+#		    print('SHU: ',TheExtDict['SHU'][oo],TheExtDict['SHUslr'][oo],TheExtDict['SHUscn'][oo],TheExtDict['SHUtbc'][oo],TheUncDict['SHUuncSCN'][oo])
+#		    print('SHUA: ',TheExtDict['SHUA'][oo],TheExtDict['SHUAslr'][oo],TheExtDict['SHUAscn'][oo],TheExtDict['SHUAtbc'][oo],TheUncDict['SHUAuncSCN'][oo])
+#		    print('CRH: ',TheExtDict['CRH'][oo],TheExtDict['CRHslr'][oo],TheExtDict['CRHscn'][oo],TheExtDict['CRHtbc'][oo],TheUncDict['CRHuncSCN'][oo])
+#		    print('CRHA: ',TheExtDict['CRHA'][oo],TheExtDict['CRHAslr'][oo],TheExtDict['CRHAscn'][oo],TheExtDict['CRHAtbc'][oo],TheUncDict['CRHAuncSCN'][oo])
+#		    print('DPT: ',TheExtDict['DPT'][oo],TheExtDict['DPTslr'][oo],TheExtDict['DPTscn'][oo],TheExtDict['DPTtbc'][oo],TheUncDict['DPTuncSCN'][oo])
+#		    print('DPTA: ',TheExtDict['DPTA'][oo],TheExtDict['DPTAslr'][oo],TheExtDict['DPTAscn'][oo],TheExtDict['DPTAtbc'][oo],TheUncDict['DPTAuncSCN'][oo])
+#	            pdb.set_trace()
 
                 # Obtain height info from HOB/HOT or estimate height from HOP (almost the same!??? - linear equation) or estimate height from 
                 # HOA (linear equation) or estimate height based on platform (ship = 16 to 24 scaling linearly every month between ~16m in 
