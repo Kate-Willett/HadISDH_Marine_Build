@@ -46,7 +46,7 @@ tcp.compare_BCNBC('all') # or 'ship'
 # run BC types comparison for all or ship only
 tcp.compare_BCtype('all') # or 'ship' (ship not set up yet for all different BC types)
 # run ship vs all comparison for dayQC, nightQC, bothQC, dayBC, nightBC, bothBC
-tcp.compare_ship('all') # or 'ship' (ship not set up yet for all different BC types)
+tcp.compare_PTs('NBC') # or 'BClocal' 
 
 
 -----------------------

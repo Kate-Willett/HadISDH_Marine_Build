@@ -849,7 +849,7 @@ def get_config(filename='configuration.txt'):
     with open(filename, 'rb') as csvfile:
         reader = csv.reader(csvfile, delimiter=',')
         for row in reader:
-            config[row[0]] = row[1]
+	    config[row[0]] = row[1]
     
     assert 'data_base_dir'  in config, "No data base directory specified"
     assert 'data_base_name' in config, "No data base name specified"
