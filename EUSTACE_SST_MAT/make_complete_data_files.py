@@ -16,6 +16,9 @@ CODE PURPOSE AND OUTPUT
 -----------------------
 Takes pentad files and monthly files to make single dataset files.
 
+NOTE: The hard coded start year is 1973. If the given start year is different to 1973 then the program opens an existing file to merge with.
+      YOU WILL NEED TO CHANGE THE CODE IF YOU WANT TO CREATE A SEPERATE MERGED FILE THAT DOES NOT START IN 1973
+
 -----------------------
 LIST OF MODULES
 -----------------------
@@ -145,6 +148,9 @@ def combine_files(suffix = "relax", pentads = False, do3hr = False, months = Fal
 # KATE modified
     settings = set_paths_and_vars.set(doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn, doQC = doQC, doQC1it = doQC1it, doQC2it = doQC2it, doQC3it = doQC3it, ShipOnly = ShipOnly)
     #settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC)
+    
+    # I've added this to test if there is an existing file to merge with so that it is easy to do annual updates.
+    DefaultStartYear = 1973
 # end
     # pentads
     if pentads:
@@ -243,6 +249,54 @@ def combine_files(suffix = "relax", pentads = False, do3hr = False, months = Fal
     if months:
 
         OBS_ORDER = utils.make_MetVars(settings.mdi, multiplier = False)
+	
+	# KATE ADDED:
+	# Test to see if there is an existing merged file to combine with by looking at the given start year compared to the default of 1973
+	# If it is different then open the existing file and rewrite it.
+	# I'll rewrite it with _new just to check all is well
+	if start_year != DefaultStartYear:
+	
+	    # We must merge with the existing file
+            if daily:
+                filename = settings.DATA_LOCATION + "{}_5x5_monthly_from_daily_{}_{}.nc".format(settings.OUTROOT, period, suffix)
+            else:
+                filename = settings.DATA_LOCATION + "{}_5x5_monthly_{}_{}.nc".format(settings.OUTROOT, period, suffix)
+
+            ncdf_file = ncdf.Dataset(filename,'r', format='NETCDF4')
+
+            time = ncdf_file.variables["time"]
+
+            #try:
+            #    assert time.long_name == "time since 1/{}/{} in hours".format(month, year)
+
+            #except AssertionError:
+            #    print "time units are not as expected."
+            #    print "    expected time since 1/{}/{} in hours".format(month, year)
+            #    print "    got {}".format(time.long_name)
+            #    sys.exit()
+
+            for v, var in enumerate(OBS_ORDER):
+
+                nc_var = ncdf_file.variables[var.name]
+
+                try:
+                    var.data = utils.ma_append(var.data, nc_var[:], axis = 0)
+
+                    if v == 0:
+                        n_obs = utils.ma_append(n_obs, ncdf_file.variables["n_obs"][:], axis = 0)
+                        n_grids = utils.ma_append(n_grids, ncdf_file.variables["n_grids"][:], axis = 0)
+
+                except AttributeError:
+                    var.data = nc_var[:]
+                    var.data.fill_value = nc_var.missing_value
+
+                    if v == 0:
+                        n_obs = ncdf_file.variables["n_obs"][:]
+                        n_grids = ncdf_file.variables["n_grids"][:]
+
+        # This should now just be appended to with the additional months
+
+	    	
 
         #*****************************
         # monthlies
@@ -331,6 +385,9 @@ def combine_files(suffix = "relax", pentads = False, do3hr = False, months = Fal
         #grid5_lons = np.arange(-180+DELTA, 180+DELTA, DELTA)
 # end
 # KATE modified - START_YEAR not defined, should be start_year
+# Test for start_year being different to DefaultStartYear here too - we want this to begin with the DefaultStartYear in the case of a merge
+        if start_year != DefaultStartYear:
+	    start_year = DefaultStartYear
         times = utils.TimeVar("time", "time since 1/1/{} in months".format(start_year), "months", "time")
         #times = utils.TimeVar("time", "time since 1/1/{} in months".format(START_YEAR), "months", "time")
 # end
@@ -338,7 +395,7 @@ def combine_files(suffix = "relax", pentads = False, do3hr = False, months = Fal
 
         # and write file
         if daily:
-            out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_5x5_monthly_from_daily_{}_{}.nc".format(period, suffix)
+            out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_5x5_monthly_from_daily_{}_{}_new.nc".format(period, suffix)
         else:
             out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_5x5_monthly_{}_{}.nc".format(period, suffix)
 
