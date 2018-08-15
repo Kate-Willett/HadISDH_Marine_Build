@@ -142,7 +142,7 @@ def set(doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doQC 
     '''
 
 
-    plots = False
+    plots = True
     doMedian = False
     
 # KATE MODIFIED TO BRING OUT COMMON DIR PATHS
