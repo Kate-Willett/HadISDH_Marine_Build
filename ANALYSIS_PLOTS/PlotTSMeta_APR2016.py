@@ -392,7 +392,7 @@ gap= 0.04
 # New two panel plot
 plt.clf()
 fig = plt.figure(figsize=(10,5))
-ax1 = plt.axes([0.07,0.09,0.41,0.88]) # left, bottom, width, height
+ax1 = plt.axes([0.07,0.10,0.41,0.88]) # left, bottom, width, height
 
 ax1.plot(Yr[gHOB],HOBTOT[gHOB],c = 'red',linestyle = 'solid',linewidth = 2)
 ax1.plot(Yr[gHOT],HOTTOT[gHOT],c = 'orange',linestyle = 'solid',linewidth = 2)
@@ -404,7 +404,7 @@ ax1.set_ylim(0,80)
 ax1.set_xlim(StYr-1,EdYr+1)
 ax1.annotate("a)",xy=(0.04,0.94),xycoords='axes fraction',size=14,color='black')
 
-ax2 = plt.axes([0.57,0.09,0.41,0.88]) # left, bottom, width, height
+ax2 = plt.axes([0.57,0.10,0.41,0.88]) # left, bottom, width, height
 ax2.set_ylabel('Mean (solid), 1 st dev (dotted) Height (m)', color='black')
 ax2.set_xlabel('Year')
 ax2.set_xlim(StYr-1,EdYr+1)
@@ -430,10 +430,10 @@ ax2.plot(Yr[gHOP],HOPMN[gHOP]-HOPSD[gHOP],c='violet',linestyle='dotted',linewidt
 
 ax2.annotate("b)",xy=(0.04,0.94),xycoords='axes fraction',size=14,color='black')
 
-ax2.annotate("HOB: barometer height",xy=(0.04,0.90),xycoords='axes fraction',size=12,color='red')
-ax2.annotate("HOT: thermometer height",xy=(0.04,0.86),xycoords='axes fraction',size=12,color='orange')
-ax2.annotate("HOA: anemometer height",xy=(0.04,0.82),xycoords='axes fraction',size=12,color='blue')
-ax2.annotate("HOP: visual observation height",xy=(0.04,0.78),xycoords='axes fraction',size=12,color='violet')
+ax2.annotate("HOB: barometer height",xy=(0.04,0.90),xycoords='axes fraction',size=10,color='red')
+ax2.annotate("HOT: thermometer height",xy=(0.04,0.86),xycoords='axes fraction',size=10,color='orange')
+ax2.annotate("HOA: anemometer height",xy=(0.04,0.82),xycoords='axes fraction',size=10,color='blue')
+ax2.annotate("HOP: visual observation height",xy=(0.04,0.78),xycoords='axes fraction',size=10,color='violet')
 
 #plt.tight_layout()
 
