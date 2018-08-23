@@ -37,7 +37,7 @@
 # UNCERTAINTIES
 
 # Apply UNCround uncertainty of 0.05 deg C to AT / DPT if the ATround or DPTround flag is set to 1. (> 50% of trk with at least
-# 24 obs are .0s) OR if it is a zero and fits into one of these categories: (0s > 2x mean of others - by eye) xxxx is a fill in where we'll 
+# 20 obs are .0s) OR if it is a zero and fits into one of these categories: (0s > 2x mean of others - by eye) xxxx is a fill in where we'll 
 # include in the list even though its not shown in the figures - DecimalFreqDiagsDPT_all_ERAclimNBC_YYYYYYYYMMMM.png
 # Years with ? are close but not 2X
 # Years with ? that are isolated will not be included. This within a string of years will be.
@@ -1753,7 +1753,7 @@ def ApplyRoundUnc(UncDict,ExtDict,Counter,ClimP):
     The combined uncertainty can then be rolled out to th other variables. When both AT and DPT are rounded this error could be very large or very small though.
     
     Apply UNCround uncertainty of 0.5/SQRT(3) deg C to AT / DPT if the ATround or DPTround flag is set to 1. (> 50% of trk with at least
-    24 obs are .0s) 
+    20 obs are .0s) 
     OR if AT or DPT is .0 and fits into one of these YR/Deck categories: (0s = max frequency and > 1.25 * mean of others - PlotDecimalFreq_APR2016.py) 
     
     ICOADS.3.0.0 based on DeckStatsROUNDDPT_1.25_I300_all_OBSclim2NBC_OCT2016.txt
@@ -1912,7 +1912,7 @@ def ApplyRoundUnc(UncDict,ExtDict,Counter,ClimP):
     992 = [1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015]
     993 = [2002,2005,2007,2008,2009,2010,2011,2012,2013,2014]
     
-    ICOADS.3.0.0 based on DeckStatsROUNDDPT_1.25_I300_all_OBSclim2NBC_OCT2016.txt
+    ICOADS.3.0.0 based on DeckStatsROUNDDPT_2.0_I300_all_OBSclim2NBC_OCT2016.txt
     Deck years with frequency 0s >= 2.0 * mean frequency(all other decimals)
     1973     555 666     732 735                 888 889
     1974                 732 735                 888 889
@@ -1977,7 +1977,7 @@ def ApplyRoundUnc(UncDict,ExtDict,Counter,ClimP):
     DPT_dict[992] = [1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012]
     DPT_dict[993] = [2013]
 
-    ICOADS.3.0.0 based on DeckStatsROUNDAT_1.25_I300_all_OBSclim2NBC_OCT2016.txt
+    ICOADS.3.0.0 based on DeckStatsROUNDAT_2.0_I300_all_OBSclim2NBC_OCT2016.txt
     Deck years with frequency 0s >= 2.0 * mean frequency(all other decimals)
     1973 128 223             254 255     732                                 888             900 926 927
     1974 128 223             254 255     732                                 888         898 900 926 927 928
