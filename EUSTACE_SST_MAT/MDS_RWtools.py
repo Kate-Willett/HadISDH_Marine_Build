@@ -175,6 +175,7 @@ TheTypesUnc=("|S9","|S8","int","int","int","int","int","int",
           "int","int","int","int","int","int","int","int","int","int","int","int","int","int",
           "int","int","int","int","int","int","int","int","int","int","int","int","int","int",
           "int","int","int","int","int","int","int","int","int","int","int","int","int","int",
+          "int","int","int","int","int","int","int","int","int","int","int","int","int","int",
           "int","int","int",
           "|S3","|S3","|S3","int","int","int","int","int","int",
           "int","int","int","int","int","int","int","int",
@@ -183,6 +184,7 @@ TheTypesUnc=("|S9","|S8","int","int","int","int","int","int",
           "int","int","int","int","int","int")
 
 TheDelimitersUnc=(10,8,8,8,8,8,8,8,
+               8,8,8,8,8,8,8,8,8,8,8,8,8,8,
                8,8,8,8,8,8,8,8,8,8,8,8,8,8,
                8,8,8,8,8,8,8,8,8,8,8,8,8,8,
                8,8,8,8,8,8,8,8,8,8,8,8,8,8,
@@ -515,7 +517,7 @@ def ReadMDSuncertainty(TheYear,TheMonth,TheType):
     MDSDict['DY']=np.array(RawData['f6'])
     MDSDict['HR']=np.array(RawData['f7'])
 
-    MDSDict['ATtbc']=np.array(RawData['f8'])/10.
+    MDSDict['ATtbc']=np.array(RawData['f8'])/10. 	# tbc = total of bias correction uncertainties
     MDSDict['ATAtbc']=np.array(RawData['f9'])/100.
     MDSDict['DPTtbc']=np.array(RawData['f10'])/10.
     MDSDict['DPTAtbc']=np.array(RawData['f11'])/100.
@@ -530,7 +532,7 @@ def ReadMDSuncertainty(TheYear,TheMonth,TheType):
     MDSDict['DPDtbc']=np.array(RawData['f20'])/10.
     MDSDict['DPDAtbc']=np.array(RawData['f21'])/100.
 
-    MDSDict['ATuncT']=np.array(RawData['f22'])/10.
+    MDSDict['ATuncT']=np.array(RawData['f22'])/10. 	# T = total uncertainty combined in quadrature
     MDSDict['ATAuncT']=np.array(RawData['f23'])/100.
     MDSDict['DPTuncT']=np.array(RawData['f24'])/10.
     MDSDict['DPTAuncT']=np.array(RawData['f25'])/100.
@@ -545,7 +547,7 @@ def ReadMDSuncertainty(TheYear,TheMonth,TheType):
     MDSDict['DPDuncT']=np.array(RawData['f34'])/10.
     MDSDict['DPDAuncT']=np.array(RawData['f35'])/100.
 
-    MDSDict['ATuncSLR']=np.array(RawData['f36'])/10.
+    MDSDict['ATuncSLR']=np.array(RawData['f36'])/10.	# SLR = solar adjustment uncertainties
     MDSDict['ATAuncSLR']=np.array(RawData['f37'])/100.
     MDSDict['DPTuncSLR']=np.array(RawData['f38'])/10.
     MDSDict['DPTAuncSLR']=np.array(RawData['f39'])/100.
@@ -560,7 +562,7 @@ def ReadMDSuncertainty(TheYear,TheMonth,TheType):
     MDSDict['DPDuncSLR']=np.array(RawData['f48'])/10.
     MDSDict['DPDAuncSLR']=np.array(RawData['f49'])/100.
 
-    MDSDict['ATuncSCN']=np.array(RawData['f50'])/10.
+    MDSDict['ATuncSCN']=np.array(RawData['f50'])/10.	# SCN = screen adjustment uncertainties
     MDSDict['ATAuncSCN']=np.array(RawData['f51'])/100.
     MDSDict['DPTuncSCN']=np.array(RawData['f52'])/10.
     MDSDict['DPTAuncSCN']=np.array(RawData['f53'])/100.
@@ -575,7 +577,7 @@ def ReadMDSuncertainty(TheYear,TheMonth,TheType):
     MDSDict['DPDuncSCN']=np.array(RawData['f62'])/10.
     MDSDict['DPDAuncSCN']=np.array(RawData['f63'])/100.
 
-    MDSDict['ATuncHGT']=np.array(RawData['f64'])/10.
+    MDSDict['ATuncHGT']=np.array(RawData['f64'])/10.	# HGT = height correction uncertainties
     MDSDict['ATAuncHGT']=np.array(RawData['f65'])/100.
     MDSDict['DPTuncHGT']=np.array(RawData['f66'])/10.
     MDSDict['DPTAuncHGT']=np.array(RawData['f67'])/100.
@@ -590,7 +592,7 @@ def ReadMDSuncertainty(TheYear,TheMonth,TheType):
     MDSDict['DPDuncHGT']=np.array(RawData['f76'])/10.
     MDSDict['DPDAuncHGT']=np.array(RawData['f77'])/100.
 
-    MDSDict['ATuncM']=np.array(RawData['f78'])/10.
+    MDSDict['ATuncM']=np.array(RawData['f78'])/10.	# M = measurement uncertainties
     MDSDict['ATAuncM']=np.array(RawData['f79'])/100.
     MDSDict['DPTuncM']=np.array(RawData['f80'])/10.
     MDSDict['DPTAuncM']=np.array(RawData['f81'])/100.
@@ -605,7 +607,7 @@ def ReadMDSuncertainty(TheYear,TheMonth,TheType):
     MDSDict['DPDuncM']=np.array(RawData['f90'])/10.
     MDSDict['DPDAuncM']=np.array(RawData['f91'])/100.
 
-    MDSDict['ATuncR']=np.array(RawData['f92'])/10.
+    MDSDict['ATuncR']=np.array(RawData['f92'])/10.	# R = rounding uncertainties
     MDSDict['ATAuncR']=np.array(RawData['f93'])/100.
     MDSDict['DPTuncR']=np.array(RawData['f94'])/10.
     MDSDict['DPTAuncR']=np.array(RawData['f95'])/100.
@@ -620,47 +622,62 @@ def ReadMDSuncertainty(TheYear,TheMonth,TheType):
     MDSDict['DPDuncR']=np.array(RawData['f104'])/10.
     MDSDict['DPDAuncR']=np.array(RawData['f105'])/100.
 
-    MDSDict['DCK']=np.array(RawData['f106'])
-    MDSDict['SID']=np.array(RawData['f107'])
-    MDSDict['PT']=np.array(RawData['f108'])
+    MDSDict['ATuncC']=np.array(RawData['f106'])/10.	# C = climatological uncertainties
+    MDSDict['ATAuncC']=np.array(RawData['f107'])/100.
+    MDSDict['DPTuncC']=np.array(RawData['f108'])/10.
+    MDSDict['DPTAuncC']=np.array(RawData['f109'])/100.
+    MDSDict['SHUuncC']=np.array(RawData['f110'])/10.
+    MDSDict['SHUAuncC']=np.array(RawData['f111'])/100.
+    MDSDict['VAPuncC']=np.array(RawData['f112'])/10.
+    MDSDict['VAPAuncC']=np.array(RawData['f113'])/100.
+    MDSDict['CRHuncC']=np.array(RawData['f114'])/10.
+    MDSDict['CRHAuncC']=np.array(RawData['f115'])/100.
+    MDSDict['CWBuncC']=np.array(RawData['f116'])/10.
+    MDSDict['CWBAuncC']=np.array(RawData['f117'])/100.
+    MDSDict['DPDuncC']=np.array(RawData['f118'])/10.
+    MDSDict['DPDAuncC']=np.array(RawData['f119'])/100.
 
-    MDSDict['EOT']=np.array(RawData['f109'])
-    MDSDict['EOH']=np.array(RawData['f110'])
-    MDSDict['ESTE']=np.array(RawData['f111'])
-    MDSDict['LOV']=np.array(RawData['f112'])
-    MDSDict['HOP']=np.array(RawData['f113'])
-    MDSDict['HOT']=np.array(RawData['f114'])
-    MDSDict['HOB']=np.array(RawData['f115'])
-    MDSDict['HOA']=np.array(RawData['f116'])
-    MDSDict['ESTH']=np.array(RawData['f117'])
+    MDSDict['DCK']=np.array(RawData['f120'])
+    MDSDict['SID']=np.array(RawData['f121'])
+    MDSDict['PT']=np.array(RawData['f122'])
 
-    MDSDict['day']=np.array(RawData['f118'])
-    MDSDict['land']=np.array(RawData['f119'])
-    MDSDict['trk']=np.array(RawData['f120'])
-    MDSDict['date1']=np.array(RawData['f121'])
-    MDSDict['date2']=np.array(RawData['f122'])
-    MDSDict['pos']=np.array(RawData['f123'])
-    MDSDict['blklst']=np.array(RawData['f124'])
-    MDSDict['dup']=np.array(RawData['f125'])
+    MDSDict['EOT']=np.array(RawData['f123'])
+    MDSDict['EOH']=np.array(RawData['f124'])
+    MDSDict['ESTE']=np.array(RawData['f125'])
+    MDSDict['LOV']=np.array(RawData['f126'])
+    MDSDict['HOP']=np.array(RawData['f127'])
+    MDSDict['HOT']=np.array(RawData['f128'])
+    MDSDict['HOB']=np.array(RawData['f129'])
+    MDSDict['HOA']=np.array(RawData['f130'])
+    MDSDict['ESTH']=np.array(RawData['f131'])
 
-    MDSDict['SSTbud']=np.array(RawData['f126'])
-    MDSDict['SSTclim']=np.array(RawData['f127'])
-    MDSDict['SSTnonorm']=np.array(RawData['f128'])
-    MDSDict['SSTfreez']=np.array(RawData['f129'])
-    MDSDict['SSTrep']=np.array(RawData['f130'])
+    MDSDict['day']=np.array(RawData['f132'])
+    MDSDict['land']=np.array(RawData['f133'])
+    MDSDict['trk']=np.array(RawData['f134'])
+    MDSDict['date1']=np.array(RawData['f135'])
+    MDSDict['date2']=np.array(RawData['f136'])
+    MDSDict['pos']=np.array(RawData['f137'])
+    MDSDict['blklst']=np.array(RawData['f138'])
+    MDSDict['dup']=np.array(RawData['f139'])
 
-    MDSDict['ATbud']=np.array(RawData['f131'])
-    MDSDict['ATclim']=np.array(RawData['f132'])
-    MDSDict['ATnonorm']=np.array(RawData['f133'])
-    MDSDict['ATround']=np.array(RawData['f134']) # round in place of nbud
-    MDSDict['ATrep']=np.array(RawData['f135'])
+    MDSDict['SSTbud']=np.array(RawData['f140'])
+    MDSDict['SSTclim']=np.array(RawData['f141'])
+    MDSDict['SSTnonorm']=np.array(RawData['f142'])
+    MDSDict['SSTfreez']=np.array(RawData['f143'])
+    MDSDict['SSTrep']=np.array(RawData['f144'])
 
-    MDSDict['DPTbud']=np.array(RawData['f136'])
-    MDSDict['DPTclim']=np.array(RawData['f137'])
-    MDSDict['DPTssat']=np.array(RawData['f138'])
-    MDSDict['DPTround']=np.array(RawData['f139']) # round in place of nbud
-    MDSDict['DPTrep']=np.array(RawData['f140'])
-    MDSDict['DPTrepsat']=np.array(RawData['f141'])
+    MDSDict['ATbud']=np.array(RawData['f145'])
+    MDSDict['ATclim']=np.array(RawData['f146'])
+    MDSDict['ATnonorm']=np.array(RawData['f147'])
+    MDSDict['ATround']=np.array(RawData['f148']) # round in place of nbud
+    MDSDict['ATrep']=np.array(RawData['f149'])
+
+    MDSDict['DPTbud']=np.array(RawData['f150'])
+    MDSDict['DPTclim']=np.array(RawData['f151'])
+    MDSDict['DPTssat']=np.array(RawData['f152'])
+    MDSDict['DPTround']=np.array(RawData['f153']) # round in place of nbud
+    MDSDict['DPTrep']=np.array(RawData['f154'])
+    MDSDict['DPTrepsat']=np.array(RawData['f155'])
 
 
     nobs=len(MDSDict['shipid'])
@@ -1105,6 +1122,21 @@ def WriteMDSuncertainty(TheYear,TheMonth,TheType,MDSDict):
 			"{:8d}".format(int(round(MDSDict['CWBAuncR'][linee]*100.,0)))+\
 			"{:8d}".format(int(round(MDSDict['DPDuncR'][linee]*10.,0)))+\
 			"{:8d}".format(int(round(MDSDict['DPDAuncR'][linee]*100.,0)))+\
+	
+			"{:8d}".format(int(round(MDSDict['ATuncC'][linee]*10.,0)))+\
+			"{:8d}".format(int(round(MDSDict['ATAuncC'][linee]*100.,0)))+\
+			"{:8d}".format(int(round(MDSDict['DPTuncC'][linee]*10.,0)))+\
+			"{:8d}".format(int(round(MDSDict['DPTAuncC'][linee]*100.,0)))+\
+			"{:8d}".format(int(round(MDSDict['SHUuncC'][linee]*10.,0)))+\
+			"{:8d}".format(int(round(MDSDict['SHUAuncC'][linee]*100.,0)))+\
+			"{:8d}".format(int(round(MDSDict['VAPuncC'][linee]*10.,0)))+\
+			"{:8d}".format(int(round(MDSDict['VAPAuncC'][linee]*100.,0)))+\
+			"{:8d}".format(int(round(MDSDict['CRHuncC'][linee]*10.,0)))+\
+			"{:8d}".format(int(round(MDSDict['CRHAuncC'][linee]*100.,0)))+\
+			"{:8d}".format(int(round(MDSDict['CWBuncC'][linee]*10.,0)))+\
+			"{:8d}".format(int(round(MDSDict['CWBAuncC'][linee]*100.,0)))+\
+			"{:8d}".format(int(round(MDSDict['DPDuncC'][linee]*10.,0)))+\
+			"{:8d}".format(int(round(MDSDict['DPDAuncC'][linee]*100.,0)))+\
 	
 			"{:8d}".format(MDSDict['DCK'][linee])+\
 			"{:8d}".format(MDSDict['SID'][linee])+\
@@ -1562,6 +1594,21 @@ def MakeUncDict(FillDict=False):
     MDSDict['CWBAuncR'] = []
     MDSDict['DPDuncR'] = []
     MDSDict['DPDAuncR'] = []
+
+    MDSDict['ATuncR'] = [] # climatological uncertainties
+    MDSDict['ATAuncC'] = []
+    MDSDict['DPTuncC'] = []
+    MDSDict['DPTAuncC'] = []
+    MDSDict['SHUuncC'] = []
+    MDSDict['SHUAuncC'] = []
+    MDSDict['VAPuncC'] = []
+    MDSDict['VAPAuncC'] = []
+    MDSDict['CRHuncC'] = []
+    MDSDict['CRHAuncC'] = []
+    MDSDict['CWBuncC'] = []
+    MDSDict['CWBAuncC'] = []
+    MDSDict['DPDuncC'] = []
+    MDSDict['DPDAuncC'] = []
 
     if (FillDict != False):
         MDSDict['DCK'] = copy.copy(FillDict['DCK'])  
