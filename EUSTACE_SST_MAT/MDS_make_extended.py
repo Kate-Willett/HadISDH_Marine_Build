@@ -3,7 +3,7 @@
 # 
 # Author: Kate Willett
 # Created: 15 April 2016
-# Last update: 7 April 2016
+# Last update: 4 Sep 2018
 # Location: /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/
 # GitHub: https://github.com/Kate-Willett/HadISDH_Marine_Build/					
 # -----------------------
@@ -16,80 +16,131 @@
 
 # Pretend to apply a solar corrections - this may be applied later.
 
-# Obtain exposure information from EOH or EOT or esimate exposure - assume Buoys and platforma are unventilated screens, previously used the
-# Josey et al., 1999 apply 30% of adjustment to ships with no info to represent that ~3rd of obs are not ventilated.
+# Obtain exposure information from EOH or EOT or apply 55% of adjustment to unknowns (ships only) - assume buoys and platforms are well ventilated (no metadata anyway and may not keep)
+# 55% value comes from mean of EOH that require an adjustment over the 1973-2014 (metadata) period) 
+# see InstrumentMetaDataStats_ships_OBSclim2NBC_I300_55_AUG2018.xlsx
+# Previously: assumed Buoys and platforma are unventilated screens and used the Josey et al., 1999 apply 30% of adjustment to ships with no info to represent that ~3rd of obs are not ventilated.
+# Apply 3.4% q adjustment to all obs with a screened/unventilated exposure (VS, S and SN - and US) (NOT TO BUOYS!) and a 55% of 3.4% to obs with no exposure 
+# and convert across other humidity variables. DO this to orig and solar corrected obs.
+# We have explored various different ??% to modify the 3.4% in the case of unknown observations (InstrumentMetaDataStats_ships_OBSclim2NBC_I300_55_AUG2018.xlsx 
+# and hadisdh.blogspot.co.uk. I'm now going with 55%. I had thought to use a growth factor for 2015+ where there are no metadata but I no longer think this is necessary.
+# This is partly because I'm using a different (better) method to estimate the adjustment magnitude which shows less of an effect of the drop out of metadata.
 
-# Apply 3.4% q adjustment to all obs with a screened/unventilated exposure (VS, S and SN) (NOT TO BUOYS!) and a ??% of 3.4% to obs with no exposure or
-# estimated exposure and convert across other humidity variables. DO this to orig and solar corrected obs.
-# We have explored various different ??% to modify the 3.4% in the case of unknown observations (InstrumentMetaDAtaStats_ships_OBSclim2NBC_I300_OCT2016.xlsx 
-# and hadisdh.blogspot.co.uk. I'm now going with 55% and a growth factor for 2015 where there are no metadata
-
-# Obtain height info from HOB/HOT/HOP or HOA-10 orestimate height based on platform (ship = 17 to 22.5 scaling linearly every month between ~16m in 
-# 1973 to ~24m by 2006 (Kent et al., 2007 in: Berry and Kent, 2011 used 16 to 24 from Jan 1973 to Dec 2006), buoy = assume 4m instrument height (howmany?, platform 
-# = no adjustment - LARGE uncertaintyu)
+# Obtain height info from HOP/HOB/HOT ( in order of length of metadata record for stability) or HOA-10 (mean over HOP/HOB/HOT-HOA) or estimate height based on platform:
+#	ship = 17 to 23 scaling linearly every month between (this is mean of HOP/HOB/HOT!!!)
+# AT SOME POINT DO WE CONTINUE THIS LINEAR TREND BEYOND 2014 or assume ships aren't getting any higher?
+# (Kent et al., 2007 in: Berry and Kent, 2011 used 16 to 24 from Jan 1973 to Dec 2006)
+#	buoy = 4m with anemometer at 5m http://www.ndbc.noaa.gov/bht.shtm, platform = no change) - LARGE uncertainty! - +/- 0.5(T-SST); 0.5(q-q0); 0.5u) Will not include these in final analyses!!!
+# 	platform = no adjustment - LARGE uncertainty! - +/- 0.5(T-SST); 0.5(q-q0); 0.5u) Will not include these in final analyses!!!
+# Need HOA too so either use provided HOA (preferred) or estimated HOH+10 - buoys = 5m
 
 # Use height info, SST (or AT), SLP (or climP), u (or 0.5m if < 0.5, ~6 if missing or > 100m/s) to create an estimated height adjusted 
-# value. Do this to orig and solar/screen corrected obs. (fix SST to be between -1.8 and 40. or AT between -1.8 adn 40.)
+# value. Do this to orig and solar/screen corrected obs. (fix SST to be between -1.8 and 40. or AT between -1.8 adn 40.) - NOT TO PLATFORMS!
 
 # Write out orig, total, height, screen, solar to extended along with metadata (including estimated exposure and height) and QC
 # flags.
 
 # UNCERTAINTIES
-
-# Apply UNCround uncertainty of 0.05 deg C to AT / DPT if the ATround or DPTround flag is set to 1. (> 50% of trk with at least
-# 20 obs are .0s) OR if it is a zero and fits into one of these categories: (0s > 2x mean of others - by eye) xxxx is a fill in where we'll 
-# include in the list even though its not shown in the figures - DecimalFreqDiagsDPT_all_ERAclimNBC_YYYYYYYYMMMM.png
-# Years with ? are close but not 2X
-# Years with ? that are isolated will not be included. This within a string of years will be.
+# ROUNDING:
+# Eindividual = 0.5/SQRT(3) = 0.29 uniform uncertainty to Td, T, q and e (1 variable) and
+# Ecombined = 1/SQRT(3) = 0.58 uniform uncertainty to RH, Tw and DPD (2 variables)
+# IF: 
+# DPTround or ATround flag is set (>20 obs in track with at least 50% 0.0)
+# or if it is a .0 and fits into one of these categories: (0s > 2x mean of others) xxxx is a fill in where we'll 
+# include in the list even though its not actually a deck with > 50% ,0s but because the years either side are for that deck
 # DPT:
-# 254:                                              1982                1986
-# 555: 1973 
-# 666:      
-# 732: 1973 1974 1975 1976 1977 1978 1979 1980 1981 1982 xxxx 1984 1985 xxxx 1987
-# 735: 1973 1974 1975 1976 1977 1978 1979 1980 1981 1982 1983 1984 1985 1986 1987
-# 792:                                                                                                                              1998 1999 2000 2001 2002 2003 2004 2005 2006 2007 2008 2009 2010 2011 2012 2013 2014 2015
-# 793:                                                                                                                                                  2002?                    2007?
-# 794:                                                                                                                                                                                                                   2015                                                                                                                                                   2002?                    2007?
-# 849:                               1979
-# 850:      
-# 874:                                                                                                          1994 1995 1996 1997 xxxx xxxx 2000 2001 2002 2003 2004 2005 2006 2007
-# 888: 1973 1974 1975 1976 1977	1978 1979 1980 1981 xxxx xxxx xxxx xxxx 1986 1987 1988 1989 1990 1991 1992 1993	1994 1995 1996 1997	     
-# 889: 1973 1974 1975 1976 1977 xxxx 1979 1980 1981 xxxx xxxx 1984 1985 1986 1987 1988 1989 1990 1991 1992 1993 1994
-# 892:                                    1980 1981 1982 1983 1984 1985 1986 1987 1988 1989 1990 1991 1992 1993 1994 1995 1996 1997
-# 893:                                                                                                1992?  
-# 896:                                    1980 1981 1982 1983 1984 xxxx 1986      
-# 926:                                    1980?xxxx 1982?1983?xxxx 1985?xxxx 1987?1988?1989?1990?1991?1992?xxxx xxxx xxxx 1996?1997 1998 1999 2000 xxxx 2002?2003?
-# 927:                                                             1985?1986?1987?xxxx 1989?xxxx xxxx xxxx xxxx 1994 1995 1996 1997 1998 1999 2000 2001 2002 2003 2004 2005 2006 2007
-# 992:                                                                                                                                                                                2008 2009 2010 2011 2012 2013 2014?
-
-# AT: 0.5s also an issue to T but ignoring that for now. 555 all 0.5 in 1973!
+# 254: 1986
+# 555: 1973
+# 666: 1973
+# 708: 2001 2003 2004 2005 2006 2007 2008 2009 2020 2011 2012
+# 732: 1973 1974 1975 1976 1977 1978 1979 1980 1981 1982 1983 1984 1985
+# 735: 1973 1974 1975 1976 1977 1978 1979 1980 1981 1982 1983 1984 1985 1986
+# 749: 1978
+# 792: 1998 1999 2000 2001 2002 2003 2004 2005 2006 2007 2008 2009 2020 2011 2012 2013
+# 849: 1978 1979
+# 874: 1995 1996 1997 
+# 888: 1973 1974 1975 1976 1977 1978 1979 1980 1981 1986 1987 1988 1989 1990 1991 1992 1993 1994 1995 1996 1997 
+# 889: 1973 1974 1975 1976 1977 1978 1979 1980 1981 1984 1985 1986 1987 1988 1989 1990 1991 1992 1993 1994 1995 
+# 892: 1980 1981 1982 1983 1984 1985 1986 1987 1988 1989 1990 1991 1992 1993 1994 1995 1996 1997 
+# 896: 1980 1981 1982 1983 1993 1995 1996 1997 
+# 926: 1997 1998 1999
+# 927: 1995 1996 1997 1998 1999 2000 2001 2002 2003 2004 2005 2006 2007 2008 2009 2020 2011 2012 
+# 992: 1999 2000 2001 2002 2003 2004 2005 2006 2007 2008 2009 2020 2011 2012
+# 993: 2013
+#
+# AT:
 # 128: 1973 1974 1975 1976 1977 1978
-# 223: 1973 1974
-# 233:                                                                                 1989 
-# 254: 1973 1974 1975 1976 1977 1978 1979 1980 1981 1982 1983 1984 1985 1986 1987 1988 1989 1990 1991 1992
-# 732: 1973 1974
-# 792:                                                                                                                              1998 1999 2000 2001 2002 2003 2004 2005 2006 2007 2008 2009 2010 2011 2012 2013 2014 2015
-# 793:                                                                                                                                                       2003?
-# 794:                                                                                                                                                                                                                   2015
-# 849:                               1979
-# 850:                               1979
-# 874:                                                                                                          1994 1995 1996 1997           2000 2001 2002 2003 2004 2005 2006 2007
-# 888: 1973 1974 1975 1976 1977 1978 1979 1980 1981 xxxx 1983 xxxx xxxx 1986 1987 1988 1989 1990 1991 1992 1993 1994 1995 1996 1997
-# 892:                                    1980 1981 1982 1983 1984 1985 1986 1987 1988 1989 1990 1991 1992 1993 1994 1995 1996 1997
-# 893:                                                                                 1989
-# 896:                                    1980 1981 1982
-# 900: 1973 1974 1975 1976 1977 1978
-# 926: 1973 1974 1975 1976 1977 1978 1979 1980 1981 1982 1983 1984 1985 1986 1987 1988 1989 1990 1991 1992 1993 1994 1995 1996 1997 1998 1999 2000 2001 2002 2003 2004 2005 2006 2007
-# 927: 1973 1974 1975 1976 1977 1978 1979 1980 1981 1982 1983 1984 1985 1986 1987 1988 1989 1990 1991 1992 1993 1994 1995 1996 1997 xxxx 1999 2000 2001 2002 2003 2004 2005 2006 2007
-# 992:                                                                                                                                                                                2008 2009 2010 2011 2012 2013 2014                          
+# 223: 1973 1974 1975 1976 1977 1978 1979 1980 1981
+# 229: 1978 1979 1980
+# 233: 1982 1983 1984 1985 1986 1987 1988 1989 1990 1992 1993 1994
+# 239: 1983 1986 1990
+# 254: 1973 1974 1975 1976 1977 1978 1979 1980 1981 1982 1983 1984 1985 1986 1987 1988 1989 1990 1991 1992 1993 1994
+# 255: 1973 1974 1975 1979
+# 700: 2000 2001 2008
+# 732: 1973 1974 1975 1976 1977 1978 1979 1980 1981 1982 1983 1984 1985 1986 1987 1988 1989 1990
+# 749: 1978 1979
+# 781: 1986 1988 1989 1990 1991 1992 1993
+# 792: 1998 1999 2000 2001 2002 2003 2004 2005 2006 2007 2008 2009 2010 2011 2012 2013 2014 2015 2016 2017
+# 793: 2007
+# 849: 1978 1979
+# 850: 1978 1979
+# 874: 1995 1996 1997 2014
+# 875: 2012 2013 2014
+# 888: 1973 1974 1975 1976 1977 1978 1979 1980 1981 1986 1987 1988 1989 1990 1991 1992 1993 1994 1995 1996 1997
+# 892: 1980 1981 1982 1983 1984 1985 1986 1987 1988 1989 1990 1991 1992 1993 1994 1995 1996 1997
+# 896: 1980 1981 1982 1983 1993 1994 1996 1997
+# 898: 1974
+# 900: 1973 1974 1975 1976 1977 1978 1979
+# 926: 1973 1974 1975 1976 1977 1978 1979 1980 1981 1982 1983 1984 1985 1986 1987 1988 1989 1990 1991 1992 1993 1994 1995 1996 1997 1998 1999 2000 2001 2002 2003 2004 2005 2006 2007 2008 2009 2010 2011 2012 2013 2014
+# 927: 1973 1974 1975 1976 1977 1978 1979 1980 1981 1982 1983 1984 1985 1986 1987 1988 1989 1990 1991 1992 1993 1994 1995 1996 1997 1998 1999 2000 2001 2002 2003 2004 2005 2006 2007 2008 2009 2010 2011 2012
+# 928: 1974
+# 992: 1999 2000 2001 2002 2003 2004 2005 2006 2007 2008 2009 2010 2011 2012 2013 2014 2015 2016 2017
+# 993: 2008 2009 2010 2011 2012 2013 
 
 # Apply UNCsolar to all observations (daytime temperatures) that have had an adjustment for solar bias
 
-# Apply UNCscreen to all observations that have had an adjustment for being screened/unventilated.
+# Apply UNCscreen to all observations that have had an adjustment for being screened/unventilated - SHIPS ONLY!!!
+# 0.2g/kg to both full and 55% adjustments - Berry and Kent 2011 show global average difference (in time and lat) to be +/-0.2 g/kg for adjusted screens vs aspirated psychrometers
+# I can't decude how to treat this (normal, uniform, triangular distribution uncertainty or as a flat 1sigma uncertainty? Following Berry adn Kent I apply it flat.
+# Apply additional uncertainty to the unknowns with 55% of adjustment because they could be 45% of 3.4% lower ot 55% of 3.4% higher
+# Start with q and work out unc as ((q_before-q_adj)/55)*100 gives the potential large adjustment which can then be the uncertainty +0.2g/kg
+# This is most likely an over estimate which ignores probability - 55% chance of it needing to be adjusted vs 45% chance of no need for adjustment 
 
-# Apply UNCheight to all observations depending on their height adjustment. Larg uncertainties for buoys +/- 10m? and platforms +/- 20m.
+# Apply UNCheight to all observations depending on their height adjustment. 
+# There has to be some uncertainty in the calculation - rounding/precision, accuracy of formula and assumptions = lets say 10%
+# Difference between HOB/HOP/HOT generally ~1m so adjustment to 10m has an ~1m uncertainty ~10%?
+# We could try to justify this scientifically:
+# HOB-HOP mean = -0.2, sd = 2.15, uniform unc = (((-0.2 + 2.15) - (-0.2 - 2.15))/2.) / SQRT(3) = 1.18m or normal dist unc = (((-0.2 + 2.15) - (-0.2 - 2.15))/2.) / 3 = 0.68m
+# HOT-HOP mean = -1.2, sd = 2.191, uniform unc = (((-1.2 + 2.91) - (-1.2 - 2.91))/2.) / SQRT(3) = 1.68m or normal dist unc = (((-1.2 + 2.91) - (-1.2 - 2.91))/2.) / 3 = 0.97m
+# This is close to 1m which is 10% of the 10m which we have attempted to adjust to.
+# Large uncertainties for buoys +/- 10m? and platforms +/- 10s of m.
+# ESTH from HOB/HOT/HOP then 0.2*adj. (10% calc + 10% height) - should these be combined in quadrature? - or we keep it simple at 0.25*adj - height conversion NOT LINEAR ANYWAY!!!
+# ESTH for buoys  = 1*adj
+# ESTH from HOA (~7.2m StDev) = 0.75*adj - could try and do something clever with the box / uniform uncertainty on a 7.1m StDev (((7.1 - -7.1)/2)/SQRT(3) = 4.1m). Not really sure how that becomes a % though. 
+# ESTH from linear trend = 1*adj
+# no adj (platform or no resolution) = +/- 0.5(t-SST); 0.5(q-qo); 0.5u
+### OR
+# Calc an Hmax and Hmin and assess uncertainty as ((Hmax-Hmin)/2)/SQRT(3) - uniform distribution because it could lie anywhere in between this
+# In call cases (for ships) if HOA provided then HOAmax = HOA and HOAmin = HOA else HOAmax = HOAest+9m and HOAmin = HOAest-9m because stdev of HOP/HOB/HOT-HOA is 9 (HOB preferred choice for HOH).
+# See HeightMetatDataStats_ships_OBSclim2NBC_I300_55_AUG2018.xlsx for details
+# ESTH from HOB/HOT/HOP then ESTHmax = ESTH+1, ESTHmin = ESTH-1
+# ESTH for buoys then 1*adj
+# ESTH from HOA-10 then ESTHmax = ESTH+9, ESTHmin = ESTH-9 - reflecting st dev in HOP/HOB/HOT-HOA
+# ESTH from linear trend:
+#     there is a linear trend in the standard deviation of the estimate from 4.6 in 1973 to 11 in 2014 so SDmonthX = 4.6+ 0.0127*nmonths until Jan 2015
+#     ESTHmax = ESTH+SDmonthX, ESTHmin = ESTH-SDmonthX
+# no adj can be calculated  (platform or no resolution) unc = +/- 0.5(t-SST); 0.5(q-qo); 0.5u
+# If uncertainty cannot be calculated and SST is ok then = +/- 0.5(t-SST); 0.5(q-qo); 0.5u
+# else = 0.1 deg or 0.007*q 
+# If no SST and it has to be se to AT and forced to be -2 to 40 then unc = adjustment, 0.1deg or 0.007q - which ever is largest
 
 # Apply UNCmeas based on assumption of errors to the dry bulb and wet bulb, converted to other variables.
+
+# Apply UNCclim - base this on StDevCLIM / SQRT(NobsCLIM)
+# This will most likely be an underestimate because we're using gridded pentad climatologies!!!
+# Assume minimum number of obs (NobsCLIM) going into pentad monthly climatology of 10 over the 1981-2010 period because we do not have this information to hand.
+# StDevCLIM is the standard deviation of the pentads over the 30 year climatology period for that pentad e.g Pentad1(Jan1-5)
+# Obtain StDevCLIM from <var>2m_OBSclim2NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc <var>2m_stdevs
 
 # Combine all uncertainties (assuming uncorrelated for now)
 #
@@ -119,28 +170,63 @@
 # from LinearTrends import MedianPairwise - fits linear trend using Median Pairwise
 # import HeightCorrect as hc
 # import CalcHums as ch
+# import ReadNetCDF as ReadNCF
 #
 # -----------------------
 # DATA
 # -----------------------
-# /project/hadobs2/hadisdh/marine/ICOADS.2.5.1/*/new_suite_197312_ERAclimNBC.txt
+# /project/hadobs2/hadisdh/marine/ICOADS.3.0.0/OBSclim2NBC/new_suite_197312_OBSclim2NBC.txt
 # 
-# Also requires climatological P for the nearest pentad 1x1 for recalculation of humidity values
+# Also requires climatological P (1981-2010) for the nearest pentad 1x1 for recalculation of humidity values
 # /project/hadobs2/hadisdh/marine/otherdata/p2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
 #
 # -----------------------
 # HOW TO RUN THE CODE
 # -----------------------
-# python2.7 MDS_make_extended.py --year1 '1973' --year2 '1973' --month1 '01' --month2 '01' --typee 'ERAclimNBC'
+# python2.7 MDS_make_extended.py --year1 '1973' --year2 '1973' --month1 '01' --month2 '01' --typee 'OBSclim2NBC'
 # 
 # -----------------------
 # OUTPUT
 # -----------------------
-# /project/hadobs2/hadisdh/marine/ICOADS.2.5.1/ERAclimBC/new_suite_197301_ERAclimBC_extended.txt
+# /project/hadobs2/hadisdh/marine/ICOADS.3.0.0/OBSclim2BC/new_suite_197301_OBSclim2BC_extended.txt
 #
 # -----------------------
 # VERSION/RELEASE NOTES
 # -----------------------
+#
+# Version 3 (4 September 2018)
+# ---------
+#  
+# Enhancements
+#  
+# Changes
+# Instrument Adjustments
+#   We now include US in the list of exposures to have the adjustment applied
+#   We now do not apply adjustments to buoys and platforms
+#   We now apply 55% of the 3.4% reduction in the case of unknown ship exposures with NO growth factor where there are no metadata
+#   Uncertainty for unknowns with 55% of adjustment is now ((q_before-q_adj)/55)*100 +0.2g/kg
+#
+# Height Adjustments
+#  We now have two options:
+#	1) Apply adjustments based on our own metadata and assumptions
+#	  Use HOP,then HOB, then HOT - straight up use no calculation - unc = +/-1m height adjs uniform uncertainty (half-wdith/SQRT(3))
+#         If buoy assume 4m and anemometer at 5m - unc = 1*adj
+#	  If only HOA is present then use conversion from HOA to HOP (HOA-10) -  - unc = +/-9m height adjs uniform uncertainty (half-wdith/SQRT(3))
+#	  If no height info is available then use linear relationship from new assessment - 17m to 23m (Dec 2014) and beyond - unc = +/- 4.6-11m SD
+#	  If platform do not apply adjustment - unc = T-SST/2 or (q-q0)/2 
+#	  If cannot apply adjustment (unstable calc) - unc = T-SST/2 or (q-q0)/2
+#         If unc cannot be calculated then unc = adjustment or 0.1 deg or 0.007*q - whichever is largest
+#	2) Apply adjustments based on NOCS provided height estimates - NOT YET APPLIED
+#
+# UncRound updated to latest deck/stats up to 2017
+#	# At some point these should be read in externally so that we do not have to change the code base every year
+#
+# Added UncCLIM: StDevCLIM / SQRT(NobsCLIM)
+#
+#  
+# Bug fixes
+#   
+#
 #
 # Version 2 (12 October 2016)
 # ---------
@@ -215,6 +301,7 @@ import pdb # pdb.set_trace() or c
 import HeightCorrect as hc
 import CalcHums as ch
 import MDS_RWtools as mrw
+import ReadNetCDF as ReadNCF
 
 SLPClimFilee = '/project/hadobs2/hadisdh/marine/otherdata/p2m_pentad_1by1marine_ERA-Interim_data_19792015.nc'
 
@@ -419,6 +506,22 @@ def FillABad(ExtDict,UncDict,Counter):
     UncDict['CWBAuncR'].append(0.0)
     UncDict['DPDuncR'].append(0.0)
     UncDict['DPDAuncR'].append(0.0)
+
+    # Fill VARuncC
+    UncDict['ATuncC'].append(0.0)
+    UncDict['ATAuncC'].append(0.0)
+    UncDict['DPTuncC'].append(0.0)
+    UncDict['DPTAuncC'].append(0.0)
+    UncDict['SHUuncC'].append(0.0)
+    UncDict['SHUAuncC'].append(0.0)
+    UncDict['VAPuncC'].append(0.0)
+    UncDict['VAPAuncC'].append(0.0)
+    UncDict['CRHuncC'].append(0.0)
+    UncDict['CRHAuncC'].append(0.0)
+    UncDict['CWBuncC'].append(0.0)
+    UncDict['CWBAuncC'].append(0.0)
+    UncDict['DPDuncC'].append(0.0)
+    UncDict['DPDAuncC'].append(0.0)
     
     # Fill ESTE and ESTH (Unc and Ext)
     ExtDict['ESTE'].append('XXX')
@@ -575,23 +678,23 @@ def ApplyScreenAdjUnc(ExtDict,UncDict,Counter,ClimP):
      - Screen = S
      - Ship's Screen = SN
      - Ventilated Screen = VS ??? Not sure about this one.
+     - Unscreened = US # AS OF AUG 2018) 
     Assume aspirated or whirled: = 'ASP'
      - Aspirated = A
      - Whirled = W
      - Sling = SL
      - Ship's Sling = SG
-     - Unscreened = US 
+     - # NO LONGER AS OF AUG 2018 Unscreened = US # 
     PT:
     ships = 0, 1, 2, 3, 4, 5 = U55
-    buoys = 6(moored), 8(ice) = ASP
-    platforms = 9(ice), 10(oceanographic), 15 (fixed ocean) = ASP
+    buoys = 6(moored), 8(ice) = ASP - therefore no adjustment
+    platforms = 9(ice), 10(oceanographic), 15 (fixed ocean) = ASP - therefore no adjustment
     
-    Obtain exposure information from EOH or EOT or estimate exposure - assume Buoys and platforma are suitably ventilated screens, previously used the
-    Josey et al., 1999 apply 30% of adjustment to ships with no info to represent that ~3rd of obs are not ventilated.
+    Obtain exposure information from EOH or EOT or estimate exposure - assume Buoys and platforma are suitably ventilated screens
 
     Apply 3.4% q adjustment to all obs with a screened/unventilated exposure and
-    Apply a 55% of 3.4% q adjustment to obs with no exposure information
-    If its 2015 (a period with NO metadata) then grow the (3.4*0.55)*1.14 to account for unavoidable shift in adjustment
+    Apply a 55% of 3.4% q adjustment to obs with no exposure information - this is the mean of those ship obs with EOH that are poorly ventilated (S/SN/VS/US)
+    # DO NOT DO THIS If its 2015 (a period with NO metadata) then grow the (3.4*0.55)*1.14 to account for unavoidable shift in adjustment #
     (this is the ratio of the mean adjustment to 2014 (lots of metadata) / mean adjustment to 2015 (no metadata))
     Convert across other humidity variables. DO this to orig and solar corrected obs. Berry and Kent 2011.
     
@@ -600,6 +703,11 @@ def ApplyScreenAdjUnc(ExtDict,UncDict,Counter,ClimP):
          ~0.1g/kg +ve bias (UNA still too moist) 1973-1980, -ve bias ~-0.1 g/kg 1980+ peaking to -0.2 g/kg 1988 and 2002 
 	 (only assessed to 2002)
 	 ~-0.1 g/kg -ve bias 40-60N, 20S and below, ~0.1 g/kg +ve bias 0 to 20S 
+	 
+    Apply additional uncertainty to the unknowns with 55% of adjustment because they could be 45% of 3.4% lower or 55% of 3.4% higher
+    Start with q and work out unc as ((q_before-q_adj)/55)*100 gives the potential large adjustment which can then be the uncertainty +0.2g/kg
+    This is most likely an over estimate which ignores probability - 55% chance of it needing to be adjusted vs 45% chance of no need for adjustment 
+	 
     
     '''
     # Set the values to adjust 
@@ -609,20 +717,23 @@ def ApplyScreenAdjUnc(ExtDict,UncDict,Counter,ClimP):
     # Use 55% as the average percentage of ships with EOH metadata that are poorly ventilated
     PctPoorlyAsp = 0.55
     UnkAdjFactor = (100. - (ScnAdjustment * PctPoorlyAsp)) / 100. # should be 0.9813
+    Std_q_unc = 0.2 # from Berry and Kent, 2011 (g/kg)
     
-    # Set the values for when the metadata drop out
-    # First year where there are no metadata
-    EndofMetaData = 2015
-    # Factor to grow the adjustments (last year of metadata mean adjustment / first year of no metadata mean adjustment)
-    GrowFactor = 1.14
-    GrowUnkAdjFactor = (100. - ((ScnAdjustment * PctPoorlyAsp) * GrowFactor)) / 100. # should be 0.9787
+# REMOVED AS OF AUG2018
+#    # Set the values for when the metadata drop out
+#    # First year where there are no metadata
+#    EndofMetaData = 2015
+#    # Factor to grow the adjustments (last year of metadata mean adjustment / first year of no metadata mean adjustment)
+#    GrowFactor = 1.14
+#    GrowUnkAdjFactor = (100. - ((ScnAdjustment * PctPoorlyAsp) * GrowFactor)) / 100. # should be 0.9787
     
     # FIRST SORT OUT THE EXPOSURE OR ESTIMATED EXPOSURE
     
     # Choice 1. If EOH exists then use this
+    # Added US to this from AUG2018 
     if (ExtDict['EOH'][Counter] != 'Non'):
         # if its a screen or ship's screen then it needs an adjustment
-	if ((ExtDict['EOH'][Counter] == 'S  ') | (ExtDict['EOH'][Counter] == 'SN ') | (ExtDict['EOH'][Counter] == 'VS ')):
+	if ((ExtDict['EOH'][Counter] == 'S  ') | (ExtDict['EOH'][Counter] == 'SN ') | (ExtDict['EOH'][Counter] == 'VS ') | (ExtDict['EOH'][Counter] == 'US ')):
 	    # Fill in (append) the Estimated Exposure accordingly
 	    ExtDict['ESTE'].append('UNA')
 	    UncDict['ESTE'].append('UNA')
@@ -633,9 +744,10 @@ def ApplyScreenAdjUnc(ExtDict,UncDict,Counter,ClimP):
 	    UncDict['ESTE'].append('ASP')
 
     # Choice 2. If EOH doesn't exist but EOT exists then use this
+    # Added US to this from AUG2018 
     elif ((ExtDict['EOH'][Counter] == 'Non') & (ExtDict['EOT'][Counter] != 'Non')):
         # if its a screen or ship's screen then it needs an adjustment
-	if ((ExtDict['EOT'][Counter] == 'S  ') | (ExtDict['EOT'][Counter] == 'SN ') | (ExtDict['EOT'][Counter] == 'VS ')):
+	if ((ExtDict['EOT'][Counter] == 'S  ') | (ExtDict['EOT'][Counter] == 'SN ') | (ExtDict['EOT'][Counter] == 'VS ') | (ExtDict['EOT'][Counter] == 'US ')):
 	    # Fill in (append) the Estimated Exposure accordingly
 	    ExtDict['ESTE'].append('UNA')
 	    UncDict['ESTE'].append('UNA')
@@ -647,7 +759,7 @@ def ApplyScreenAdjUnc(ExtDict,UncDict,Counter,ClimP):
 	    
     # Choice 3a. If neither EOH or EOT exists then base it on the PT (buoys and platforms = ASP)
     elif (ExtDict['PT'][Counter] > 5):
-        # if its a buoy or platform then it needs an adjustment
+        # if its a buoy or platform then it DOES NOT need an adjustment
 	# Fill in (append) the Estimated Exposure accordingly
 	ExtDict['ESTE'].append('ASP')
 	UncDict['ESTE'].append('ASP')
@@ -657,7 +769,7 @@ def ApplyScreenAdjUnc(ExtDict,UncDict,Counter,ClimP):
 	ExtDict['ESTE'].append('U55')
 	UncDict['ESTE'].append('U55')
 	
-    # Now for ESTE = UNA or U55 apply 3.4% decrease to SHU and roll out to anomalies and other variables already solar adjusted
+    # Now for ESTE = UNA or U55 apply decrease to SHU and roll out to anomalies and other variables already solar adjusted
 
     # NO CHANGE TO AT so append VARscn with original, no need to add anything to VARtbc
     ExtDict['ATscn'].append(ExtDict['AT'][Counter])
@@ -705,27 +817,39 @@ def ApplyScreenAdjUnc(ExtDict,UncDict,Counter,ClimP):
 	    # Apply full adjustment 100 - 3.4 = 96.6
 	    q_adj = ExtDict['SHUtbc'][Counter] * FullAdjFactor
 	    q_adj_orig = ExtDict['SHU'][Counter] * FullAdjFactor
+# Setting q_unc here based on whether its UNA or U55 - AUG2018
+	    q_unc = Std_q_unc 
         else:
 	    # These should now be all of the U55 obs
-	    # For values up to 2015 where there are metadata - WILL NEED TO CHANGE IN FUTURE!!!
-	    if (ExtDict['YR'][Counter] < EndofMetaData):
-	        # Apply 55% of adjustment
-	        # 3.4 * 0.55 = 1.87, 100 - 1.87 = 98.13
-	        q_adj = ExtDict['SHUtbc'][Counter] * UnkAdjFactor
-	        q_adj_orig = ExtDict['SHU'][Counter] * UnkAdjFactor
+            # Apply 55% of adjustment
+            # 3.4 * 0.55 = 1.87, (100 - 1.87)/100. = 0.9813
+            q_adj = ExtDict['SHUtbc'][Counter] * UnkAdjFactor
+            q_adj_orig = ExtDict['SHU'][Counter] * UnkAdjFactor
+# Setting q_unc here based on whether its UNA or U55 - AUG2018
+# This now accounts for the uncertainty of not being fully adjusted when it should be but is an overestimate when the ob has been adjusted when it shouldn't have been
+	    q_unc = Std_q_unc + abs((ExtDict['SHUtbc'][Counter]-q_adj)*(1./PctPoorlyAsp))
 	    
-	    # Catch any values from 2015 where there are no metadata - WILL NEED TO CHANGE IN FUTURE!!!
-	    else:
-	        # Apply 55% * growfactor of adjustment
-	        # 3.4 * 0.55 * 1.14 = 2.1318, 100 - 2.1318 = 97.87
-	        q_adj = ExtDict['SHUtbc'][Counter] * GrowUnkAdjFactor
-	        q_adj_orig = ExtDict['SHU'][Counter] * GrowUnkAdjFactor
+# removed this bit about growth factor as of AUG2018
+#	    # These should now be all of the U55 obs
+#	    # For values up to 2015 where there are metadata - WILL NEED TO CHANGE IN FUTURE!!!
+#	    if (ExtDict['YR'][Counter] < EndofMetaData):
+#	        # Apply 55% of adjustment
+#	        # 3.4 * 0.55 = 1.87, 100 - 1.87 = 98.13
+#	        q_adj = ExtDict['SHUtbc'][Counter] * UnkAdjFactor
+#	        q_adj_orig = ExtDict['SHU'][Counter] * UnkAdjFactor
+#	    
+#	    # Catch any values from 2015 where there are no metadata - WILL NEED TO CHANGE IN FUTURE!!!
+#	    else:
+#	        # Apply 55% * growfactor of adjustment
+#	        # 3.4 * 0.55 * 1.14 = 2.1318, 100 - 2.1318 = 97.87
+#	        q_adj = ExtDict['SHUtbc'][Counter] * GrowUnkAdjFactor
+#	        q_adj_orig = ExtDict['SHU'][Counter] * GrowUnkAdjFactor
 	
 	ExtDict['SHUscn'].append(q_adj_orig)
         ExtDict['SHUAscn'].append(ExtDict['SHUA'][Counter] - (ExtDict['SHU'][Counter] - q_adj_orig))
         ExtDict['SHUAtbc'][Counter] = ExtDict['SHUAtbc'][Counter] - (ExtDict['SHUtbc'][Counter] - q_adj)
 	ExtDict['SHUtbc'][Counter] = q_adj
-	q_unc = 0.2 # apply same uncertainty in both cases
+	# NOTE all uncertainties are set based on tbc as these are then used to create total uncertainty
         UncDict['SHUuncSCN'].append(q_unc)
         UncDict['SHUAuncSCN'].append(q_unc)
 
@@ -841,18 +965,24 @@ def EstimateHeight(ExtDict,Counter):
     EstHeightH = estimated height of hygrometer
     EstHeightA = estimated height of anemometer (or provided)
     EstUnc = allocated uncertainty amount
+    MaxEstHeightH = estimated maximum likely height of hygrometer for uncertainty
+    MaxEstHeightA = estimated maximum likely height of anemometer (or provided) for uncertainty
+    MinEstHeightH = estimated minimum height of hygrometer for uncertainty
+    MinEstHeightA = estimated minimum height of anemometer (or provided) for uncertainty
     
     If PT = ship (0,1,2,3,4,5) - only really 5 that we have both HOB/HOT and HOA/HOP info
-    1) ESTH = HOT: height of thermomenter in m (preferred) UNLESS IT IS SILLY (e.g., < 2m) - unc = 0.1*adj
-    2) ESTH = HOB: height of barometer in m (second choice) UNLESS IT IS SILLY (e.g., < 2m) - unc = 0.1*adj
-    3) ESTH = HOP: height of visual obs platform in m (third choice) UNLESS IT IS SILLY (e.g., < 2m) - unc = 0.1*adj   
+    1) ESTH = HOP: height of visual obs platform in m UNLESS IT IS SILLY (e.g., < 2m) - ESTHmax = ESTH+1, ESTHmin = ESTH-1
+    2) ESTH = HOB: height of barometer in m UNLESS IT IS SILLY (e.g., < 2m) - ESTHmax = ESTH+1, ESTHmin = ESTH-1
+    3) ESTH = HOT: height of thermometer in m UNLESS IT IS SILLY (e.g., < 2m) - ESTHmax = ESTH+1, ESTHmin = ESTH-1
        THERE ARE SOME IN JAN 1973 at 1m (~106200-106220)
-    4) ESTH = HOA-10: height of anemometer in m converted UNLESS IT IS SILLY (e.g., < 2m) - unc = 0.85*adj
-    5) ESTH = 17-22m so 17. + (nmonths*0.0149m) from Jan 1973 to Dec 2000 - based on HOB reaching and mostly staying above 22m - HOP missing 
-       Maxes out at 22m / January 2001!!!
-       Kent et al., 2007, Berry and Kent, 2011 say 16 to 24m but that most likely covers from 1971-2007 so 17 is consistent
-    IF PT = buoy (6,8) no height info so assume 4m HOP and 5m HOA - unc = 0.85*adj
-    ESTH = 4 (NBDC gives height as 4 for most listed) http://www.ndbc.noaa.gov/bht.shtml
+    4) ESTH = HOA-10: height of anemometer in m converted to (HOP/HOB/HOT) UNLESS IT IS SILLY (e.g., < 2m) - ESTHmax = ESTH+9, ESTHmin = ESTH-9 - reflecting st dev in HOP/HOB/HOT-HOA
+    5) ESTH = 17-23m from Jan 1973 to Dec 2014 then set at 23m 
+              so 17. + (nmonths*0.012m) - based on 23-17 = 6, 6 / 504 months (2014-1973)+1 = 42 years * 12 = 504 months
+              Maxes out at 23m / January 2015!!!
+              Kent et al., 2007, Berry and Kent, 2011 say 16 to 24m but that most likely covers from 1971-2007 so 17 is consistent 
+              There is a linear trend in the standard deviation of the estimate from 4.6 in 1973 to 11 in 2014 so SDmonthX = 4.6+ 0.0127*nmonths until Jan 2015
+              ESTHmax = ESTH+SDmonthX, ESTHmin = ESTH-SDmonthX
+    IF PT = buoy (6,8) no height info so set ESTH = 4m and HOA = 5m - unc = 1*adj - NBDC gives height as 4 for most listed) http://www.ndbc.noaa.gov/bht.shtml
     IF PT = platform (9,10,15) (no height info so do not apply adjustment - ESTH = 999 - unc = (T-SST)/2., (q-q0)/2
     
     IF adjustment cannot be calculated - unc = (T-SST)/2., (q-q0)/2
@@ -863,21 +993,24 @@ def EstimateHeight(ExtDict,Counter):
 
     # Prescribed heights (of thermomenters and anemometers) for buoys and platforms
     PBuoy = 4.
-    PBuoyHOA = 5.
+    PBuoyHOA = 5. 
     PPlatform = 999.	# was 20 but now do not apply
     PPlatformHOA = 999. # was 30 but now do not apply
         
     # Increments for estimating height by YR and MN 
     StHeight = 17. # was 16
-    EdHeight = 22. # was 24
+    EdHeight = 23. # was 22 until AUG 2018
+    StHeightSD = 4.6 
+    EdHeightSD = 11. 
     StYr = 1973 # assume January
-    EdYr = 2001 # assume December 2000 (was Dec 2006 so 2007)
-    MnInc = (EdHeight / StHeight) / (((EdYr) - StYr) * 12.) # should be 0.0149 - was ~0.02
+    EdYr = 2015 # assume December 2014 (was Dec 2000 so 2001 until AUG2018)
+    MnInc = (EdHeight / StHeight) / (((EdYr) - StYr) * 12.) # should be 0.012 - was 0.0149
+    MnIncSD = (EdHeightSD / StHeightSD) / (((EdYr) - StYr) * 12.) # should be 0.013 - was 0.0149
         
-    # proportion of adjustment to apply as uncertainty depending on estimate type:
-    calc_height = 1 # default is VERY UNCERTAIN!
-    actual_height = 0.1 # actual height
-    estimated_height =  0.85 # estimated height (ship) or prescribed height (buoy) was 0.5
+    # meters of adjustment to apply as uncertainty depending on estimate type:
+    calc_height = 100. # default is VERY UNCERTAIN! - linear trend height and buoys - will be treated as either linear trend in SD or 100% unc for Buoys
+    actual_height = 1. # actual height - has 1m mean difference between HOP/HOB/HOT
+    estimated_height =  9. # estimated height from HOA (ship) has 9m standard deviation
     no_adjustment = 999 # either its a platform or an adjustment can't be applied
 
     # ENSURE THAT ESTH IS A FLOAT
@@ -888,67 +1021,95 @@ def EstimateHeight(ExtDict,Counter):
             # Fill in (append) the Estimated Height accordingly
 	    EstHeightH = float(PBuoy)
 	    EstHeightA = float(PBuoyHOA) # http://www.ndbc.noaa.gov/bht.shtml
-	    EstUnc = estimated_height
+	    EstUnc = calc_height
+	    # These won't be used for buoys so it shouldn't matter what they are!!!
+	    MaxEstHeightH = float(PBuoy)
+	    MaxEstHeightA = float(PBuoyHOA) # http://www.ndbc.noaa.gov/bht.shtml
+	    MinEstHeightH = float(PBuoy)
+	    MinEstHeightA = float(PBuoyHOA) # http://www.ndbc.noaa.gov/bht.shtml
     # Now check if its a platform (will be removed next time around)
 	else:
             # Fill in (append) the Estimated Height accordingly
 	    EstHeightH = float(PPlatform)
 	    EstHeightA = float(PPlatformHOA)
 	    EstUnc = no_adjustment
+	    # These won't be used for buoys so it shouldn't matter what they are!!!
+	    MaxEstHeightH = float(PPlatform)
+	    MaxEstHeightA = float(PPlatformHOA) # http://www.ndbc.noaa.gov/bht.shtml
+	    MinEstHeightH = float(PPlatform)
+	    MinEstHeightA = float(PPlatformHOA) # http://www.ndbc.noaa.gov/bht.shtml
     # Or its a ship then get a height
     else:
-        # Choice 1. If HOB or HOT exists then use this - UNLESS THEY ARE SILLY (< 2m)
-        if (ExtDict['HOT'][Counter] > 2.):
+        # Choice 1. If HOP exists then use this - UNLESS THEY ARE SILLY (< 2m)
+        if (ExtDict['HOP'][Counter] > 2.):
             # Fill in (append) the Estimated Height accordingly
-	    EstHeightH = float(ExtDict['HOT'][Counter])
+	    EstHeightH = float(ExtDict['HOP'][Counter])
 	    EstUnc = actual_height
-        # Choice 2. If HOB or HOT exists then use this - UNLESS THEY ARE SILLY (< 2m)
+	    MaxEstHeightH = EstHeightH+actual_height
+	    MinEstHeightH = EstHeightH-actual_height
+        # Choice 2. If HOB exists then use this - UNLESS THEY ARE SILLY (< 2m)
         elif (ExtDict['HOB'][Counter] > 2.):
             # Fill in (append) the Estimated Height accordingly
 	    EstHeightH = float(ExtDict['HOB'][Counter])
 	    EstUnc = actual_height
-        # Choice 3. If HOP exists then use this - UNLESS THEY ARE SILLY (< 2m)
-        elif (ExtDict['HOP'][Counter] > 2.):
+	    MaxEstHeightH = EstHeightH+actual_height
+	    MinEstHeightH = EstHeightH-actual_height
+        # Choice 3. If HOT exists then use this - UNLESS THEY ARE SILLY (< 2m)
+        elif (ExtDict['HOT'][Counter] > 2.):
             # Fill in (append) the Estimated Height accordingly
-	    EstHeightH = float(ExtDict['HOP'][Counter])
+	    EstHeightH = float(ExtDict['HOT'][Counter])
 	    EstUnc = actual_height
+	    MaxEstHeightH = EstHeightH+actual_height
+	    MinEstHeightH = EstHeightH-actual_height
         # Choice 4. If HOA is available then estimate - UNLESS THEY ARE SILLY (< 12m) 12 because 12-10 = 2!
         elif (ExtDict['HOA'][Counter] > 12.):
             EstHeightH = float(ExtDict['HOA'][Counter] - 10.)
 	    EstUnc = estimated_height
+	    MaxEstHeightH = EstHeightH+estimated_height
+	    MinEstHeightH = EstHeightH-estimated_height
         # Choice 5. Prescribe a height based on YR and MN (there should only be ships left by now
         else:
-            # if YR >= 2001 (EdYr) then apply fixed height EdHeight
+            # if YR >= 2015 (EdYr) then apply fixed height EdHeight
 	    if (ExtDict['YR'][Counter] >= EdYr):
 	        # Fill in (append) the Estimated Height accordingly
 	        EstHeightH = float(EdHeight)
 	        EstUnc = calc_height
+	        MaxEstHeightH = EstHeightH+EdHeightSD
+	        MinEstHeightH = EstHeightH-EdHeightSD
             # if YR < 1973 then apply fixed height StHeight
 	    elif (ExtDict['YR'][Counter] < StYr): # There aren't any years before this but maybe in the future?    
 	        # Fill in (append) the Estimated Height accordingly
 	        EstHeightH = float(StHeight)
 	        EstUnc = calc_height
+	        MaxEstHeightH = EstHeightH+StHeightSD
+	        MinEstHeightH = EstHeightH-StHeightSD
 	    # Work out StHeight+MnInc depending on YR and MN
 	    else:
 	        NMonths = ((ExtDict['YR'][Counter] - StYr) * 12) + ExtDict['MO'][Counter]
 	        # Fill in (append) the Estimated Height accordingly
 	        EstHeightH = float(StHeight + (NMonths * MnInc))
 	        EstUnc = calc_height
+	        MaxEstHeightH = EstHeightH+float(StHeightSD + (NMonths * MnIncSD))
+	        MinEstHeightH = EstHeightH-float(StHeightSD + (NMonths * MnIncSD))
 
         # Check if HOA exists and is greater than 2m, if it does not then HOA = ESTH+10
         if (ExtDict['HOA'][Counter] > 2.):
             EstHeightA = float(ExtDict['HOA'][Counter])
+	    MaxEstHeightA = EstHeightA
+	    MinEstHeightA = EstHeightA
 	# IF HOA does not exist or is <= than 2.
 	else:    
 	    EstHeightA = float(EstHeightH + 10.)
+	    MaxEstHeightA = EstHeightA+estimated_height
+	    MinEstHeightA = EstHeightA-estimated_height
 
     # Test output
-#    print('Platform: ',ExtDict['PT'][Counter])
-#    print('HOB/HOT/HOP/HOA: ',ExtDict['HOB'][Counter],ExtDict['HOT'][Counter],ExtDict['HOP'][Counter],ExtDict['HOA'][Counter])
-#    print('ESTH/HOA/UNC: ',EstHeightH, EstHeightA, EstUnc)
-#    pdb.set_trace()
+    print('Platform: ',ExtDict['PT'][Counter])
+    print('HOB/HOT/HOP/HOA: ',ExtDict['HOB'][Counter],ExtDict['HOT'][Counter],ExtDict['HOP'][Counter],ExtDict['HOA'][Counter])
+    print('ESTH/HOA/UNC: ',EstHeightH, EstHeightA, EstUnc,MaxEstHeightH,MinEstHeightH,MaxEstHeightA,MinEstHeightA)
+    pdb.set_trace()
 
-    return EstHeightH,EstHeightA,EstUnc
+    return EstHeightH,EstHeightA,EstUnc,MaxEstHeightH,MaxEstHeightA,MinEstHeightH,MinEstHeightA,
 #************************************************************************************************************
 # GetNOCSHeight
 #************************************************************************************************************
@@ -1040,10 +1201,588 @@ def GetNOCSHeight(ExtDict,Counter):
 #    pdb.set_trace()
 
     return EstHeightH,EstHeightA,EstUnc
+
 #************************************************************************************************************
 # ApplyHeightAdjUnc
 #************************************************************************************************************
 def ApplyHeightAdjUnc(ExtDict,UncDict,Counter,ClimP,ChooseLocal):
+
+    '''
+    ExtDict = dictionary of orig AND adjusted values
+    UncDict = dicitonary of uncertainty values
+    Counter = loop number for finding right original ob   
+    ClimP = climatological pentad mean SLP from nearest 1x1 gridbox to ob for humidity calculation 
+    
+    This function calls for either an estimated height from EstimateHeight or a NOCS provided Height from GetNOCSHeight    
+    
+    IF adjustment cannot be calculated - unc = (T-SST)/2., (q-q0)/2
+    IF adjustment cannot be calculated and SST is not present/failed QC - 
+    unc = 0.1 for AT (10m at DALR), q*0.007 (7% per 1 deg so 0.7 per 0.1 deg)
+    
+    IF SST is missing or invalid and we have to use AT or forced limits (-2.0, 40) to height adjust.
+    Or if uncertainty cannot be calculated (ships):
+    then unc = adjustment or 0.1 deg, 0.007*q WHICHEVER IS LARGEST!!!
+    
+    HeightCorrect.py 
+    Use height info, 
+        SST (or AT if missing or failed buddy/clim/freeze), 
+	ClimP (not observed SLP), 
+	u (or 0.5m if < 0.5, 6 (moderate) if missing or > 100m/s)
+    to create an estimated height adjusted value. Do this to orig and solar/screen corrected obs.
+    
+    Other humidity variables are converted too - with a check for supersaturation and T adjusted to == DPT if there is an issues
+    
+    Derive uncertainties (1 sigma!):
+     - imperfect calculations? difficult to quantify
+     - imperfect height estimation? lengthy to redo height ajdustment for different scenarios?
+     - one way to say that this is VERY uncertain would be to use the magnitude of the adjustment compared to the original value
+     - For obs with actual HOT or HOB or HOP - use 10% of adjustment (unc in calculation)
+     - For obs with estimated from HOA or buoys - use 75% of adjustment + 10% 
+     - For obs with estimated from linear function - use 90% of adjustment + 10% 
+     - For platforms or non-calculable adjustments - use (T-SST)/2., (q-q0)/2
+     - ACTUALLY I'M GOING WITH THE FOLLOWING FOR NOW WHICH SEEMS A LITTLE MORE SCIENTIFIC
+     # Calc an Hmax and Hmin and assess uncertainty as ((Hmax-Hmin)/2)/SQRT(3) - UNIFORM!!! distribution because it could lie anywhere in between this
+     # In call cases (for ships) if HOA provided then HOAmax = HOA and HOAmin = HOA else HOAmax = HOAest+9m and HOAmin = HOAest-9m because stdev of HOP/HOB/HOT-HOA is 9 (HOB preferred choice for HOH).
+     # See HeightMetatDataStats_ships_OBSclim2NBC_I300_55_AUG2018.xlsx for details
+     # ESTH from HOB/HOT/HOP then ESTHmax = ESTH+1, ESTHmin = ESTH-1
+     # ESTH for buoys then 1*adj
+     # ESTH from HOA-10 then ESTHmax = ESTH+9, ESTHmin = ESTH-9 - reflecting st dev in HOP/HOB/HOT-HOA
+     # ESTH from linear trend:
+     #     there is a linear trend in the standard deviation of the estimate from 4.6 in 1973 to 11 in 2014 so SDmonthX = 4.6+ 0.0127*nmonths until Jan 2015
+     #     ESTHmax = ESTH+SDmonthX, ESTHmin = ESTH-SDmonthX
+     # no adj can be calculated (platform or no resolution) unc = +/- 0.5(t-SST); 0.5(q-qo); 0.5u
+     # If unc cannot be calculated and SST ok then unc = +/- 0.5(t-SST); 0.5(q-qo); 0.5u else unc = 0.1 deg or 0.007*q
+     If SST is estimated from AT and forced to be -2 to 40 then unc = adjustent, 0.1deg or 0.007q - whichever is largest
+          
+     Looks like HOB and HOT and HOP are not identical - but there is really not much in it.
+     HOP mean = 20.9, sd = 7.60, HOB mean = 21.7, sd = 10.4, HOT mean = 22.7, sd = 8.96. Differences and equations relating to HOA and HOP are different.
+     See HeightMetaDataStats_ships_OBSclim2NBC_I300_55_AUG2018.txt/xlsx
+    '''
+    
+    # Catch to ensure larger unceratinty when there is no valid SST
+    noSST_estimate = False # no valid SST so AT or forced limits (-2.0, 40) used
+    # If no valid SST then SST = AT so no adjustment applied to AT and v uncertain to q etc
+
+    # Extra variable to apply large uncertainties when no adjustment can be made
+    no_adjustment = 999 # either its a platform or an adjustment can't be applied
+ 
+    # If ChooseLocal == 'local' then call EstimateHeight to get height and unc info
+    if (ChooseLocal == 'local'):
+        EstHeightH,EstHeightA,EstUnc,MaxEstHeightH,MinEstHeightH,MaxEstHeightA,MinEstHeightA = EstimateHeight(ExtDict,Counter)
+	ExtDict['ESTH'].append(EstHeightH)
+	UncDict['ESTH'].append(EstHeightH)
+	HOA = EstHeightA
+	unc_estimate = EstUnc
+    
+    # Else if ChooseLocal == 'localNOCS' then call GetNOCSHeight
+    elif (ChooseLocal == 'localNOCS'):
+        EstHeightH,EstHeightA,EstUnc = GetNOCSHeight(ExtDict,Counter)
+	ExtDict['ESTH'].append(EstHeightH)
+	UncDict['ESTH'].append(EstHeightH)
+	HOA = EstHeightA
+	unc_estimate = EstUnc    
+    
+    # Else something is amiss
+    else:
+        print('No ChooseLocal/LocalType info!')
+	pdb.set_trace()
+       
+    # NOW obtain the height correction for AT and SHU (USING SST, U, ClimP and ESTH) and also for the other variables
+    # Do not need to pull through the HeightDict so use _
+ 
+    # Order of vars: sst,at,shu,u,zu,zt,zq,dpt=(-99.9),vap=(-99.9),crh=(-99.9),cwb=(-99.9),dpd=(-99.9),climp=(-99.9)
+    # The derived adjustments for other variables also include a check for supersaturation and an adjustment to AT=DPT if that happens
+
+    # Only apply if not dealing with platforms! (will be removed next time around) OR ESTH is already 10m!!!
+    if ((ExtDict['ESTH'][Counter] < 999) & (ExtDict['ESTH'][Counter] != 10)):
+    
+        # First test for a valid SST (not missing or failing clim/freeze QC)
+	# Note the < -2.0 will catch both missing values -32768 and freezing flags
+	# If it is missing or invalid then use AT
+	# However, AT could be way below valid SSTs (-2.0 to 40 deg C?)
+	# So force these upper and lower limits
+	# Regardless - change unc to no_adjustment which means a large uncertainty will be applied
+	if ((ExtDict['SST'][Counter] < -2.0) | (ExtDict['SST'][Counter] > 40.) | \
+	     (ExtDict['SSTclim'][Counter] > 0)): # 1 = fail, 8 = not applied 
+	    MySSTtbc = ExtDict['ATtbc'][Counter]
+	    MySSTorig = ExtDict['AT'][Counter]
+	    
+	    # Now double check this is still valid
+	    if (MySSTtbc < -2.0):
+	        MySSTtbc = -2.0
+	    elif (MySSTtbc > 40.):
+	        MySSTtbc = 40.
+
+	    # Now double check this is still valid
+	    if (MySSTorig < -2.0):
+	        MySSTorig = -2.0
+	    elif (MySSTorig > 40.):
+	        MySSTorig = 40.
+		
+	    # Either way force the uncertainty to be large
+	    noSST_estimate = True
+	
+	# If its ok then pass to MySST
+	else:
+	    MySSTtbc = ExtDict['SST'][Counter]	
+	    MySSTorig = ExtDict['SST'][Counter]	
+	
+        # We're most interested in the combined bias corrections but we're assessing combined and HGT only seperately
+	# This means that we could potentially have an adjustment value for one but it may fail for the other
+	# We should do the combined one first and it if fails, not try to do the HGT only, if HGT only fails then ok
+
+        # Do this for the VARtbc values
+#        print("TBC: ",HOA, ExtDict['ESTH'][Counter])
+#        print(ExtDict['SST'][Counter],ExtDict['ATtbc'][Counter],ExtDict['SHUtbc'][Counter],ExtDict['W'][Counter],HOA,ExtDict['ESTH'][Counter],ExtDict['ESTH'][Counter],
+#              ExtDict['DPTtbc'][Counter],ExtDict['VAPtbc'][Counter],ExtDict['CRHtbc'][Counter],ExtDict['CWBtbc'][Counter],ExtDict['DPDtbc'][Counter],ClimP)
+        AdjDict,_ = hc.run_heightcorrection_final(MySSTtbc,
+                                                  ExtDict['ATtbc'][Counter],
+					          ExtDict['SHUtbc'][Counter],
+					          ExtDict['W'][Counter],
+					          HOA,
+					          ExtDict['ESTH'][Counter],
+					          ExtDict['ESTH'][Counter],
+					          dpt=ExtDict['DPTtbc'][Counter],
+					          vap=ExtDict['VAPtbc'][Counter],
+					          crh=ExtDict['CRHtbc'][Counter],
+					          cwb=ExtDict['CWBtbc'][Counter],
+					          dpd=ExtDict['DPDtbc'][Counter],
+					          climp=ClimP)
+
+        # Double check to make sure some sensible values have come out - in some cases there is non-convergence where height cannot be adjusted.
+        # In these cases - apply no height correction. Uncertainty should be large so is set to no_adjustment to be estimated later.
+        # In other cases where SHU is VERY small to begin with (most likely screwy!) e.g. Jan 1973 ob 145622 shu = 0.1 this leads to -ve adjusted values
+        # and NaNs. I have added a catch for this in HeightCorrect.py so it now returns -99,9 in those cases.
+        # In other cases where AT is >>40 but SST ~8 (e.g. April 1974 ob 118659) we have at_10m>100! We can't have that!
+	# There is a check that at_10m > -80 and < 65.
+	# NOTE all uncertainties are set based on tbc as these are then used to create total uncertainty
+        if (AdjDict['at_10m'] > -99.):					      
+   
+            # Copy the values before applying the changes - as its only a pointer we shouldn't need to copy - DOUBLE CHECK THIS!!!
+	    t_orig = ExtDict['ATtbc'][Counter]
+            td_orig = ExtDict['DPTtbc'][Counter]
+            tw_orig = ExtDict['CWBtbc'][Counter]
+            q_orig = ExtDict['SHUtbc'][Counter]
+            e_orig = ExtDict['VAPtbc'][Counter]
+            rh_orig = ExtDict['CRHtbc'][Counter]
+            dpd_orig = ExtDict['DPDtbc'][Counter]
+	    
+            # Now copy the new adjustments to VARtbc, apply to the anomalies, and obtain the uncertainty estimate on the adjustment applied
+            # Anomalies need to be sorted out first
+#            print('SENSIBLE TBC VALUES: ',AdjDict)
+	    ATdiff = ExtDict['ATtbc'][Counter] - AdjDict['at_10m']
+	    ExtDict['ATAtbc'][Counter] = ExtDict['ATAtbc'][Counter] - ATdiff
+            UncDict['ATuncHGT'].append(abs(ATdiff) * unc_estimate)
+            UncDict['ATAuncHGT'].append(UncDict['ATuncHGT'][Counter])
+            ExtDict['ATtbc'][Counter] = AdjDict['at_10m']
+	    DPTdiff = ExtDict['DPTtbc'][Counter] - AdjDict['dpt_10m']
+            ExtDict['DPTAtbc'][Counter] = ExtDict['DPTAtbc'][Counter] - DPTdiff
+            UncDict['DPTuncHGT'].append(abs(DPTdiff) * unc_estimate)
+            UncDict['DPTAuncHGT'].append(UncDict['DPTuncHGT'][Counter])
+            ExtDict['DPTtbc'][Counter] = AdjDict['dpt_10m']
+	    SHUdiff = ExtDict['SHUtbc'][Counter] - AdjDict['shu_10m']
+            ExtDict['SHUAtbc'][Counter] = ExtDict['SHUAtbc'][Counter] - SHUdiff
+            UncDict['SHUuncHGT'].append(abs(SHUdiff) * unc_estimate)
+            UncDict['SHUAuncHGT'].append(UncDict['SHUuncHGT'][Counter])
+            ExtDict['SHUtbc'][Counter] = AdjDict['shu_10m']
+	    VAPdiff = ExtDict['VAPtbc'][Counter] - AdjDict['vap_10m']
+            ExtDict['VAPAtbc'][Counter] = ExtDict['VAPAtbc'][Counter] - VAPdiff
+            UncDict['VAPuncHGT'].append(abs(VAPdiff) * unc_estimate)
+            UncDict['VAPAuncHGT'].append(UncDict['VAPuncHGT'][Counter])
+            ExtDict['VAPtbc'][Counter] = AdjDict['vap_10m']
+	    CRHdiff = ExtDict['CRHtbc'][Counter] - AdjDict['crh_10m']
+            ExtDict['CRHAtbc'][Counter] = ExtDict['CRHAtbc'][Counter] - CRHdiff
+            UncDict['CRHuncHGT'].append(abs(CRHdiff) * unc_estimate)
+            UncDict['CRHAuncHGT'].append(UncDict['CRHuncHGT'][Counter])
+            ExtDict['CRHtbc'][Counter] = AdjDict['crh_10m']
+	    CWBdiff = ExtDict['CWBtbc'][Counter] - AdjDict['cwb_10m']
+            ExtDict['CWBAtbc'][Counter] = ExtDict['CWBAtbc'][Counter] - CWBdiff
+            UncDict['CWBuncHGT'].append(abs(CWBdiff) * unc_estimate)
+            UncDict['CWBAuncHGT'].append(UncDict['CWBuncHGT'][Counter])
+            ExtDict['CWBtbc'][Counter] = AdjDict['cwb_10m']
+	    DPDdiff = ExtDict['DPDtbc'][Counter] - AdjDict['dpd_10m']
+            ExtDict['DPDAtbc'][Counter] = ExtDict['DPDAtbc'][Counter] - DPDdiff
+            UncDict['DPDuncHGT'].append(abs(DPDdiff) * unc_estimate)
+            UncDict['DPDAuncHGT'].append(UncDict['DPDuncHGT'][Counter])
+            ExtDict['DPDtbc'][Counter] = AdjDict['dpd_10m']    
+
+
+# AUG 2018 NOW WORK ON UNCERTAINTY ESTIMATES
+	    
+	    # If this is a noSST_estimate scenario (noSST_estimate == True)
+	    # then check uncertainty is the larger
+	    # of either adjustment magnitude or 0.1 deg, 0.007*q
+	    # Uncertainty will have already been set based on ESTH type
+	    # NOTE UNCERTAINTIES ARE ALREADY SET SO USE COUNTER RATHER THAN APPEND!!!
+	    if (noSST_estimate):
+	    
+#	        print('SILLY SST: ',ExtDict['SST'][Counter],ExtDict['SSTclim'][Counter],MySSTtbc, MySSTorig)
+	        
+		# Test AT
+		if (abs(ATdiff) >= 0.1):    
+	            
+		    # Apply adjustment magnitude as uncertainty in T 
+	            UncDict['ATuncHGT'][Counter] = abs(ATdiff)
+                    UncDict['ATAuncHGT'][Counter] = abs(ATdiff)
+		
+		else:
+
+		    # Assume uncertainty in T is 10m diff at DALR = 0.1degC (worst case scenario)
+	            UncDict['ATuncHGT'][Counter] = 0.1
+                    UncDict['ATAuncHGT'][Counter] = 0.1
+		
+		    
+		# Test SHUuncHGT
+		if (abs(SHUdiff) >= (ExtDict['SHUtbc'][Counter] * 0.007)):
+		    
+		    # Apply adjustment magnitude as uncertainty in SHU 
+	            UncDict['SHUuncHGT'][Counter] = abs(SHUdiff)
+                    UncDict['SHUAuncHGT'][Counter] = abs(SHUdiff)
+
+                else:
+
+		    # Assume uncertainty in SHU is 10m diff at DALR = 0.1 degC although this would mean that there is no moisture and so no change in q!
+	            UncDict['SHUuncHGT'][Counter] = ExtDict['SHUtbc'][Counter] * 0.007 # should be 0.7% of q
+                    UncDict['SHUAuncHGT'][Counter] = ExtDict['SHUtbc'][Counter] * 0.007
+
+	        # Now apply these to the other variables;
+                # Get vapour pressure from specific humidity
+                UpperVal_vap = ch.vap_from_sh(ExtDict['SHUtbc'][Counter] + UncDict['SHUuncHGT'][Counter],ClimP,roundit=False)
+	        LowerVal_vap = ch.vap_from_sh(ExtDict['SHUtbc'][Counter],ClimP,roundit=False) # NOW SHOULD BE LOWER
+	        UncDict['VAPuncHGT'][Counter] = UpperVal_vap - LowerVal_vap
+                UncDict['VAPAuncHGT'][Counter] = UpperVal_vap - LowerVal_vap
+
+                # Get dew point temperature from vapour pressure (use at too to check for wet bulb <=0)
+                UpperVal_dpt = ch.td_from_vap(UpperVal_vap,ClimP,ExtDict['ATtbc'][Counter],roundit=False)
+	        LowerVal_dpt = ch.td_from_vap(LowerVal_vap,ClimP,ExtDict['ATtbc'][Counter],roundit=False)
+	        UncDict['DPTuncHGT'][Counter] = UpperVal_dpt - LowerVal_dpt
+                UncDict['DPTAuncHGT'][Counter] = UpperVal_dpt - LowerVal_dpt
+
+                # Get wet bulb temperature from vapour pressure and dew point temperature and air temperature
+                UpperVal_cwb = ch.wb(UpperVal_dpt,ExtDict['ATtbc'][Counter],ClimP,roundit=False)
+	        LowerVal_cwb = ch.wb(LowerVal_dpt,ExtDict['ATtbc'][Counter],ClimP,roundit=False)
+	        UncDict['CWBuncHGT'][Counter] = abs(UpperVal_cwb - LowerVal_cwb) # SHOULDN'T NEED abs BUT JUST IN CASE
+                UncDict['CWBAuncHGT'][Counter] = abs(UpperVal_cwb - LowerVal_cwb)
+
+                # Get relative humidity from dew point temperature and temperature
+                UpperVal_crh = ch.rh(UpperVal_dpt,ExtDict['ATtbc'][Counter],ClimP,roundit=False)
+	        LowerVal_crh = ch.rh(LowerVal_dpt,ExtDict['ATtbc'][Counter],ClimP,roundit=False)
+	        UncDict['CRHuncHGT'][Counter] = abs(UpperVal_crh - LowerVal_crh)
+                UncDict['CRHAuncHGT'][Counter] = abs(UpperVal_crh - LowerVal_crh)
+
+                # Get dew point depression from temperautre and dew point depression
+                UpperVal_dpd = ch.dpd(UpperVal_dpt,ExtDict['ATtbc'][Counter],roundit=False)
+	        LowerVal_dpd = ch.dpd(LowerVal_dpt,ExtDict['ATtbc'][Counter],roundit=False)
+	        UncDict['DPDuncHGT'][Counter] = abs(UpperVal_dpd - LowerVal_dpd)
+                UncDict['DPDAuncHGT'][Counter] = abs(UpperVal_dpd - LowerVal_dpd)
+
+# If there is a valid SST then we need to calculate the MaxAdjDict adn MinAdjDict to work out uncertainty          
+            else:
+                MaxdAdjDict,_ = hc.run_heightcorrection_final(MySSTtbc,
+                                                  t_orig,
+					          q_orig,
+					          ExtDict['W'][Counter],
+					          MaxEstHeightA,
+					          MaxEstHeightH,
+					          MaxEstHeightH,
+					          dpt=dpt_orig,
+					          vap=vap_orig,
+					          crh=rh_orig,
+					          cwb=tw_orig,
+					          dpd=dpd_orig,
+					          climp=ClimP)
+
+                MindAdjDict,_ = hc.run_heightcorrection_final(MySSTtbc,
+                                                  t_orig,
+					          q_orig,
+					          ExtDict['W'][Counter],
+					          MinEstHeightA,
+					          MinEstHeightH,
+					          MinEstHeightH,
+					          dpt=dpt_orig,
+					          vap=vap_orig,
+					          crh=rh_orig,
+					          cwb=tw_orig,
+					          dpd=dpd_orig,
+					          climp=ClimP)
+
+                 # Now check we have sensible values and compute (range/2)/SQRT(3)
+                 if ((MaxAdjDict['at_10m'] > -99.) & (MinAdjDict['at_10m'] > -99.)):					      
+                     UncDict['ATuncHGT'].append((abs(MaxAdjDict['at_10m']  - MinAdjDict['at_10m'])/2.)/np.sqrt(3))
+                     UncDict['ATAuncHGT'].append(UncDict['ATuncHGT'][Counter])
+                     UncDict['DPTuncHGT'].append((abs(MaxAdjDict['dpt_10m']  - MinAdjDict['dpt_10m'])/2.)/np.sqrt(3))
+                     UncDict['DPTAuncHGT'].append(UncDict['DPTuncHGT'][Counter])
+                     UncDict['SHUuncHGT'].append((abs(MaxAdjDict['shu_10m']  - MinAdjDict['shu_10m'])/2.)/np.sqrt(3))
+                     UncDict['SHUAuncHGT'].append(UncDict['SHUuncHGT'][Counter])
+                     UncDict['VAPuncHGT'].append((abs(MaxAdjDict['vap_10m']  - MinAdjDict['vap_10m'])/2.)/np.sqrt(3))
+                     UncDict['VAPAuncHGT'].append(UncDict['VAPuncHGT'][Counter])
+                     UncDict['CRHuncHGT'].append((abs(MaxAdjDict['crh_10m']  - MinAdjDict['crh_10m'])/2.)/np.sqrt(3))
+                     UncDict['CRHAuncHGT'].append(UncDict['CRHuncHGT'][Counter])
+                     UncDict['CWBuncHGT'].append((abs(MaxAdjDict['cwb_10m']  - MinAdjDict['cwb_10m'])/2.)/np.sqrt(3))
+                     UncDict['CWBAuncHGT'].append(UncDict['CWBuncHGT'][Counter])
+                     UncDict['DPDuncHGT'].append((abs(MaxAdjDict['dpd_10m']  - MinAdjDict['dpd_10m'])/2.)/np.sqrt(3))
+                     UncDict['DPDAuncHGT'].append(UncDict['DPDuncHGT'][Counter])
+		     print('Check HGT unc: ',MaxAdjDict['at_10m'],MinAdjDict['at_10m'],
+		                         abs(MaxAdjDict['at_10m']  - MinAdjDict['at_10m']),
+					 (abs(MaxAdjDict['at_10m']  - MinAdjDict['at_10m'])/2.),
+					 (abs(MaxAdjDict['at_10m']  - MinAdjDict['at_10m'])/2.)/np.sqrt(3))
+		     pdb.set_trace()
+		 
+		 
+		 # If we don't have sensible values then set unc_estimate to 999 so that these get set later!!!
+		 else:
+		     unc_estimate = 999
+
+	    # So we have a 'good' value for tbc so now we should try calculating for hc (HGT only)
+            # Do this for the ORIGINAL values
+#            print("Original: ",HOA, ExtDict['ESTH'][Counter])
+#            print(ExtDict['SST'][Counter],ExtDict['AT'][Counter],ExtDict['SHU'][Counter],ExtDict['W'][Counter],HOA,ExtDict['ESTH'][Counter],ExtDict['ESTH'][Counter],
+#                  ExtDict['DPT'][Counter],ExtDict['VAP'][Counter],ExtDict['CRH'][Counter],ExtDict['CWB'][Counter],ExtDict['DPD'][Counter],ClimP)
+            AdjDict,_ = hc.run_heightcorrection_final(MySSTorig,
+                                                      ExtDict['AT'][Counter],
+					              ExtDict['SHU'][Counter],
+					              ExtDict['W'][Counter],
+					              HOA,
+					              ExtDict['ESTH'][Counter],
+					              ExtDict['ESTH'][Counter],
+					              dpt=ExtDict['DPT'][Counter],
+					              vap=ExtDict['VAP'][Counter],
+					              crh=ExtDict['CRH'][Counter],
+					              cwb=ExtDict['CWB'][Counter],
+					              dpd=ExtDict['DPD'][Counter],
+					              climp=ClimP)
+					      
+            # Double check to make sure some sensible values have come out - in some cases there is non-convergence where height cannot be adjusted.
+            # In these cases - apply no height correction. Uncertainty should be large but we've already set it based on tbc so we don't need to here.
+            # In other cases where SHU is VERY small to begin with (most likely screwy!) e.g. Jan 1973 ob 145622 shu = 0.1 this leads to -ve adjusted values
+            # and NaNs. I have added a catch for this in HeightCorrect.py so it now returns -99,9 in those cases.
+            # In other cases where AT is >>40 but SST ~8 (e.g. April 1974 ob 118659) we have at_10m>100! We can't have that!
+	    # There is a check that at_10m > -80 and < 65.
+            if (AdjDict['at_10m'] > -99.):
+
+#                print('SENSIBLE ORIG VALUES: ',AdjDict)
+
+                # Then append the new adjusted variables, apply to the anomalies - NO uncertainty estimate to hc only!!! only assessing for tbc!!!
+                ExtDict['AThc'].append(AdjDict['at_10m'])
+                ExtDict['ATAhc'].append(ExtDict['ATA'][Counter] - (ExtDict['AT'][Counter] - AdjDict['at_10m']))
+                ExtDict['DPThc'].append(AdjDict['dpt_10m'])
+                ExtDict['DPTAhc'].append(ExtDict['DPTA'][Counter] - (ExtDict['DPT'][Counter] - AdjDict['dpt_10m']))
+                ExtDict['SHUhc'].append(AdjDict['shu_10m'])
+                ExtDict['SHUAhc'].append(ExtDict['SHUA'][Counter] - (ExtDict['SHU'][Counter] - AdjDict['shu_10m']))
+                ExtDict['VAPhc'].append(AdjDict['vap_10m'])
+                ExtDict['VAPAhc'].append(ExtDict['VAPA'][Counter] - (ExtDict['VAP'][Counter] - AdjDict['vap_10m']))
+                ExtDict['CRHhc'].append(AdjDict['crh_10m'])
+                ExtDict['CRHAhc'].append(ExtDict['CRHA'][Counter] - (ExtDict['CRH'][Counter] - AdjDict['crh_10m']))
+                ExtDict['CWBhc'].append(AdjDict['cwb_10m'])
+                ExtDict['CWBAhc'].append(ExtDict['CWBA'][Counter] - (ExtDict['CWB'][Counter] - AdjDict['cwb_10m']))
+                ExtDict['DPDhc'].append(AdjDict['dpd_10m'])
+                ExtDict['DPDAhc'].append(ExtDict['DPDA'][Counter] - (ExtDict['DPD'][Counter] - AdjDict['dpd_10m']))
+            else:
+	    
+#                print('SILLY ORIG VALUES')
+	        #pdb.set_trace()
+
+                # Then append the original variables, apply to the anomalies 
+                ExtDict['AThc'].append(ExtDict['AT'][Counter])
+                ExtDict['ATAhc'].append(ExtDict['ATA'][Counter])
+                ExtDict['DPThc'].append(ExtDict['DPT'][Counter])
+                ExtDict['DPTAhc'].append(ExtDict['DPTA'][Counter])
+                ExtDict['SHUhc'].append(ExtDict['SHU'][Counter])
+                ExtDict['SHUAhc'].append(ExtDict['SHUA'][Counter])
+                ExtDict['VAPhc'].append(ExtDict['VAP'][Counter])
+                ExtDict['VAPAhc'].append(ExtDict['VAPA'][Counter])
+                ExtDict['CRHhc'].append(ExtDict['CRH'][Counter])
+                ExtDict['CRHAhc'].append(ExtDict['CRHA'][Counter])
+                ExtDict['CWBhc'].append(ExtDict['CWB'][Counter])
+                ExtDict['CWBAhc'].append(ExtDict['CWBA'][Counter])
+                ExtDict['DPDhc'].append(ExtDict['DPD'][Counter])
+                ExtDict['DPDAhc'].append(ExtDict['DPDA'][Counter])
+	    
+        else:
+               
+#	    print('SILLY TBC VALUES')
+	    #pdb.set_trace()
+            
+	    # If no adjustment can be applied then still apply uncertainty in value. 
+	    # Do this along with other instances of no_adjustment 
+	    unc_estimate = no_adjustment
+	    
+	    # No need to do anything to the tbc avlues - there is no change from the previous process
+	    # We do need to set the hc values to the original variables though.
+            ExtDict['AThc'].append(ExtDict['AT'][Counter])
+            ExtDict['ATAhc'].append(ExtDict['ATA'][Counter])
+            ExtDict['DPThc'].append(ExtDict['DPT'][Counter])
+            ExtDict['DPTAhc'].append(ExtDict['DPTA'][Counter])
+            ExtDict['SHUhc'].append(ExtDict['SHU'][Counter])
+            ExtDict['SHUAhc'].append(ExtDict['SHUA'][Counter])
+            ExtDict['VAPhc'].append(ExtDict['VAP'][Counter])
+            ExtDict['VAPAhc'].append(ExtDict['VAPA'][Counter])
+            ExtDict['CRHhc'].append(ExtDict['CRH'][Counter])
+            ExtDict['CRHAhc'].append(ExtDict['CRHA'][Counter])
+            ExtDict['CWBhc'].append(ExtDict['CWB'][Counter])
+            ExtDict['CWBAhc'].append(ExtDict['CWBA'][Counter])
+            ExtDict['DPDhc'].append(ExtDict['DPD'][Counter])
+            ExtDict['DPDAhc'].append(ExtDict['DPDA'][Counter])
+
+	    # Set uncertainties to 0.0 to catch the ESTH == 10 case. These are then overwritten below in the case of unc_estimate == 999
+            UncDict['ATuncHGT'].append(0.0)
+            UncDict['ATAuncHGT'].append(0.0)
+            UncDict['DPTuncHGT'].append(0.0)
+            UncDict['DPTAuncHGT'].append(0.0)
+            UncDict['SHUuncHGT'].append(0.0)
+            UncDict['SHUAuncHGT'].append(0.0)
+            UncDict['VAPuncHGT'].append(0.0)
+            UncDict['VAPAuncHGT'].append(0.0)
+            UncDict['CRHuncHGT'].append(0.0)
+            UncDict['CRHAuncHGT'].append(0.0)
+            UncDict['CWBuncHGT'].append(0.0)
+            UncDict['CWBAuncHGT'].append(0.0)
+            UncDict['DPDuncHGT'].append(0.0)
+            UncDict['DPDAuncHGT'].append(0.0)
+        
+    # If ESTH is 999 then its a platform or if its 10 then its already at desired height so we're not applying any adjustments and need to pass values as they are to ExtDict	    
+    else:	    
+        ExtDict['AThc'].append(ExtDict['AT'][Counter])
+        ExtDict['ATAhc'].append(ExtDict['ATA'][Counter])
+        ExtDict['DPThc'].append(ExtDict['DPT'][Counter])
+        ExtDict['DPTAhc'].append(ExtDict['DPTA'][Counter])
+        ExtDict['SHUhc'].append(ExtDict['SHU'][Counter])
+        ExtDict['SHUAhc'].append(ExtDict['SHUA'][Counter])
+        ExtDict['VAPhc'].append(ExtDict['VAP'][Counter])
+        ExtDict['VAPAhc'].append(ExtDict['VAPA'][Counter])
+        ExtDict['CRHhc'].append(ExtDict['CRH'][Counter])
+        ExtDict['CRHAhc'].append(ExtDict['CRHA'][Counter])
+        ExtDict['CWBhc'].append(ExtDict['CWB'][Counter])
+        ExtDict['CWBAhc'].append(ExtDict['CWBA'][Counter])
+        ExtDict['DPDhc'].append(ExtDict['DPD'][Counter])
+        ExtDict['DPDAhc'].append(ExtDict['DPDA'][Counter])
+	
+	# Set uncertainties to 0.0 to catch the ESTH == 10 case. These are then overwritten below in the case of unc_estimate == 999
+        UncDict['ATuncHGT'].append(0.0)
+        UncDict['ATAuncHGT'].append(0.0)
+        UncDict['DPTuncHGT'].append(0.0)
+        UncDict['DPTAuncHGT'].append(0.0)
+        UncDict['SHUuncHGT'].append(0.0)
+        UncDict['SHUAuncHGT'].append(0.0)
+        UncDict['VAPuncHGT'].append(0.0)
+        UncDict['VAPAuncHGT'].append(0.0)
+        UncDict['CRHuncHGT'].append(0.0)
+        UncDict['CRHAuncHGT'].append(0.0)
+        UncDict['CWBuncHGT'].append(0.0)
+        UncDict['CWBAuncHGT'].append(0.0)
+        UncDict['DPDuncHGT'].append(0.0)
+        UncDict['DPDAuncHGT'].append(0.0)
+
+    # Now get uncertainty estimates in the case where no adjustment has been applied (platform or unresolved equation)
+    if (unc_estimate == 999):	  
+        # This is a convoluted application of abs(T-SST)/2. and abs(q-q0)/2. rolled out to all variables  
+        # If there is no SST then we cannot get difference between surface values
+	# - assume unc in T of worst case scenario DALR 0.1deg C (change in 10m height)
+	
+	# If SST is present and valid then do the ob-surface / 2 thing
+	if ((ExtDict['SST'][Counter] >= -2.0) & (ExtDict['SST'][Counter] <= 40.) & (ExtDict['SSTclim'][Counter] == 0)):
+	    # Get surface values using function in height correct - requires SST to be present
+	    # t0 is SST
+	    # q0 is 0.98 * q(SST)
+	    u0,t0,q0 = hc.get_surface_values(ExtDict['SST'][Counter])
+
+	    # Assume uncertainty in T is abs(T - t0) 2.
+	    UncDict['ATuncHGT'][Counter] = abs(ExtDict['ATtbc'][Counter] - t0)/2.
+	    # Same for anomaly - would be so many degrees above or below what it is?
+            UncDict['ATAuncHGT'][Counter] = abs(ExtDict['ATtbc'][Counter] - t0)/2.
+
+	    # Assume uncertainty in  is 10m diff at DALR = 0.1degC
+	    UncDict['SHUuncHGT'][Counter] = abs(ExtDict['SHUtbc'][Counter] - q0)/2.
+            UncDict['SHUAuncHGT'][Counter] = abs(ExtDict['SHUtbc'][Counter] - q0)/2.
+	    
+	    # Now apply these to the other variables;
+            # Get vapour pressure from specific humidity
+            UpperVal_vap = ch.vap_from_sh(ExtDict['SHUtbc'][Counter],ClimP,roundit=False)
+	    LowerVal_vap = ch.vap_from_sh(q0,ClimP,roundit=False) # NOT NECESSARILY A LOWER VALUE!!! LOWER IN HEIGHT
+	    UncDict['VAPuncHGT'][Counter] = abs(UpperVal_vap - LowerVal_vap)/2.
+            UncDict['VAPAuncHGT'][Counter] = abs(UpperVal_vap - LowerVal_vap)/2.
+
+            # Get dew point temperature from vapour pressure (use at too to check for wet bulb <=0)
+            UpperVal_dpt = ch.td_from_vap(UpperVal_vap,ClimP,ExtDict['ATtbc'][Counter],roundit=False)
+	    LowerVal_dpt = ch.td_from_vap(LowerVal_vap,ClimP,t0,roundit=False)
+	    UncDict['DPTuncHGT'][Counter] = abs(UpperVal_dpt - LowerVal_dpt)/2.
+            UncDict['DPTAuncHGT'][Counter] = abs(UpperVal_dpt - LowerVal_dpt)/2.
+ 
+            # Get wet bulb temperature from vapour pressure and dew point temperature and air temperature
+            UpperVal_cwb = ch.wb(UpperVal_dpt,ExtDict['ATtbc'][Counter],ClimP,roundit=False)
+	    LowerVal_cwb = ch.wb(LowerVal_dpt,t0,ClimP,roundit=False)
+	    UncDict['CWBuncHGT'][Counter] = abs(UpperVal_cwb - LowerVal_cwb)/2.
+            UncDict['CWBAuncHGT'][Counter] = abs(UpperVal_cwb - LowerVal_cwb)/2.
+ 
+            # Get relative humidity from dew point temperature and temperature
+            UpperVal_crh = ch.rh(UpperVal_dpt,ExtDict['ATtbc'][Counter],ClimP,roundit=False)
+	    LowerVal_crh = ch.rh(LowerVal_dpt,t0,ClimP,roundit=False)
+	    UncDict['CRHuncHGT'][Counter] = abs(UpperVal_crh - LowerVal_crh)/2.
+            UncDict['CRHAuncHGT'][Counter] = abs(UpperVal_crh - LowerVal_crh)/2.
+ 
+            # Get dew point depression from temperautre and dew point depression
+            UpperVal_dpd = ch.dpd(UpperVal_dpt,ExtDict['ATtbc'][Counter],roundit=False)
+	    LowerVal_dpd = ch.dpd(LowerVal_dpt,t0,roundit=False)
+	    UncDict['DPDuncHGT'][Counter] = abs(UpperVal_dpd - LowerVal_dpd)/2.
+            UncDict['DPDAuncHGT'][Counter] = abs(UpperVal_dpd - LowerVal_dpd)/2.
+	
+	# If there is no SST or its invalid then we're totally guessing
+	# Yuk - had thought about DALR/SALR for 10m but its tricky to derive through the variables
+	# Could go with a percentage but then how does that work with T?
+	# Lets go with DALR (maximum expected change in T) and then assume saturation for respective rate of change in absolute humidity
+	# So - ~7% increase in q or e for 1deg rise in t = 0.7% for 0.1 change in T
+	# This is all a bit horrible
+	else:
+	
+	    # Assume uncertainty in T is 10m diff at DALR = 0.1degC (worst case scenario)
+	    UncDict['ATuncHGT'][Counter] = 0.1
+            UncDict['ATAuncHGT'][Counter] = 0.1
+
+	    # Assume uncertainty in SHU is 10m diff at DALR = 0.1 degC although this would mean that there is no moisture and so no change in q!
+	    UncDict['SHUuncHGT'][Counter] = ExtDict['SHU'][Counter] * 0.007 # should be 0.7% of q
+            UncDict['SHUAuncHGT'][Counter] = ExtDict['SHU'][Counter] * 0.007
+
+	    # Now apply these to the other variables;
+            # Get vapour pressure from specific humidity
+            UpperVal_vap = ch.vap_from_sh(ExtDict['SHUtbc'][Counter] + UncDict['SHUuncHGT'][Counter],ClimP,roundit=False)
+	    LowerVal_vap = ch.vap_from_sh(ExtDict['SHUtbc'][Counter],ClimP,roundit=False) # NOW SHOULD BE LOWER
+	    UncDict['VAPuncHGT'][Counter] = UpperVal_vap - LowerVal_vap
+            UncDict['VAPAuncHGT'][Counter] = UpperVal_vap - LowerVal_vap
+
+            # Get dew point temperature from vapour pressure (use at too to check for wet bulb <=0)
+            UpperVal_dpt = ch.td_from_vap(UpperVal_vap,ClimP,ExtDict['ATtbc'][Counter],roundit=False)
+	    LowerVal_dpt = ch.td_from_vap(LowerVal_vap,ClimP,ExtDict['ATtbc'][Counter],roundit=False)
+	    UncDict['DPTuncHGT'][Counter] = UpperVal_dpt - LowerVal_dpt
+            UncDict['DPTAuncHGT'][Counter] = UpperVal_dpt - LowerVal_dpt
+
+            # Get wet bulb temperature from vapour pressure and dew point temperature and air temperature
+            UpperVal_cwb = ch.wb(UpperVal_dpt,ExtDict['ATtbc'][Counter],ClimP,roundit=False)
+	    LowerVal_cwb = ch.wb(LowerVal_dpt,ExtDict['ATtbc'][Counter],ClimP,roundit=False)
+	    UncDict['CWBuncHGT'][Counter] = abs(UpperVal_cwb - LowerVal_cwb) # SHOULDN'T NEED abs BUT JUST IN CASE
+            UncDict['CWBAuncHGT'][Counter] = abs(UpperVal_cwb - LowerVal_cwb)
+
+            # Get relative humidity from dew point temperature and temperature
+            UpperVal_crh = ch.rh(UpperVal_dpt,ExtDict['ATtbc'][Counter],ClimP,roundit=False)
+	    LowerVal_crh = ch.rh(LowerVal_dpt,ExtDict['ATtbc'][Counter],ClimP,roundit=False)
+	    UncDict['CRHuncHGT'][Counter] = abs(UpperVal_crh - LowerVal_crh)
+            UncDict['CRHAuncHGT'][Counter] = abs(UpperVal_crh - LowerVal_crh)
+
+            # Get dew point depression from temperautre and dew point depression
+            UpperVal_dpd = ch.dpd(UpperVal_dpt,ExtDict['ATtbc'][Counter],roundit=False)
+	    LowerVal_dpd = ch.dpd(LowerVal_dpt,ExtDict['ATtbc'][Counter],roundit=False)
+	    UncDict['DPDuncHGT'][Counter] = abs(UpperVal_dpd - LowerVal_dpd)
+            UncDict['DPDAuncHGT'][Counter] = abs(UpperVal_dpd - LowerVal_dpd)
+	    
+    
+#    print('Check the outputs: ',Counter)
+#    pdb.set_trace()
+    
+    return ExtDict,UncDict
+
+#************************************************************************************************************
+# OLDApplyHeightAdjUnc
+#************************************************************************************************************
+def OLDApplyHeightAdjUnc(ExtDict,UncDict,Counter,ClimP,ChooseLocal):
 
     '''
     ExtDict = dictionary of orig AND adjusted values
@@ -1742,286 +2481,45 @@ def ApplyMeasUnc(UncDict,Counter,ClimP):
 #************************************************************************************************************
 def ApplyRoundUnc(UncDict,ExtDict,Counter,ClimP):
     '''
-    There is a tendency for many obs, especially DPT to be recorded only to a whole number. For DPT this is most common in the early period prior to 1982 and especially prior to 1980.
+    There is a tendency for many obs, AT and DPT to be recorded only to a whole number. For DPT this is most common in the early period prior to 1982 and especially prior to 1980.
     There are many Decks with a high percentage of 0.0s (much much higher >2x) than the other decimals even in the later record though.
     We have no idea whether these are rounded, truncated, ceiling'd etc. For AT there is also a higher % of 0.5s and sometimes 0.2s and 0.8s - Fahrenheit conversion???
     
-    We have assessed tracks where 0.0s are very common and also Decks/Years.
+    We have assessed tracks where 0.0s are very common (ATround and DPTround flags) and also Decks/Years.
     
-    We can apply an uncertainty of 0.5/SQRT(3) deg C to any ob that is likely to be part of a whole number Deck/track for AT and/ or DPT.
+    We can apply an uncertainty of 0.5/SQRT(3) deg C to any ob that is likely to be part of a whole number Deck/track for AT and/ or DPT (and derived SHU, VAP)
     
-    The combined uncertainty can then be rolled out to th other variables. When both AT and DPT are rounded this error could be very large or very small though.
+    The combined uncertainty can then be rolled out to the other variables (CRH, TWB, DPD). When both AT and DPT are rounded this error could be very large or very small though.
     
     Apply UNCround uncertainty of 0.5/SQRT(3) deg C to AT / DPT if the ATround or DPTround flag is set to 1. (> 50% of trk with at least
     20 obs are .0s) 
-    OR if AT or DPT is .0 and fits into one of these YR/Deck categories: (0s = max frequency and > 1.25 * mean of others - PlotDecimalFreq_APR2016.py) 
+    OR if AT or DPT is .0 and fits into one of these YR/Deck categories: (0s = max frequency and > 2. * mean of others - PlotDecimalFreq_APR2016.py) 
     
-    ICOADS.3.0.0 based on DeckStatsROUNDDPT_1.25_I300_all_OBSclim2NBC_OCT2016.txt
-    Deck years with frequency 0s > 1.25 * mean frequency(all other decimals)
-    1973         555 666         732 735                                     888 889             926
-    1974                         732 735                                     888 889             926
-    1975                         732 735                                     888 889             926
-    1976                         732 735                                     888 889
-    1977                         732 735                                     888 889             926 927  
-    1978                         732 735     749                 849 850     888 889                 927
-    1979     254                 732 735     749                 849         888 889             926 927    
-    1980                         732 735                                     888 889 892     896 926 927
-    1981                         732 735                                     888 889 892     896 926 927
-    1982     254                 732 735                                         889 892     896 926 927
-    1983     254                 732 735                                         889 892     896 926 927
-    1984                         732 735                                         889 892     896 926 927
-    1985     254                 732 735                                         889 892     896 926 927
-    1986     254                 732 735                                     888 889 892     896 926 927	
-    1987 233 254                 732 735                                     888 889 892         926 927	
-    1988                         732 735                                     888 889 892 893 896 926
-    1989                                                                     888 889 892         926 927
-    1990                             735                                     888 889 892         926 927
-    1991                                                                     888 889 892 893     926 927
-    1992                                         781                         888 889 892 893 896 926
-    1993                                                                     888 889 892 893 896 926
-    1994                                                                     888 889 892         926 927
-    1995                                                                 874 888 889 892 893 896 926 927
-    1996                             735                                 874 888     892     896 926 927
-    1997                                                                 874 888     892     896 926 927   
-    1998                                             792 793                                     926 927
-    1999                                             792                                         926 927 992
-    2000                 700                         792                                         926 927 992
-    2001                 700 708                     792                                         926 927 992	  
-    2002                                             792                                         926 927 992 993
-    2003                     708                     792                                         926 927 992 993   
-    2004                     708                     792                                             927 992
-    2005                 700 708                     792 793                                         927 992 993    
-    2006                 700 708                     792                                             927 992
-    2007                     708         740         792 793                                         927 992 993
-    2008                 700 708                     792 793                                         927 992 993
-    2009                     708                     792                                             927 992
-    2010                     708                     792                                             927 992 993
-    2011                     708                     792                                             927 992 993
-    2012                     708                     792                                             927 992 993
-    2013                                             792                                                 992 993
-    2014                                             792     794         874                             992 993
-    2015                                             792                                                 992
-
-    233 = [187]
-    254 = [1979,1982,1983,1985,1986,1987]
-    555 = [1973]
-    666 = [1973]
-    700 = [2000,2001,2005,2006,2008]
-    708 = [2001,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012]
-    732 = [1973,1974,1975,1976,1978,1979,1980,1981,1982,1983,1984,1985,1986,1987,1988]
-    735 = [1973,1974,1975,1976,1978,1979,1980,1981,1982,1983,1984,1985,1986,1987,1988,1990,1996]
-    740 = [2007]
-    749 = [1978,1979]
-    781 = [1992]
-    792 = [1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015]
-    793 = [1998,2005,2007,2008]
-    794 = [2014]
-    849 = [1978,1979]
-    850 = [1978]
-    874 = [1995,1996,1997,2014]
-    888 = [1973,1974,1975,1976,1977,1978,1979,1980,1981,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997]
-    889 = [1973,1974,1975,1976,1977,1978,1979,1980,1981,1982,1983,1984,1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995]
-    892 = [1980,1981,1982,1983,1984,1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997]
-    893 = [1988,1991,1992,1993,1995]
-    896 = [1980,1981,1982,1983,1984,1985,1986,1988,1992,1993,1995,1996,1997]
-    926 = [1973,1974,1975,1977,1979,1980,1981,1982,1983,1984,1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003]
-    927 = [1977,1978,1979,1980,1981,1982,1983,1984,1985,1986,1987,1989,1990,1991,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012]
-    992 = [1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015]
-    993 = [2002,2003,2005,2007,2008,2010,2011,2012,2013,2014]
-
-    ICOADS.3.0.0 based on DeckStatsROUNDAT_1.25_I300_all_OBSclim2NBC_OCT2016.txt
-    Deck years with frequency 0s > 1.25 * mean frequency(all other decimals)
-    AT: 0.5s also an issue to T but ignoring that for now. 555 all 0.5 in 1973!
-    1973 128     223                 254 255         720 732                                         888 889             898 900 926 927 928 
-    1974 128     223                 254 255         720 732 735                                     888 889             898 900 926 927 928
-    1975 128     223                 254 255         720 732                                         888 889                 900 926 927 
-    1976 128     223                 254             720 732 735                                     888 889                 900 926 927 
-    1977 128     223 224             254             720 732 735                                     888 889                 900 926 927
-    1978 128     223     229         254             720 732 735 749                 849 850         888 889                 900 926 927 
-    1979         223     229         254 255         720 732 735 749                 849 850         888 889                 900 926 927 
-    1980         223     229         254             720 732 735                                     888 889 892     896         926 927
-    1981         223     229         254             720 732 735                                     888 889 892     896         926 927
-    1982                     233     254             720 732 735                                             892     896         926 927
-    1983                     233 239 254                 732         781                                     892     896         926 927
-    1984                     233     254                 732 735                                         889 892     896         926 927
-    1985                     233     254             720 732                                                 892     896         926 927
-    1986                     233 239 254                 732         781                             888     892     896         926 927
-    1987                     233 239 254                 732 735                                     888     892 893 896         926 927 
-    1988                     233 239 254                 732 735     781                             888     892 893 896         926 927
-    1989                     233 239 254                 732         781                             888 889 892 893             926 927 
-    1990                     233 239 254                 732         781                             888 889 892 893             926 927 
-    1991                         239 254                             781                             888     892 893             926 927
-    1992                     233 239 254                     735     781                             888     892 893 896         926 927 
-    1993                     233 239 254                             781                             888     892 893 896         926 927
-    1994                     233     254                                                             888     892     896         926 927
-    1995     144                                                                             874     888     892 893             926 927
-    1996                                                                                     874     888     892     896         926 927
-    1997                                                                                     874     888     892     896         926 927
-    1998                                                                 792                                                     926 927
-    1999                                                                 792                                                     926 927     992
-    2000                                     700                         792                                                     926 927     992 
-    2001                                     700                         792                                                     926 927     992 
-    2002                                     700                         792                                                     926 927     992 993
-    2003                                     700                         792                                                     926 927     992 
-    2004                                     700                         792                                                     926 927     992 
-    2005                                     700                         792 793                                                 926 927     992 993
-    2006                                     700                         792                                                     926 927     992 
-    2007                                     700                         792 793                                                 926 927     992 993
-    2008                                     700 708                     792 793                                                 926 927     992 993
-    2009                                     700                         792                                                     926 927     992 993
-    2010                                     700                         792                                                     926 927     992 993
-    2011                                     700 708                     792                                                     926 927     992 993
-    2012                                     700                         792                     875                             926 927     992 993
-    2013                                                                 792                     875                             926         992 993 
-    2014                                                                 792     794         874 875                             926         992 993
-    2015                                                                 792                                                                 992
-
-    128 = [1973,1974,1975,1976,1977,1978]
-    144 = [1995]
-    223 = [1973,1974,1975,1976,1977,1978,1979,1980,1981]
-    224 = [1977]
-    229 = [1978,1979,1980,1981]
-    233 = [1982,1983,1984,1985,1986,1987,1988,1989,1990,1992,1993,1994]
-    239 = [1983,1986,1987,1988,1989,1990,1991,1992,1993]
-    254 = [1973,1974,1975,1976,1977,1978,1979,1980,1981,1982,1983,1984,1985,1986,1987,1988,1989,1990,1991,1992,1993,1994]
-    255 = [1973,1974,1975,1979]
-    700 = [2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012]
-    708 = [2008,2011]
-    720 = [1973,1974,1975,1976,1977,1978,1979,1980,1981,1982,1985]
-    732 = [1973,1974,1975,1976,1977,1978,1979,1980,1981,1982,1983,1984,1985,1986,1987,1988,1989,1990]
-    735 = [1974,1976,1977,1978,1979,1980,1981,1982,1984, 1987,1988,1992]
-    749 = [1978,1979]
-    781 = [1983,1986,1988,1989,1990,1991,1992,1993]
-    792 = [1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015]
-    793 = [2005,2007,2008]
-    794 = [2014]
-    849 = [1978,1979]
-    850 = [1978,1979]
-    874 = [1995,1996,1997,2014]
-    875 = [2012,2013,2014]
-    888 = [1973,1974,1975,1976,1977,1978,1979,1980,1981,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997]
-    889 = [1973,1974,1975,1976,1977,1978,1979,1980,1981,1984,1989,1990]
-    892 = [1980,1981,1982,1983,1984,1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997]
-    893 = [1987,1988,1989,1990,1991,1992,1993,1995]
-    896 = [1980,1981,1982,1983,1984,1985,1986,1987,1988,1992,1993,1994,1996,1997]
-    898 = [1973,1974]
-    900 = [1973,1974,1975,1976,1977,1978,1979]
-    926 = [1973,1974,1975,1976,1977,1978,1979,1980,1981,1982,1983,1984,1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014]
-    927 = [1973,1974,1975,1976,1977,1978,1979,1980,1981,1982,1983,1984,1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012]
-    928 = [1973,1974]
-    992 = [1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015]
-    993 = [2002,2005,2007,2008,2009,2010,2011,2012,2013,2014]
+    ICOADS.3.0.0 based on DeckStatsROUNDDPT_2.0_I300_55_all_OBSclim2NBC_AUG2018.txt
+    Deck years with frequency 0s > 2.0 * mean frequency(all other decimals)
     
-    ICOADS.3.0.0 based on DeckStatsROUNDDPT_2.0_I300_all_OBSclim2NBC_OCT2016.txt
-    Deck years with frequency 0s >= 2.0 * mean frequency(all other decimals)
-    1973     555 666     732 735                 888 889
-    1974                 732 735                 888 889
-    1975                 732 735                 888 889
-    1976                 732 735                 888 889
-    1977                 732 735                 888 889
-    1978                 732 735 749     849     888 889
-    1979                 732 735         849     888 889
-    1980                 732 735                 888 889 892 896
-    1981                 732 735                 888 889 892 896
-    1982                 732 735                         892 896
-    1983                 732 735                         892 896
-    1984                 732 735                     889 892
-    1985                 732 735                     889 892
-    1986 254                 735                 888 889 892
-    1987                                         888 889 892
-    1988                                         888 889 892
-    1989                                         888 889 892
-    1990                                         888 889 892
-    1991                                         888 889 892
-    1992                                         888 889 892
-    1993                                         888 889 892 896
-    1994                                         888 889 892
-    1995                                     874 888 889 892 896     927
-    1996                                     874 888     892 896     927
-    1997                                     874 888     892 896 926 927
-    1998                             792                         926 927 
-    1999                             792                         926 927 992
-    2000                             792                             927 992
-    2001             708             792                             927 992
-    2002                             792                             927 992
-    2003             708             792                             927 992
-    2004             708             792                             927 992
-    2005             708             792                             927 992
-    2006             708             792                             927 992
-    2007             708             792                             927 992
-    2008             708             792                             927 992
-    2009             708             792                             927 992
-    2010             708             792                             927 992
-    2011             708             792                             927 992
-    2012             708             792                             927 992
-    2013                             792                                     993 
-    2014 
-    2015 
-
     DPT_dict[254] = [1986]
     DPT_dict[555] = [1973]
     DPT_dict[666] = [1973]
-    DPT_dict[708] = [2001,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012]
+    DPT_dict[708] = [2001,2003,2004,2005,2006,2007,2008,2009,2020,2011,2012]
     DPT_dict[732] = [1973,1974,1975,1976,1977,1978,1979,1980,1981,1982,1983,1984,1985]
     DPT_dict[735] = [1973,1974,1975,1976,1977,1978,1979,1980,1981,1982,1983,1984,1985,1986]
     DPT_dict[749] = [1978]
-    DPT_dict[792] = [1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013]
+    DPT_dict[792] = [1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2020,2011,2012,2013]
     DPT_dict[849] = [1978,1979]
     DPT_dict[874] = [1995,1996,1997]
-    DPT_dict[888] = [1973,1974,1975,1976,1977,1978,1979,1980,1981,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997]
-    DPT_dict[889] = [1973,1974,1975,1976,1977,1978,1979,1980,1981,1984,1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995]
-    DPT_dict[892] = [1980,1981,1982,1983,1984,1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997]
-    DPT_dict[896] = [1980,1981,1982,1983,1993,1995,1996,1997]
+    DPT_dict[888] = [1973,1974,1975,1976,1977,1978,1979,1980,1981,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997] 
+    DPT_dict[889] = [1973,1974,1975,1976,1977,1978,1979,1980,1981,1984,1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995] 
+    DPT_dict[892] = [1980,1981,1982,1983,1984,1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997] 
+    DPT_dict[896] = [1980,1981,1982,1983,1993,1995,1996,1997] 
     DPT_dict[926] = [1997,1998,1999]
-    DPT_dict[927] = [1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012]
-    DPT_dict[992] = [1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012]
+    DPT_dict[927] = [1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2020,2011,2012] 
+    DPT_dict[992] = [1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2020,2011,2012]
     DPT_dict[993] = [2013]
 
-    ICOADS.3.0.0 based on DeckStatsROUNDAT_2.0_I300_all_OBSclim2NBC_OCT2016.txt
+
+    ICOADS.3.0.0 based on DeckStatsROUNDAT_2.0_I300_55_all_OBSclim2NBC_AUG2018.txt
     Deck years with frequency 0s >= 2.0 * mean frequency(all other decimals)
-    1973 128 223             254 255     732                                 888             900 926 927
-    1974 128 223             254 255     732                                 888         898 900 926 927 928
-    1975 128 223             254 255     732                                 888             900 926 927
-    1976 128 223             254         732                                 888             900 926 927
-    1977 128 223             254         732                                 888             900 926 927
-    1978 128 223 229         254         732 749             849 850         888             900 926 927
-    1979     223 229         254 255     732 749             849 850         888             900 926 927
-    1980     223 229         254         732                                 888 892 896         926 927
-    1981     223             254         732                                 888 892 896         926 927
-    1982             233     254         732                                     892 896         926 927
-    1983             233 239 254         732                                     892 896         926 927
-    1984             233     254         732                                     892             926 927
-    1985             233     254         732                                     892             926 927
-    1986             233 239 254         732     781                         888 892             926 927
-    1987             233     254         732                                 888 892             926 927
-    1988             233     254         732     781                         888 892             926 927
-    1989             233     254         732     781                         888 892             926 927
-    1990             233 239 254         732     781                         888 892             926 927
-    1991                     254                 781                         888 892             926 927
-    1992             233     254                 781                         888 892             926 927
-    1993             233     254                 781                         888 892 896         926 927
-    1994             233     254                                             888 892 896         926 927
-    1995                                                             874     888 892             926 927
-    1996                                                             874     888 892 896         926 927
-    1997                                                             874     888 892 896         926 927
-    1998                                             792                                         926 927
-    1999                                             792                                         926 927    992
-    2000                             700             792                                         926 927    992
-    2001                             700             792                                         926 927    992
-    2002                                             792                                         926 927    992
-    2003                                             792                                         926 927    992
-    2004                                             792                                         926 927    992
-    2005                                             792                                         926 927    992
-    2006                                             792                                         926 927    992
-    2007                                             792 793                                     926 927    992
-    2008                             700             792                                         926 927    992 993
-    2009                                             792                                         926 927    992 993
-    2010                                             792                                         926 927    992 993
-    2011                                             792                                         926 927    992 993
-    2012                                             792                 875                     926 927    992 993
-    2013                                             792                 875                     926        992 993
-    2014                                             792             874 875                     926        992
-    2015                                             792                                                    992
 
     AT_dict[128] = [1973,1974,1975,1976,1977,1978]
     AT_dict[223] = [1973,1974,1975,1976,1977,1978,1979,1980,1981]
@@ -2034,7 +2532,7 @@ def ApplyRoundUnc(UncDict,ExtDict,Counter,ClimP):
     AT_dict[732] = [1973,1974,1975,1976,1977,1978,1979,1980,1981,1982,1983,1984,1985,1986,1987,1988,1989,1990]
     AT_dict[749] = [1978,1979]
     AT_dict[781] = [1986,1988,1989,1990,1991,1992,1993]
-    AT_dict[792] = [1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015]
+    AT_dict[792] = [1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017]
     AT_dict[793] = [2007]
     AT_dict[849] = [1978,1979]
     AT_dict[850] = [1978,1979]
@@ -2048,7 +2546,7 @@ def ApplyRoundUnc(UncDict,ExtDict,Counter,ClimP):
     AT_dict[926] = [1973,1974,1975,1976,1977,1978,1979,1980,1981,1982,1983,1984,1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014]
     AT_dict[927] = [1973,1974,1975,1976,1977,1978,1979,1980,1981,1982,1983,1984,1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012]
     AT_dict[928] = [1974]
-    AT_dict[992] = [1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015]
+    AT_dict[992] = [1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017]
     AT_dict[993] = [2008,2009,2010,2011,2012,2013]
     
 
@@ -2060,91 +2558,28 @@ def ApplyRoundUnc(UncDict,ExtDict,Counter,ClimP):
     
     # Set up look up table for DPT Yr/Decks THESE ARE OLD ONES FOR ICOADS.2.5.1 ERAclimNBC
     DPT_dict = dict([])
-    # >1.25
-    #DPT_dict[233] = [187]
-    #DPT_dict[254] = [1979,1982,1983,1985,1986,1987]
-    #DPT_dict[555] = [1973]
-    #DPT_dict[666] = [1973]
-    #DPT_dict[700] = [2000,2001,2005,2006,2008]
-    #DPT_dict[708] = [2001,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012]
-    #DPT_dict[732] = [1973,1974,1975,1976,1978,1979,1980,1981,1982,1983,1984,1985,1986,1987,1988]
-    #DPT_dict[735] = [1973,1974,1975,1976,1978,1979,1980,1981,1982,1983,1984,1985,1986,1987,1988,1990,1996]
-    #DPT_dict[740] = [2007]
-    #DPT_dict[749] = [1978,1979]
-    #DPT_dict[781] = [1992]
-    #DPT_dict[792] = [1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015]
-    #DPT_dict[793] = [1998,2005,2007,2008]
-    #DPT_dict[794] = [2014]
-    #DPT_dict[849] = [1978,1979]
-    #DPT_dict[850] = [1978]
-    #DPT_dict[874] = [1995,1996,1997,2014]
-    #DPT_dict[888] = [1973,1974,1975,1976,1977,1978,1979,1980,1981,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997]
-    #DPT_dict[889] = [1973,1974,1975,1976,1977,1978,1979,1980,1981,1982,1983,1984,1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995]
-    #DPT_dict[892] = [1980,1981,1982,1983,1984,1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997]
-    #DPT_dict[893] = [1988,1991,1992,1993,1995]
-    #DPT_dict[896] = [1980,1981,1982,1983,1984,1985,1986,1988,1992,1993,1995,1996,1997]
-    #DPT_dict[926] = [1973,1974,1975,1977,1979,1980,1981,1982,1983,1984,1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003]
-    #DPT_dict[927] = [1977,1978,1979,1980,1981,1982,1983,1984,1985,1986,1987,1989,1990,1991,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012]
-    #DPT_dict[992] = [1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015]
-    #DPT_dict[993] = [2002,2003,2005,2007,2008,2010,2011,2012,2013,2014]
-    # >=2.0
+    # >=2.0    
     DPT_dict[254] = [1986]
     DPT_dict[555] = [1973]
     DPT_dict[666] = [1973]
-    DPT_dict[708] = [2001,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012]
+    DPT_dict[708] = [2001,2003,2004,2005,2006,2007,2008,2009,2020,2011,2012]
     DPT_dict[732] = [1973,1974,1975,1976,1977,1978,1979,1980,1981,1982,1983,1984,1985]
     DPT_dict[735] = [1973,1974,1975,1976,1977,1978,1979,1980,1981,1982,1983,1984,1985,1986]
     DPT_dict[749] = [1978]
-    DPT_dict[792] = [1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013]
+    DPT_dict[792] = [1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2020,2011,2012,2013]
     DPT_dict[849] = [1978,1979]
     DPT_dict[874] = [1995,1996,1997]
-    DPT_dict[888] = [1973,1974,1975,1976,1977,1978,1979,1980,1981,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997]
-    DPT_dict[889] = [1973,1974,1975,1976,1977,1978,1979,1980,1981,1984,1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995]
-    DPT_dict[892] = [1980,1981,1982,1983,1984,1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997]
-    DPT_dict[896] = [1980,1981,1982,1983,1993,1995,1996,1997]
+    DPT_dict[888] = [1973,1974,1975,1976,1977,1978,1979,1980,1981,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997] 
+    DPT_dict[889] = [1973,1974,1975,1976,1977,1978,1979,1980,1981,1984,1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995] 
+    DPT_dict[892] = [1980,1981,1982,1983,1984,1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997] 
+    DPT_dict[896] = [1980,1981,1982,1983,1993,1995,1996,1997] 
     DPT_dict[926] = [1997,1998,1999]
-    DPT_dict[927] = [1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012]
-    DPT_dict[992] = [1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012]
+    DPT_dict[927] = [1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2020,2011,2012] 
+    DPT_dict[992] = [1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2020,2011,2012]
     DPT_dict[993] = [2013]
     
     # Set up look up table for AT Yr/Decks THESE ARE OLD ONES FOR ICOADS.2.5.1 ERAclimNBC
     AT_dict = dict([])
-    # >1.25
-    #AT_dict[128] = [1973,1974,1975,1976,1977,1978]
-    #AT_dict[144] = [1995]
-    #AT_dict[223] = [1973,1974,1975,1976,1977,1978,1979,1980,1981]
-    #AT_dict[224] = [1977]
-    #AT_dict[229] = [1978,1979,1980,1981]
-    #AT_dict[233] = [1982,1983,1984,1985,1986,1987,1988,1989,1990,1992,1993,1994]
-    #AT_dict[239] = [1983,1986,1987,1988,1989,1990,1991,1992,1993]
-    #AT_dict[254] = [1973,1974,1975,1976,1977,1978,1979,1980,1981,1982,1983,1984,1985,1986,1987,1988,1989,1990,1991,1992,1993,1994]
-    #AT_dict[255] = [1973,1974,1975,1979]
-    #AT_dict[700] = [2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012]
-    #AT_dict[708] = [2008,2011]
-    #AT_dict[720] = [1973,1974,1975,1976,1977,1978,1979,1980,1981,1982,1985]
-    #AT_dict[732] = [1973,1974,1975,1976,1977,1978,1979,1980,1981,1982,1983,1984,1985,1986,1987,1988,1989,1990]
-    #AT_dict[735] = [1974,1976,1977,1978,1979,1980,1981,1982,1984, 1987,1988,1992]
-    #AT_dict[749] = [1978,1979]
-    #AT_dict[781] = [1983,1986,1988,1989,1990,1991,1992,1993]
-    #AT_dict[792] = [1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015]
-    #AT_dict[793] = [2005,2007,2008]
-    #AT_dict[794] = [2014]
-    #AT_dict[849] = [1978,1979]
-    #AT_dict[850] = [1978,1979]
-    #AT_dict[874] = [1995,1996,1997,2014]
-    #AT_dict[875] = [2012,2013,2014]
-    #AT_dict[888] = [1973,1974,1975,1976,1977,1978,1979,1980,1981,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997]
-    #AT_dict[889] = [1973,1974,1975,1976,1977,1978,1979,1980,1981,1984,1989,1990]
-    #AT_dict[892] = [1980,1981,1982,1983,1984,1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997]
-    #AT_dict[893] = [1987,1988,1989,1990,1991,1992,1993,1995]
-    #AT_dict[896] = [1980,1981,1982,1983,1984,1985,1986,1987,1988,1992,1993,1994,1996,1997]
-    #AT_dict[898] = [1973,1974]
-    #AT_dict[900] = [1973,1974,1975,1976,1977,1978,1979]
-    #AT_dict[926] = [1973,1974,1975,1976,1977,1978,1979,1980,1981,1982,1983,1984,1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014]
-    #AT_dict[927] = [1973,1974,1975,1976,1977,1978,1979,1980,1981,1982,1983,1984,1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012]
-    #AT_dict[928] = [1973,1974]
-    #AT_dict[992] = [1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015]
-    #AT_dict[993] = [2002,2005,2007,2008,2009,2010,2011,2012,2013,2014]
     # >= 2.0
     AT_dict[128] = [1973,1974,1975,1976,1977,1978]
     AT_dict[223] = [1973,1974,1975,1976,1977,1978,1979,1980,1981]
@@ -2157,7 +2592,7 @@ def ApplyRoundUnc(UncDict,ExtDict,Counter,ClimP):
     AT_dict[732] = [1973,1974,1975,1976,1977,1978,1979,1980,1981,1982,1983,1984,1985,1986,1987,1988,1989,1990]
     AT_dict[749] = [1978,1979]
     AT_dict[781] = [1986,1988,1989,1990,1991,1992,1993]
-    AT_dict[792] = [1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015]
+    AT_dict[792] = [1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017]
     AT_dict[793] = [2007]
     AT_dict[849] = [1978,1979]
     AT_dict[850] = [1978,1979]
@@ -2171,7 +2606,7 @@ def ApplyRoundUnc(UncDict,ExtDict,Counter,ClimP):
     AT_dict[926] = [1973,1974,1975,1976,1977,1978,1979,1980,1981,1982,1983,1984,1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014]
     AT_dict[927] = [1973,1974,1975,1976,1977,1978,1979,1980,1981,1982,1983,1984,1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012]
     AT_dict[928] = [1974]
-    AT_dict[992] = [1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015]
+    AT_dict[992] = [1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017]
     AT_dict[993] = [2008,2009,2010,2011,2012,2013]
         
     # Look up - TEST THE ORIGINAL VALUE!!!!! - Make sure a VARuncR is set in all cases to 0.0 or 0.5
@@ -2319,11 +2754,86 @@ def ApplyRoundUnc(UncDict,ExtDict,Counter,ClimP):
         UncDict['DPDAuncR'][Counter] = RoundUnc	
        
     return UncDict
+
+#**********************************************************************************
+ ApplyClimUnc
+#************************************************************************************************************
+def ApplyClimUnc(UncDict,Counter):
+    '''
+    Obtain the climatological uncertainty for individual obs based on StDevCLIM / SQRT(NobsCLIM)
+    Work out the gridbox associated with the station lon/lat/pentad
+    Open netcdf and read in that gridbox - <var>2m_OBSclim2NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc <var>2m_stdevs
+    Assume low NobsCLIM of 10 - 
+    Calculate climatological uncertainty
+
+    '''
     
+    # Set up the directories for the climatology
+    InDirClim = '/project/hadobs2/hadisdh/marine/otherdata/'
+    
+    ClimFile = '2m_OBSclim2NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
+    
+    VarName = '2m_stdevs'
+    
+    # Which 1by1 degree gridbox do we need from 180 lats centred 89.5 to -89.5 and 360 lons centred -179.5 to 179.5
+    LatArr = np.arange(90.,-90.,-1) # an array of latitude northerly boundaries
+    LonArr = np.arange(-180.,180.,1) # an array of longitude westerly boundaries
+    
+    LatBox = len(LatArr[np.where(LatArr >= UncDict['LAT'][Counter])])-1
+    LonBox = len(LonArr[np.where(LonArr <= UncDict['LON'][Counter])])-1
+    print('LAT N and LON W: ',LatArr[LatBox],LonArr[LonBox],UncDict['LAT'][Counter],UncDict['LON'][Counter])
+    pdb.set_trace()
+    
+    # Which pentad for this month and day?
+    MonthDays = [31,28,31,30,31,30,31,31,30,31,30,31] # Don't forget Feb 29th!
+    PtArr = np.arange(0,365,5) # an array of pentad day start boundaries
+    
+    DayTotal = np.sum(MonthDays[0:(UncDict['MO'][Counter]-1)]) + UncDict['DY'][Counter] # The 'MO' is 1 to 12 so 0:1 would be 0:0 and give 0, 0:2 would be 0:1 and give 31, 0:3 would be 0:1 and give 59 etc.
+    PtBox = len(PtArr[np.where(PtArr <= DayTotal)])-1
+    print('Pentad: ',PtArr[PtBox],DayTotal,UncDict['MO'][Counter],UncDict['DY'][Counter])
+    pdb.set_trace()
+    
+    # Open each climatology file, pull out the stdev for the gridbox
+    SliceInfo = dict([('TimeSlice',[PtBox:PtBox+1]),('LatSlice',[LatBox:LatBox+1]),('LonSlice',[LonBox:LonBox+1])])
+    
+    PtStDev,LatList,LonList = ReadNCF.GetGrid4Slice(InDirClim+'t'+ClimFile,['t'+VarName],SliceInfo,['latitude'],['longitude'])
+    print('Pentad Standard Deviation: ',PtStDev, LatList,LonList)
+    pdb.set_trace()    
+    # Set the Uncertainties
+    UncDict['ATuncC'][Counter] = PtStDev / np.sqrt(10.)    
+    UncDict['ATAuncC'][Counter] = PtStDev / np.sqrt(10.)    
+
+    PtStDev,LatList,LonList = ReadNCF.GetGrid4Slice(InDirClim+'td'+ClimFile,['td'+VarName],SliceInfo,['latitude'],['longitude'])    
+    # Set the Uncertainties
+    UncDict['DPTuncC'][Counter] = PtStDev / np.sqrt(10.)    
+    UncDict['DPTAuncC'][Counter] = PtStDev / np.sqrt(10.)    
+    
+    PtStDev,LatList,LonList = ReadNCF.GetGrid4Slice(InDirClim+'q'+ClimFile,['q'+VarName],SliceInfo,['latitude'],['longitude'])    
+    # Set the Uncertainties
+    UncDict['SHUuncC'][Counter] = PtStDev / np.sqrt(10.)    
+    UncDict['SHUAuncC'][Counter] = PtStDev / np.sqrt(10.)    
+    PtStDev,LatList,LonList = ReadNCF.GetGrid4Slice(InDirClim+'e'+ClimFile,['e'+VarName],SliceInfo,['latitude'],['longitude'])    
+    # Set the Uncertainties
+    UncDict['VAPuncC'][Counter] = PtStDev / np.sqrt(10.)    
+    UncDict['VAPAuncC'][Counter] = PtStDev / np.sqrt(10.)    
+    PtStDev,LatList,LonList = ReadNCF.GetGrid4Slice(InDirClim+'rh'+ClimFile,['rh'+VarName],SliceInfo,['latitude'],['longitude'])    
+    # Set the Uncertainties
+    UncDict['CRHuncC'][Counter] = PtStDev / np.sqrt(10.)    
+    UncDict['CRHAuncC'][Counter] = PtStDev / np.sqrt(10.)    
+    PtStDev,LatList,LonList = ReadNCF.GetGrid4Slice(InDirClim+'tw'+ClimFile,['tw'+VarName],SliceInfo,['latitude'],['longitude'])    
+    # Set the Uncertainties
+    UncDict['CWBuncC'][Counter] = PtStDev / np.sqrt(10.)    
+    UncDict['CWBAuncC'][Counter] = PtStDev / np.sqrt(10.)    
+    PtStDev,LatList,LonList = ReadNCF.GetGrid4Slice(InDirClim+'dpd'+ClimFile,['dpd'+VarName],SliceInfo,['latitude'],['longitude'])    
+    # Set the Uncertainties
+    UncDict['DPDuncC'][Counter] = PtStDev / np.sqrt(10.)    
+    UncDict['DPDAuncC'][Counter] = PtStDev / np.sqrt(10.)    
+
+    return UncDict
 #**********************************************************************************
 # MAIN
 #**********************************************************************************
-
+GOT TO HERE
 def main(argv):
     # INPUT PARAMETERS AS STRINGS!!!!
     year1 = '1973' 
