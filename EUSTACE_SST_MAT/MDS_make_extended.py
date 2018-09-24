@@ -41,7 +41,11 @@
 # flags.
 
 # UNCERTAINTIES
-# ROUNDING:
+#
+# EXPRESS ALL AS 1 SIGMA (STANDARD) UNCERTAINTY - see GUM.pdf
+# These can then be presented as 2sigma (k factor of 2) which represents ~95% confidence that these uncertainties represent the true error.
+#
+# ROUNDING: Rectangular/uniform uncertainty.
 # Eindividual = 0.5/SQRT(3) = 0.29 uniform uncertainty to Td, T, q and e (1 variable) and
 # Ecombined = 1/SQRT(3) = 0.58 uniform uncertainty to RH, Tw and DPD (2 variables)
 # IF: 
@@ -97,8 +101,10 @@
 # 992: 1999 2000 2001 2002 2003 2004 2005 2006 2007 2008 2009 2010 2011 2012 2013 2014 2015 2016 2017
 # 993: 2008 2009 2010 2011 2012 2013 
 
+# SOLAR:
 # Apply UNCsolar to all observations (daytime temperatures) that have had an adjustment for solar bias
 
+# INSTRUMENT: imported standard (assumed) uncertainty
 # Apply UNCscreen to all observations that have had an adjustment for being screened/unventilated - SHIPS ONLY!!!
 # 0.2g/kg to both full and 55% adjustments - Berry and Kent 2011 show global average difference (in time and lat) to be +/-0.2 g/kg for adjusted screens vs aspirated psychrometers
 # I can't decude how to treat this (normal, uniform, triangular distribution uncertainty or as a flat 1sigma uncertainty? Following Berry adn Kent I apply it flat.
@@ -106,6 +112,7 @@
 # Start with q and work out unc as ((q_before-q_adj)/55)*100 gives the potential large adjustment which can then be the uncertainty +0.2g/kg
 # This is most likely an over estimate which ignores probability - 55% chance of it needing to be adjusted vs 45% chance of no need for adjustment 
 
+# HEIGHT: normally distributed uncertainty
 # Apply UNCheight to all observations depending on their height adjustment. 
 # There has to be some uncertainty in the calculation - rounding/precision, accuracy of formula and assumptions = lets say 10%
 # Difference between HOB/HOP/HOT generally ~1m so adjustment to 10m has an ~1m uncertainty ~10%?
@@ -120,7 +127,7 @@
 # ESTH from linear trend = 1*adj
 # no adj (platform or no resolution) = +/- 0.5(t-SST); 0.5(q-qo); 0.5u
 ### OR
-# Calc an Hmax and Hmin and assess uncertainty as ((Hmax-Hmin)/2)/SQRT(3) - uniform distribution because it could lie anywhere in between this
+# Calc an Hmax and Hmin and assess uncertainty as ((Hmax-Hmin)/2)/SQRT(9) - normal distribution because Hmin/Hmax are 1sigma of estimated height and est height is best estimate
 # In call cases (for ships) if HOA provided then HOAmax = HOA and HOAmin = HOA else HOAmax = HOAest+9m and HOAmin = HOAest-9m because stdev of HOP/HOB/HOT-HOA is 9 (HOB preferred choice for HOH).
 # See HeightMetatDataStats_ships_OBSclim2NBC_I300_55_AUG2018.xlsx for details
 # ESTH from HOB/HOT/HOP then ESTHmax = ESTH+1, ESTHmin = ESTH-1
@@ -129,13 +136,15 @@
 # ESTH from linear trend:
 #     there is a linear trend in the standard deviation of the estimate from 4.6 in 1973 to 11 in 2014 so SDmonthX = 4.6+ 0.0127*nmonths until Jan 2015
 #     ESTHmax = ESTH+SDmonthX, ESTHmin = ESTH-SDmonthX
-# no adj can be calculated  (platform or no resolution) unc = +/- 0.5(t-SST); 0.5(q-qo); 0.5u
-# If uncertainty cannot be calculated and SST is ok then = +/- 0.5(t-SST); 0.5(q-qo); 0.5u
-# else = 0.1 deg or 0.007*q 
-# If no SST and it has to be se to AT and forced to be -2 to 40 then unc = adjustment, 0.1deg or 0.007q - which ever is largest
+# no adj can be calculated  (platform or no resolution) standard unc = +/- 0.5(t-SST); 0.5(q-qo); 0.5u
+# If uncertainty cannot be calculated and SST is ok then standard unc = +/- 0.5(t-SST); 0.5(q-qo); 0.5u
+# else standard unc = 0.1 deg or 0.007*q 
+# If no SST and it has to be se to AT and forced to be -2 to 40 then stanard unc = adjustment/SQRT(9), 0.1deg or 0.007q - which ever is largest
 
+# MEASUREMENT: standard uncertainty
 # Apply UNCmeas based on assumption of errors to the dry bulb and wet bulb, converted to other variables.
 
+# CLIMATOLOGY: standard uncertainty
 # Apply UNCclim - base this on StDevCLIM / SQRT(NobsCLIM)
 # This will most likely be an underestimate because we're using gridded pentad climatologies!!!
 # Assume minimum number of obs (NobsCLIM) going into pentad monthly climatology of 10 over the 1981-2010 period because we do not have this information to hand.
@@ -209,10 +218,10 @@
 # Height Adjustments
 #  We now have two options:
 #	1) Apply adjustments based on our own metadata and assumptions
-#	  Use HOP,then HOB, then HOT - straight up use no calculation - unc = +/-1m height adjs uniform uncertainty (half-wdith/SQRT(3))
-#         If buoy assume 4m and anemometer at 5m - unc = 1*adj
-#	  If only HOA is present then use conversion from HOA to HOP (HOA-10) -  - unc = +/-9m height adjs uniform uncertainty (half-wdith/SQRT(3))
-#	  If no height info is available then use linear relationship from new assessment - 17m to 23m (Dec 2014) and beyond - unc = +/- 4.6-11m SD
+#	  Use HOP,then HOB, then HOT - straight up use no calculation - unc = +/-1m height adjs normal uncertainty (half-wdith/SQRT(9))
+#         If buoy assume 4m and anemometer at 5m - unc = 1*adj/SQRT(9)
+#	  If only HOA is present then use conversion from HOA to HOP (HOA-10) -  - unc = +/-9m height adjs uniform uncertainty (half-wdith/SQRT(9))
+#	  If no height info is available then use linear relationship from new assessment - 17m to 23m (Dec 2014) and beyond - unc = +/- 4.6-11m SD height adj /SQRT(9)
 #	  If platform do not apply adjustment - unc = T-SST/2 or (q-q0)/2 
 #	  If cannot apply adjustment (unstable calc) - unc = T-SST/2 or (q-q0)/2
 #         If unc cannot be calculated then unc = adjustment or 0.1 deg or 0.007*q - whichever is largest
@@ -1008,7 +1017,7 @@ def EstimateHeight(ExtDict,Counter):
     MnIncSD = (EdHeightSD / StHeightSD) / (((EdYr) - StYr) * 12.) # should be 0.013 - was 0.0149
         
     # meters of adjustment to apply as uncertainty depending on estimate type:
-    calc_height = 100. # default is VERY UNCERTAIN! - linear trend height and buoys - will be treated as either linear trend in SD or 100% unc for Buoys
+    buoy_height = 100. # default is VERY UNCERTAIN! - linear trend height and buoys - will be treated as either linear trend in SD or 100% unc for Buoys
     actual_height = 1. # actual height - has 1m mean difference between HOP/HOB/HOT
     estimated_height =  9. # estimated height from HOA (ship) has 9m standard deviation
     no_adjustment = 999 # either its a platform or an adjustment can't be applied
@@ -1021,7 +1030,7 @@ def EstimateHeight(ExtDict,Counter):
             # Fill in (append) the Estimated Height accordingly
 	    EstHeightH = float(PBuoy)
 	    EstHeightA = float(PBuoyHOA) # http://www.ndbc.noaa.gov/bht.shtml
-	    EstUnc = calc_height
+	    EstUnc = buoy_height
 	    # These won't be used for buoys so it shouldn't matter what they are!!!
 	    MaxEstHeightH = float(PBuoy)
 	    MaxEstHeightA = float(PBuoyHOA) # http://www.ndbc.noaa.gov/bht.shtml
@@ -1073,24 +1082,27 @@ def EstimateHeight(ExtDict,Counter):
 	    if (ExtDict['YR'][Counter] >= EdYr):
 	        # Fill in (append) the Estimated Height accordingly
 	        EstHeightH = float(EdHeight)
-	        EstUnc = calc_height
 	        MaxEstHeightH = EstHeightH+EdHeightSD
 	        MinEstHeightH = EstHeightH-EdHeightSD
+	        #EstUnc = calc_height
+	        EstUnc = EdHeightSD
             # if YR < 1973 then apply fixed height StHeight
 	    elif (ExtDict['YR'][Counter] < StYr): # There aren't any years before this but maybe in the future?    
 	        # Fill in (append) the Estimated Height accordingly
 	        EstHeightH = float(StHeight)
-	        EstUnc = calc_height
 	        MaxEstHeightH = EstHeightH+StHeightSD
 	        MinEstHeightH = EstHeightH-StHeightSD
+	        #EstUnc = calc_height
+	        EstUnc = StHeightSD
 	    # Work out StHeight+MnInc depending on YR and MN
 	    else:
 	        NMonths = ((ExtDict['YR'][Counter] - StYr) * 12) + ExtDict['MO'][Counter]
 	        # Fill in (append) the Estimated Height accordingly
 	        EstHeightH = float(StHeight + (NMonths * MnInc))
-	        EstUnc = calc_height
 	        MaxEstHeightH = EstHeightH+float(StHeightSD + (NMonths * MnIncSD))
 	        MinEstHeightH = EstHeightH-float(StHeightSD + (NMonths * MnIncSD))
+	        #EstUnc = calc_height
+	        EstUnc = float(StHeightSD + (NMonths * MnIncSD))
 
         # Check if HOA exists and is greater than 2m, if it does not then HOA = ESTH+10
         if (ExtDict['HOA'][Counter] > 2.):
@@ -1106,8 +1118,8 @@ def EstimateHeight(ExtDict,Counter):
     # Test output
     print('Platform: ',ExtDict['PT'][Counter])
     print('HOB/HOT/HOP/HOA: ',ExtDict['HOB'][Counter],ExtDict['HOT'][Counter],ExtDict['HOP'][Counter],ExtDict['HOA'][Counter])
-    print('ESTH/HOA/UNC: ',EstHeightH, EstHeightA, EstUnc,MaxEstHeightH,MinEstHeightH,MaxEstHeightA,MinEstHeightA)
-    pdb.set_trace()
+    print('ESTH/HOA/UNC/MAXH/MINH/MAXA/MINA: ',EstHeightH, EstHeightA, EstUnc,MaxEstHeightH,MinEstHeightH,MaxEstHeightA,MinEstHeightA)
+    #pdb.set_trace()
 
     return EstHeightH,EstHeightA,EstUnc,MaxEstHeightH,MaxEstHeightA,MinEstHeightH,MinEstHeightA,
 #************************************************************************************************************
@@ -1221,7 +1233,7 @@ def ApplyHeightAdjUnc(ExtDict,UncDict,Counter,ClimP,ChooseLocal):
     
     IF SST is missing or invalid and we have to use AT or forced limits (-2.0, 40) to height adjust.
     Or if uncertainty cannot be calculated (ships):
-    then unc = adjustment or 0.1 deg, 0.007*q WHICHEVER IS LARGEST!!!
+    then unc = adjustment/sqrt(9) or 0.1 deg, 0.007*q WHICHEVER IS LARGEST!!!
     
     HeightCorrect.py 
     Use height info, 
@@ -1241,7 +1253,7 @@ def ApplyHeightAdjUnc(ExtDict,UncDict,Counter,ClimP,ChooseLocal):
      - For obs with estimated from linear function - use 90% of adjustment + 10% 
      - For platforms or non-calculable adjustments - use (T-SST)/2., (q-q0)/2
      - ACTUALLY I'M GOING WITH THE FOLLOWING FOR NOW WHICH SEEMS A LITTLE MORE SCIENTIFIC
-     # Calc an Hmax and Hmin and assess uncertainty as ((Hmax-Hmin)/2)/SQRT(3) - UNIFORM!!! distribution because it could lie anywhere in between this
+     # Calc an Hmax and Hmin and assess uncertainty as ((Hmax-Hmin)/2)/SQRT(9) - NORMAL!!! distribution because estimate is best guess and unc assessed over 1 SD height
      # In call cases (for ships) if HOA provided then HOAmax = HOA and HOAmin = HOA else HOAmax = HOAest+9m and HOAmin = HOAest-9m because stdev of HOP/HOB/HOT-HOA is 9 (HOB preferred choice for HOH).
      # See HeightMetatDataStats_ships_OBSclim2NBC_I300_55_AUG2018.xlsx for details
      # ESTH from HOB/HOT/HOP then ESTHmax = ESTH+1, ESTHmin = ESTH-1
@@ -1252,7 +1264,7 @@ def ApplyHeightAdjUnc(ExtDict,UncDict,Counter,ClimP,ChooseLocal):
      #     ESTHmax = ESTH+SDmonthX, ESTHmin = ESTH-SDmonthX
      # no adj can be calculated (platform or no resolution) unc = +/- 0.5(t-SST); 0.5(q-qo); 0.5u
      # If unc cannot be calculated and SST ok then unc = +/- 0.5(t-SST); 0.5(q-qo); 0.5u else unc = 0.1 deg or 0.007*q
-     If SST is estimated from AT and forced to be -2 to 40 then unc = adjustent, 0.1deg or 0.007q - whichever is largest
+     If SST is estimated from AT and forced to be -2 to 40 then unc = adjustent/sqrt(9), 0.1deg or 0.007q - whichever is largest
           
      Looks like HOB and HOT and HOP are not identical - but there is really not much in it.
      HOP mean = 20.9, sd = 7.60, HOB mean = 21.7, sd = 10.4, HOT mean = 22.7, sd = 8.96. Differences and equations relating to HOA and HOP are different.
@@ -1268,7 +1280,7 @@ def ApplyHeightAdjUnc(ExtDict,UncDict,Counter,ClimP,ChooseLocal):
  
     # If ChooseLocal == 'local' then call EstimateHeight to get height and unc info
     if (ChooseLocal == 'local'):
-        EstHeightH,EstHeightA,EstUnc,MaxEstHeightH,MinEstHeightH,MaxEstHeightA,MinEstHeightA = EstimateHeight(ExtDict,Counter)
+        EstHeightH,EstHeightA,EstUnc,MaxEstHeightH,MaxEstHeightA,MinEstHeightH,MinEstHeightA = EstimateHeight(ExtDict,Counter)
 	ExtDict['ESTH'].append(EstHeightH)
 	UncDict['ESTH'].append(EstHeightH)
 	HOA = EstHeightA
@@ -1287,6 +1299,24 @@ def ApplyHeightAdjUnc(ExtDict,UncDict,Counter,ClimP,ChooseLocal):
         print('No ChooseLocal/LocalType info!')
 	pdb.set_trace()
        
+    # Initialise uncertainty values as 0.0 - these will be reset using [Counter] later depending on platform, height estimate and SST presence  
+    # They should only be 0.0 if no height adjustment is applied because ESTH = 10m 
+    # This will be because supplied height is 10 or HOA is 20. There may be more uncertainty if ESTH is from HOA-10 but we have not captured this.
+    UncDict['ATuncHGT'].append(0.0)
+    UncDict['ATAuncHGT'].append(0.0)
+    UncDict['DPTuncHGT'].append(0.0)
+    UncDict['DPTAuncHGT'].append(0.0)
+    UncDict['SHUuncHGT'].append(0.0)
+    UncDict['SHUAuncHGT'].append(0.0)
+    UncDict['VAPuncHGT'].append(0.0)
+    UncDict['VAPAuncHGT'].append(0.0)
+    UncDict['CRHuncHGT'].append(0.0)
+    UncDict['CRHAuncHGT'].append(0.0)
+    UncDict['CWBuncHGT'].append(0.0)
+    UncDict['CWBAuncHGT'].append(0.0)
+    UncDict['DPDuncHGT'].append(0.0)
+    UncDict['DPDAuncHGT'].append(0.0)
+       
     # NOW obtain the height correction for AT and SHU (USING SST, U, ClimP and ESTH) and also for the other variables
     # Do not need to pull through the HeightDict so use _
  
@@ -1296,6 +1326,8 @@ def ApplyHeightAdjUnc(ExtDict,UncDict,Counter,ClimP,ChooseLocal):
     # Only apply if not dealing with platforms! (will be removed next time around) OR ESTH is already 10m!!!
     if ((ExtDict['ESTH'][Counter] < 999) & (ExtDict['ESTH'][Counter] != 10)):
     
+        print('There is an estimated height that is not 10m')
+    
         # First test for a valid SST (not missing or failing clim/freeze QC)
 	# Note the < -2.0 will catch both missing values -32768 and freezing flags
 	# If it is missing or invalid then use AT
@@ -1304,8 +1336,11 @@ def ApplyHeightAdjUnc(ExtDict,UncDict,Counter,ClimP,ChooseLocal):
 	# Regardless - change unc to no_adjustment which means a large uncertainty will be applied
 	if ((ExtDict['SST'][Counter] < -2.0) | (ExtDict['SST'][Counter] > 40.) | \
 	     (ExtDict['SSTclim'][Counter] > 0)): # 1 = fail, 8 = not applied 
+	     	     
 	    MySSTtbc = ExtDict['ATtbc'][Counter]
 	    MySSTorig = ExtDict['AT'][Counter]
+
+	    print('There is no valid SST so use AT (TBC/ORIG): ',MySSTtbc, MySSTorig) 
 	    
 	    # Now double check this is still valid
 	    if (MySSTtbc < -2.0):
@@ -1326,6 +1361,8 @@ def ApplyHeightAdjUnc(ExtDict,UncDict,Counter,ClimP,ChooseLocal):
 	else:
 	    MySSTtbc = ExtDict['SST'][Counter]	
 	    MySSTorig = ExtDict['SST'][Counter]	
+	    
+	    print('There is an SST (TBC/ORIG): ',MySSTtbc,MySSTorig)
 	
         # We're most interested in the combined bias corrections but we're assessing combined and HGT only seperately
 	# This means that we could potentially have an adjustment value for one but it may fail for the other
@@ -1356,7 +1393,9 @@ def ApplyHeightAdjUnc(ExtDict,UncDict,Counter,ClimP,ChooseLocal):
         # In other cases where AT is >>40 but SST ~8 (e.g. April 1974 ob 118659) we have at_10m>100! We can't have that!
 	# There is a check that at_10m > -80 and < 65.
 	# NOTE all uncertainties are set based on tbc as these are then used to create total uncertainty
-        if (AdjDict['at_10m'] > -99.):					      
+        if (AdjDict['at_10m'] > -99.):
+	
+	    print('There is a valid T adjustment (tbc/adj): ',ExtDict['ATtbc'][Counter],AdjDict['at_10m'])					      
    
             # Copy the values before applying the changes - as its only a pointer we shouldn't need to copy - DOUBLE CHECK THIS!!!
 	    t_orig = ExtDict['ATtbc'][Counter]
@@ -1372,58 +1411,44 @@ def ApplyHeightAdjUnc(ExtDict,UncDict,Counter,ClimP,ChooseLocal):
 #            print('SENSIBLE TBC VALUES: ',AdjDict)
 	    ATdiff = ExtDict['ATtbc'][Counter] - AdjDict['at_10m']
 	    ExtDict['ATAtbc'][Counter] = ExtDict['ATAtbc'][Counter] - ATdiff
-            UncDict['ATuncHGT'].append(abs(ATdiff) * unc_estimate)
-            UncDict['ATAuncHGT'].append(UncDict['ATuncHGT'][Counter])
             ExtDict['ATtbc'][Counter] = AdjDict['at_10m']
 	    DPTdiff = ExtDict['DPTtbc'][Counter] - AdjDict['dpt_10m']
             ExtDict['DPTAtbc'][Counter] = ExtDict['DPTAtbc'][Counter] - DPTdiff
-            UncDict['DPTuncHGT'].append(abs(DPTdiff) * unc_estimate)
-            UncDict['DPTAuncHGT'].append(UncDict['DPTuncHGT'][Counter])
             ExtDict['DPTtbc'][Counter] = AdjDict['dpt_10m']
 	    SHUdiff = ExtDict['SHUtbc'][Counter] - AdjDict['shu_10m']
             ExtDict['SHUAtbc'][Counter] = ExtDict['SHUAtbc'][Counter] - SHUdiff
-            UncDict['SHUuncHGT'].append(abs(SHUdiff) * unc_estimate)
-            UncDict['SHUAuncHGT'].append(UncDict['SHUuncHGT'][Counter])
             ExtDict['SHUtbc'][Counter] = AdjDict['shu_10m']
 	    VAPdiff = ExtDict['VAPtbc'][Counter] - AdjDict['vap_10m']
             ExtDict['VAPAtbc'][Counter] = ExtDict['VAPAtbc'][Counter] - VAPdiff
-            UncDict['VAPuncHGT'].append(abs(VAPdiff) * unc_estimate)
-            UncDict['VAPAuncHGT'].append(UncDict['VAPuncHGT'][Counter])
             ExtDict['VAPtbc'][Counter] = AdjDict['vap_10m']
 	    CRHdiff = ExtDict['CRHtbc'][Counter] - AdjDict['crh_10m']
             ExtDict['CRHAtbc'][Counter] = ExtDict['CRHAtbc'][Counter] - CRHdiff
-            UncDict['CRHuncHGT'].append(abs(CRHdiff) * unc_estimate)
-            UncDict['CRHAuncHGT'].append(UncDict['CRHuncHGT'][Counter])
             ExtDict['CRHtbc'][Counter] = AdjDict['crh_10m']
 	    CWBdiff = ExtDict['CWBtbc'][Counter] - AdjDict['cwb_10m']
             ExtDict['CWBAtbc'][Counter] = ExtDict['CWBAtbc'][Counter] - CWBdiff
-            UncDict['CWBuncHGT'].append(abs(CWBdiff) * unc_estimate)
-            UncDict['CWBAuncHGT'].append(UncDict['CWBuncHGT'][Counter])
             ExtDict['CWBtbc'][Counter] = AdjDict['cwb_10m']
 	    DPDdiff = ExtDict['DPDtbc'][Counter] - AdjDict['dpd_10m']
             ExtDict['DPDAtbc'][Counter] = ExtDict['DPDAtbc'][Counter] - DPDdiff
-            UncDict['DPDuncHGT'].append(abs(DPDdiff) * unc_estimate)
-            UncDict['DPDAuncHGT'].append(UncDict['DPDuncHGT'][Counter])
             ExtDict['DPDtbc'][Counter] = AdjDict['dpd_10m']    
-
 
 # AUG 2018 NOW WORK ON UNCERTAINTY ESTIMATES
 	    
 	    # If this is a noSST_estimate scenario (noSST_estimate == True)
+	    # OR if this is a buoy (unc_estimate == 100.)
 	    # then check uncertainty is the larger
 	    # of either adjustment magnitude or 0.1 deg, 0.007*q
 	    # Uncertainty will have already been set based on ESTH type
 	    # NOTE UNCERTAINTIES ARE ALREADY SET SO USE COUNTER RATHER THAN APPEND!!!
-	    if (noSST_estimate):
+	    if (noSST_estimate) | (unc_estimate == 100.):
 	    
-#	        print('SILLY SST: ',ExtDict['SST'][Counter],ExtDict['SSTclim'][Counter],MySSTtbc, MySSTorig)
+	        print('SILLY SST OR Buoy: ',ExtDict['SST'][Counter],ExtDict['SSTclim'][Counter],MySSTtbc, MySSTorig)
 	        
 		# Test AT
-		if (abs(ATdiff) >= 0.1):    
+		if (abs(ATdiff)/np.sqrt(9.) >= 0.1):    
 	            
 		    # Apply adjustment magnitude as uncertainty in T 
-	            UncDict['ATuncHGT'][Counter] = abs(ATdiff)
-                    UncDict['ATAuncHGT'][Counter] = abs(ATdiff)
+	            UncDict['ATuncHGT'][Counter] = abs(ATdiff)/np.sqrt(9.)
+                    UncDict['ATAuncHGT'][Counter] = abs(ATdiff)/np.sqrt(9.)
 		
 		else:
 
@@ -1433,11 +1458,11 @@ def ApplyHeightAdjUnc(ExtDict,UncDict,Counter,ClimP,ChooseLocal):
 		
 		    
 		# Test SHUuncHGT
-		if (abs(SHUdiff) >= (ExtDict['SHUtbc'][Counter] * 0.007)):
+		if (abs(SHUdiff)/np.sqrt(9.) >= (ExtDict['SHUtbc'][Counter] * 0.007)):
 		    
 		    # Apply adjustment magnitude as uncertainty in SHU 
-	            UncDict['SHUuncHGT'][Counter] = abs(SHUdiff)
-                    UncDict['SHUAuncHGT'][Counter] = abs(SHUdiff)
+	            UncDict['SHUuncHGT'][Counter] = abs(SHUdiff)/np.sqrt(9.)
+                    UncDict['SHUAuncHGT'][Counter] = abs(SHUdiff)/np.sqrt(9.)
 
                 else:
 
@@ -1478,60 +1503,65 @@ def ApplyHeightAdjUnc(ExtDict,UncDict,Counter,ClimP,ChooseLocal):
 
 # If there is a valid SST then we need to calculate the MaxAdjDict adn MinAdjDict to work out uncertainty          
             else:
-                MaxdAdjDict,_ = hc.run_heightcorrection_final(MySSTtbc,
+                MaxAdjDict,_ = hc.run_heightcorrection_final(MySSTtbc,
                                                   t_orig,
 					          q_orig,
 					          ExtDict['W'][Counter],
 					          MaxEstHeightA,
 					          MaxEstHeightH,
 					          MaxEstHeightH,
-					          dpt=dpt_orig,
-					          vap=vap_orig,
+					          dpt=td_orig,
+					          vap=e_orig,
 					          crh=rh_orig,
 					          cwb=tw_orig,
 					          dpd=dpd_orig,
 					          climp=ClimP)
 
-                MindAdjDict,_ = hc.run_heightcorrection_final(MySSTtbc,
+                MinAdjDict,_ = hc.run_heightcorrection_final(MySSTtbc,
                                                   t_orig,
 					          q_orig,
 					          ExtDict['W'][Counter],
 					          MinEstHeightA,
 					          MinEstHeightH,
 					          MinEstHeightH,
-					          dpt=dpt_orig,
-					          vap=vap_orig,
+					          dpt=td_orig,
+					          vap=e_orig,
 					          crh=rh_orig,
 					          cwb=tw_orig,
 					          dpd=dpd_orig,
 					          climp=ClimP)
 
-                 # Now check we have sensible values and compute (range/2)/SQRT(3)
-                 if ((MaxAdjDict['at_10m'] > -99.) & (MinAdjDict['at_10m'] > -99.)):					      
-                     UncDict['ATuncHGT'].append((abs(MaxAdjDict['at_10m']  - MinAdjDict['at_10m'])/2.)/np.sqrt(3))
-                     UncDict['ATAuncHGT'].append(UncDict['ATuncHGT'][Counter])
-                     UncDict['DPTuncHGT'].append((abs(MaxAdjDict['dpt_10m']  - MinAdjDict['dpt_10m'])/2.)/np.sqrt(3))
-                     UncDict['DPTAuncHGT'].append(UncDict['DPTuncHGT'][Counter])
-                     UncDict['SHUuncHGT'].append((abs(MaxAdjDict['shu_10m']  - MinAdjDict['shu_10m'])/2.)/np.sqrt(3))
-                     UncDict['SHUAuncHGT'].append(UncDict['SHUuncHGT'][Counter])
-                     UncDict['VAPuncHGT'].append((abs(MaxAdjDict['vap_10m']  - MinAdjDict['vap_10m'])/2.)/np.sqrt(3))
-                     UncDict['VAPAuncHGT'].append(UncDict['VAPuncHGT'][Counter])
-                     UncDict['CRHuncHGT'].append((abs(MaxAdjDict['crh_10m']  - MinAdjDict['crh_10m'])/2.)/np.sqrt(3))
-                     UncDict['CRHAuncHGT'].append(UncDict['CRHuncHGT'][Counter])
-                     UncDict['CWBuncHGT'].append((abs(MaxAdjDict['cwb_10m']  - MinAdjDict['cwb_10m'])/2.)/np.sqrt(3))
-                     UncDict['CWBAuncHGT'].append(UncDict['CWBuncHGT'][Counter])
-                     UncDict['DPDuncHGT'].append((abs(MaxAdjDict['dpd_10m']  - MinAdjDict['dpd_10m'])/2.)/np.sqrt(3))
-                     UncDict['DPDAuncHGT'].append(UncDict['DPDuncHGT'][Counter])
-		     print('Check HGT unc: ',MaxAdjDict['at_10m'],MinAdjDict['at_10m'],
-		                         abs(MaxAdjDict['at_10m']  - MinAdjDict['at_10m']),
-					 (abs(MaxAdjDict['at_10m']  - MinAdjDict['at_10m'])/2.),
-					 (abs(MaxAdjDict['at_10m']  - MinAdjDict['at_10m'])/2.)/np.sqrt(3))
-		     pdb.set_trace()
+                # Now check we have sensible values and compute (range/2)/SQRT(3)
+                if ((MaxAdjDict['at_10m'] > -99.) & (MinAdjDict['at_10m'] > -99.)):
+		
+		    print('There are valid MAX/MIN adj estimates to calculate uncertainty')
+		    					      
+                    UncDict['ATuncHGT'][Counter] = (abs(MaxAdjDict['at_10m']  - MinAdjDict['at_10m'])/2.)/np.sqrt(9.)
+                    UncDict['ATAuncHGT'][Counter] = UncDict['ATuncHGT'][Counter]
+                    UncDict['DPTuncHGT'][Counter] = (abs(MaxAdjDict['dpt_10m']  - MinAdjDict['dpt_10m'])/2.)/np.sqrt(9.)
+                    UncDict['DPTAuncHGT'][Counter] = UncDict['DPTuncHGT'][Counter]
+                    UncDict['SHUuncHGT'][Counter] = (abs(MaxAdjDict['shu_10m']  - MinAdjDict['shu_10m'])/2.)/np.sqrt(9.)
+                    UncDict['SHUAuncHGT'][Counter] = UncDict['SHUuncHGT'][Counter]
+                    UncDict['VAPuncHGT'][Counter] = (abs(MaxAdjDict['vap_10m']  - MinAdjDict['vap_10m'])/2.)/np.sqrt(9.)
+                    UncDict['VAPAuncHGT'][Counter] = UncDict['VAPuncHGT'][Counter]
+                    UncDict['CRHuncHGT'][Counter] = (abs(MaxAdjDict['crh_10m']  - MinAdjDict['crh_10m'])/2.)/np.sqrt(9.)
+                    UncDict['CRHAuncHGT'][Counter] = UncDict['CRHuncHGT'][Counter]
+                    UncDict['CWBuncHGT'][Counter] = (abs(MaxAdjDict['cwb_10m']  - MinAdjDict['cwb_10m'])/2.)/np.sqrt(9.)
+                    UncDict['CWBAuncHGT'][Counter] = UncDict['CWBuncHGT'][Counter]
+                    UncDict['DPDuncHGT'][Counter] = (abs(MaxAdjDict['dpd_10m']  - MinAdjDict['dpd_10m'])/2.)/np.sqrt(9.)
+                    UncDict['DPDAuncHGT'][Counter] = UncDict['DPDuncHGT'][Counter]
+#		    print('Check HGT unc: ',MaxAdjDict['at_10m'],MinAdjDict['at_10m'],
+#		                         abs(MaxAdjDict['at_10m']  - MinAdjDict['at_10m']),
+#					 (abs(MaxAdjDict['at_10m']  - MinAdjDict['at_10m'])/2.),
+#					 (abs(MaxAdjDict['at_10m']  - MinAdjDict['at_10m'])/2.)/np.sqrt(9.))
+#		    pdb.set_trace()
 		 
 		 
-		 # If we don't have sensible values then set unc_estimate to 999 so that these get set later!!!
-		 else:
-		     unc_estimate = 999
+		# If we don't have sensible values then set unc_estimate to 999 so that these get set later!!!
+		else:
+		    unc_estimate = 999
+		    
+		    print('There are NO valid MAX/MIN adj estimates to calculate uncertainty')
 
 	    # So we have a 'good' value for tbc so now we should try calculating for hc (HGT only)
             # Do this for the ORIGINAL values
@@ -1560,7 +1590,7 @@ def ApplyHeightAdjUnc(ExtDict,UncDict,Counter,ClimP,ChooseLocal):
 	    # There is a check that at_10m > -80 and < 65.
             if (AdjDict['at_10m'] > -99.):
 
-#                print('SENSIBLE ORIG VALUES: ',AdjDict)
+                print('SENSIBLE ORIG VALUES ')
 
                 # Then append the new adjusted variables, apply to the anomalies - NO uncertainty estimate to hc only!!! only assessing for tbc!!!
                 ExtDict['AThc'].append(AdjDict['at_10m'])
@@ -1579,7 +1609,7 @@ def ApplyHeightAdjUnc(ExtDict,UncDict,Counter,ClimP,ChooseLocal):
                 ExtDict['DPDAhc'].append(ExtDict['DPDA'][Counter] - (ExtDict['DPD'][Counter] - AdjDict['dpd_10m']))
             else:
 	    
-#                print('SILLY ORIG VALUES')
+                print('SILLY ORIG VALUES')
 	        #pdb.set_trace()
 
                 # Then append the original variables, apply to the anomalies 
@@ -1600,12 +1630,12 @@ def ApplyHeightAdjUnc(ExtDict,UncDict,Counter,ClimP,ChooseLocal):
 	    
         else:
                
-#	    print('SILLY TBC VALUES')
+	    print('SILLY TBC VALUES')
 	    #pdb.set_trace()
             
 	    # If no adjustment can be applied then still apply uncertainty in value. 
 	    # Do this along with other instances of no_adjustment 
-	    unc_estimate = no_adjustment
+	    unc_estimate = no_adjustment # this is 999
 	    
 	    # No need to do anything to the tbc avlues - there is no change from the previous process
 	    # We do need to set the hc values to the original variables though.
@@ -1624,24 +1654,27 @@ def ApplyHeightAdjUnc(ExtDict,UncDict,Counter,ClimP,ChooseLocal):
             ExtDict['DPDhc'].append(ExtDict['DPD'][Counter])
             ExtDict['DPDAhc'].append(ExtDict['DPDA'][Counter])
 
-	    # Set uncertainties to 0.0 to catch the ESTH == 10 case. These are then overwritten below in the case of unc_estimate == 999
-            UncDict['ATuncHGT'].append(0.0)
-            UncDict['ATAuncHGT'].append(0.0)
-            UncDict['DPTuncHGT'].append(0.0)
-            UncDict['DPTAuncHGT'].append(0.0)
-            UncDict['SHUuncHGT'].append(0.0)
-            UncDict['SHUAuncHGT'].append(0.0)
-            UncDict['VAPuncHGT'].append(0.0)
-            UncDict['VAPAuncHGT'].append(0.0)
-            UncDict['CRHuncHGT'].append(0.0)
-            UncDict['CRHAuncHGT'].append(0.0)
-            UncDict['CWBuncHGT'].append(0.0)
-            UncDict['CWBAuncHGT'].append(0.0)
-            UncDict['DPDuncHGT'].append(0.0)
-            UncDict['DPDAuncHGT'].append(0.0)
+#	    # Set uncertainties to 0.0 to catch the ESTH == 10 case. These are then overwritten below in the case of unc_estimate == 999
+#            UncDict['ATuncHGT'].append(0.0)
+#            UncDict['ATAuncHGT'].append(0.0)
+#            UncDict['DPTuncHGT'].append(0.0)
+#            UncDict['DPTAuncHGT'].append(0.0)
+#            UncDict['SHUuncHGT'].append(0.0)
+#            UncDict['SHUAuncHGT'].append(0.0)
+#            UncDict['VAPuncHGT'].append(0.0)
+#            UncDict['VAPAuncHGT'].append(0.0)
+#            UncDict['CRHuncHGT'].append(0.0)
+#            UncDict['CRHAuncHGT'].append(0.0)
+#            UncDict['CWBuncHGT'].append(0.0)
+#            UncDict['CWBAuncHGT'].append(0.0)
+#            UncDict['DPDuncHGT'].append(0.0)
+#            UncDict['DPDAuncHGT'].append(0.0)
         
     # If ESTH is 999 then its a platform or if its 10 then its already at desired height so we're not applying any adjustments and need to pass values as they are to ExtDict	    
     else:	    
+    
+        print('Either platform is platform or ESTH is 10')
+    
         ExtDict['AThc'].append(ExtDict['AT'][Counter])
         ExtDict['ATAhc'].append(ExtDict['ATA'][Counter])
         ExtDict['DPThc'].append(ExtDict['DPT'][Counter])
@@ -1657,30 +1690,36 @@ def ApplyHeightAdjUnc(ExtDict,UncDict,Counter,ClimP,ChooseLocal):
         ExtDict['DPDhc'].append(ExtDict['DPD'][Counter])
         ExtDict['DPDAhc'].append(ExtDict['DPDA'][Counter])
 	
-	# Set uncertainties to 0.0 to catch the ESTH == 10 case. These are then overwritten below in the case of unc_estimate == 999
-        UncDict['ATuncHGT'].append(0.0)
-        UncDict['ATAuncHGT'].append(0.0)
-        UncDict['DPTuncHGT'].append(0.0)
-        UncDict['DPTAuncHGT'].append(0.0)
-        UncDict['SHUuncHGT'].append(0.0)
-        UncDict['SHUAuncHGT'].append(0.0)
-        UncDict['VAPuncHGT'].append(0.0)
-        UncDict['VAPAuncHGT'].append(0.0)
-        UncDict['CRHuncHGT'].append(0.0)
-        UncDict['CRHAuncHGT'].append(0.0)
-        UncDict['CWBuncHGT'].append(0.0)
-        UncDict['CWBAuncHGT'].append(0.0)
-        UncDict['DPDuncHGT'].append(0.0)
-        UncDict['DPDAuncHGT'].append(0.0)
+#	# Set uncertainties to 0.0 to catch the ESTH == 10 case. These are then overwritten below in the case of unc_estimate == 999
+#        UncDict['ATuncHGT'].append(0.0)
+#        UncDict['ATAuncHGT'].append(0.0)
+#        UncDict['DPTuncHGT'].append(0.0)
+#        UncDict['DPTAuncHGT'].append(0.0)
+#        UncDict['SHUuncHGT'].append(0.0)
+#        UncDict['SHUAuncHGT'].append(0.0)
+#        UncDict['VAPuncHGT'].append(0.0)
+#        UncDict['VAPAuncHGT'].append(0.0)
+#        UncDict['CRHuncHGT'].append(0.0)
+#        UncDict['CRHAuncHGT'].append(0.0)
+#        UncDict['CWBuncHGT'].append(0.0)
+#        UncDict['CWBAuncHGT'].append(0.0)
+#        UncDict['DPDuncHGT'].append(0.0)
+#        UncDict['DPDAuncHGT'].append(0.0)
 
     # Now get uncertainty estimates in the case where no adjustment has been applied (platform or unresolved equation)
-    if (unc_estimate == 999):	  
+    if (unc_estimate == 999):
+    
+        print('Unable to set uncertainty based on adjustment')
+    	  
         # This is a convoluted application of abs(T-SST)/2. and abs(q-q0)/2. rolled out to all variables  
         # If there is no SST then we cannot get difference between surface values
 	# - assume unc in T of worst case scenario DALR 0.1deg C (change in 10m height)
 	
 	# If SST is present and valid then do the ob-surface / 2 thing
 	if ((ExtDict['SST'][Counter] >= -2.0) & (ExtDict['SST'][Counter] <= 40.) & (ExtDict['SSTclim'][Counter] == 0)):
+	
+	    print('Valid SST so base this on physics')
+	
 	    # Get surface values using function in height correct - requires SST to be present
 	    # t0 is SST
 	    # q0 is 0.98 * q(SST)
@@ -1733,6 +1772,8 @@ def ApplyHeightAdjUnc(ExtDict,UncDict,Counter,ClimP,ChooseLocal):
 	# So - ~7% increase in q or e for 1deg rise in t = 0.7% for 0.1 change in T
 	# This is all a bit horrible
 	else:
+	
+	    print('No valid SST so make a complete guess')
 	
 	    # Assume uncertainty in T is 10m diff at DALR = 0.1degC (worst case scenario)
 	    UncDict['ATuncHGT'][Counter] = 0.1
@@ -2756,7 +2797,7 @@ def ApplyRoundUnc(UncDict,ExtDict,Counter,ClimP):
     return UncDict
 
 #**********************************************************************************
- ApplyClimUnc
+# ApplyClimUnc
 #************************************************************************************************************
 def ApplyClimUnc(UncDict,Counter):
     '''
@@ -2781,8 +2822,8 @@ def ApplyClimUnc(UncDict,Counter):
     
     LatBox = len(LatArr[np.where(LatArr >= UncDict['LAT'][Counter])])-1
     LonBox = len(LonArr[np.where(LonArr <= UncDict['LON'][Counter])])-1
-    print('LAT N and LON W: ',LatArr[LatBox],LonArr[LonBox],UncDict['LAT'][Counter],UncDict['LON'][Counter])
-    pdb.set_trace()
+#    print('LAT N and LON W: ',LatArr[LatBox],LonArr[LonBox],UncDict['LAT'][Counter],UncDict['LON'][Counter])
+    #pdb.set_trace()
     
     # Which pentad for this month and day?
     MonthDays = [31,28,31,30,31,30,31,31,30,31,30,31] # Don't forget Feb 29th!
@@ -2790,50 +2831,52 @@ def ApplyClimUnc(UncDict,Counter):
     
     DayTotal = np.sum(MonthDays[0:(UncDict['MO'][Counter]-1)]) + UncDict['DY'][Counter] # The 'MO' is 1 to 12 so 0:1 would be 0:0 and give 0, 0:2 would be 0:1 and give 31, 0:3 would be 0:1 and give 59 etc.
     PtBox = len(PtArr[np.where(PtArr <= DayTotal)])-1
-    print('Pentad: ',PtArr[PtBox],DayTotal,UncDict['MO'][Counter],UncDict['DY'][Counter])
-    pdb.set_trace()
+#    print('Pentad: ',PtArr[PtBox],DayTotal,UncDict['MO'][Counter],UncDict['DY'][Counter])
+    #pdb.set_trace()
     
     # Open each climatology file, pull out the stdev for the gridbox
-    SliceInfo = dict([('TimeSlice',[PtBox:PtBox+1]),('LatSlice',[LatBox:LatBox+1]),('LonSlice',[LonBox:LonBox+1])])
+    SliceInfo = dict([('TimeSlice',[PtBox,PtBox+1]),('LatSlice',[LatBox,LatBox+1]),('LonSlice',[LonBox,LonBox+1])])
     
     PtStDev,LatList,LonList = ReadNCF.GetGrid4Slice(InDirClim+'t'+ClimFile,['t'+VarName],SliceInfo,['latitude'],['longitude'])
-    print('Pentad Standard Deviation: ',PtStDev, LatList,LonList)
-    pdb.set_trace()    
+#    print('Pentad Standard Deviation: ',PtStDev, LatList,LonList)
+    #pdb.set_trace()    
     # Set the Uncertainties
-    UncDict['ATuncC'][Counter] = PtStDev / np.sqrt(10.)    
-    UncDict['ATAuncC'][Counter] = PtStDev / np.sqrt(10.)    
-
+    # SORT OUT THE [[[sd]]] issue as it really needs to be a scalar
+    #PtStDevA = np.reshape(PtStDev[[[0]]],1)
+    UncDict['ATuncC'].append(np.squeeze(PtStDev) / np.sqrt(10.))    
+    UncDict['ATAuncC'].append(np.squeeze(PtStDev) / np.sqrt(10.))   
+    #pdb.set_trace()
+    
     PtStDev,LatList,LonList = ReadNCF.GetGrid4Slice(InDirClim+'td'+ClimFile,['td'+VarName],SliceInfo,['latitude'],['longitude'])    
     # Set the Uncertainties
-    UncDict['DPTuncC'][Counter] = PtStDev / np.sqrt(10.)    
-    UncDict['DPTAuncC'][Counter] = PtStDev / np.sqrt(10.)    
+    UncDict['DPTuncC'].append(np.squeeze(PtStDev) / np.sqrt(10.))  
+    UncDict['DPTAuncC'].append(np.squeeze(PtStDev) / np.sqrt(10.))    
     
     PtStDev,LatList,LonList = ReadNCF.GetGrid4Slice(InDirClim+'q'+ClimFile,['q'+VarName],SliceInfo,['latitude'],['longitude'])    
     # Set the Uncertainties
-    UncDict['SHUuncC'][Counter] = PtStDev / np.sqrt(10.)    
-    UncDict['SHUAuncC'][Counter] = PtStDev / np.sqrt(10.)    
+    UncDict['SHUuncC'].append(np.squeeze(PtStDev) / np.sqrt(10.))    
+    UncDict['SHUAuncC'].append(np.squeeze(PtStDev) / np.sqrt(10.))     
     PtStDev,LatList,LonList = ReadNCF.GetGrid4Slice(InDirClim+'e'+ClimFile,['e'+VarName],SliceInfo,['latitude'],['longitude'])    
     # Set the Uncertainties
-    UncDict['VAPuncC'][Counter] = PtStDev / np.sqrt(10.)    
-    UncDict['VAPAuncC'][Counter] = PtStDev / np.sqrt(10.)    
+    UncDict['VAPuncC'].append(np.squeeze(PtStDev) / np.sqrt(10.))     
+    UncDict['VAPAuncC'].append(np.squeeze(PtStDev) / np.sqrt(10.))     
     PtStDev,LatList,LonList = ReadNCF.GetGrid4Slice(InDirClim+'rh'+ClimFile,['rh'+VarName],SliceInfo,['latitude'],['longitude'])    
     # Set the Uncertainties
-    UncDict['CRHuncC'][Counter] = PtStDev / np.sqrt(10.)    
-    UncDict['CRHAuncC'][Counter] = PtStDev / np.sqrt(10.)    
+    UncDict['CRHuncC'].append(np.squeeze(PtStDev) / np.sqrt(10.))     
+    UncDict['CRHAuncC'].append(np.squeeze(PtStDev) / np.sqrt(10.))     
     PtStDev,LatList,LonList = ReadNCF.GetGrid4Slice(InDirClim+'tw'+ClimFile,['tw'+VarName],SliceInfo,['latitude'],['longitude'])    
     # Set the Uncertainties
-    UncDict['CWBuncC'][Counter] = PtStDev / np.sqrt(10.)    
-    UncDict['CWBAuncC'][Counter] = PtStDev / np.sqrt(10.)    
+    UncDict['CWBuncC'].append(np.squeeze(PtStDev) / np.sqrt(10.))     
+    UncDict['CWBAuncC'].append(np.squeeze(PtStDev) / np.sqrt(10.))    
     PtStDev,LatList,LonList = ReadNCF.GetGrid4Slice(InDirClim+'dpd'+ClimFile,['dpd'+VarName],SliceInfo,['latitude'],['longitude'])    
     # Set the Uncertainties
-    UncDict['DPDuncC'][Counter] = PtStDev / np.sqrt(10.)    
-    UncDict['DPDAuncC'][Counter] = PtStDev / np.sqrt(10.)    
+    UncDict['DPDuncC'].append(np.squeeze(PtStDev) / np.sqrt(10.))    
+    UncDict['DPDAuncC'].append(np.squeeze(PtStDev) / np.sqrt(10.))    
 
     return UncDict
 #**********************************************************************************
 # MAIN
 #**********************************************************************************
-GOT TO HERE
 def main(argv):
     # INPUT PARAMETERS AS STRINGS!!!!
     year1 = '1973' 
@@ -2906,6 +2949,17 @@ def main(argv):
             # Loop through each ob
 	    for oo in range(nobs):
 	        
+#		TestNum = 1005 # 94048 1980 01 has <0.01 q HGT uncertainty 
+#		if (oo < TestNum):
+#		    TheExtDict,TheUncDict = FillABad(TheExtDict,TheUncDict,oo)
+#		    continue
+#		    
+#		elif (oo > TestNum):
+#		    print('Stopping to prevent any output saving')
+#		    pdb.set_trace()
+#		
+#		print(oo)
+		
 		# FIRST CHECK THE OB IS VALID OR IT WILL SCREW UP THINGS BIG TIME.
 		# THESE BAD OBS SHOULD BE REMOVED DURING QC (AND WILL BE IN FUTURE RUNS!!!)
 		# e.g., Jan 1982 ob 44450 AT =99.5
@@ -2936,53 +2990,42 @@ def main(argv):
 #		print(TheExtDict['SHU'][oo],TheExtDict['SHUslr'][oo],TheExtDict['SHUtbc'][oo],TheUncDict['SHUuncSLR'][oo])
 #		print(TheExtDict['SHUA'][oo],TheExtDict['SHUAslr'][oo],TheExtDict['SHUAtbc'][oo],TheUncDict['SHUAuncSLR'][oo])
 
-                # Obtain exposure information from EOH or EOT or estimate exposure - assume Buoys and platforma are unventilated screens, 
-		# Could use the Josey et al., 1999 apply 30% of adjustment to ships with no info to represent that ~3rd of obs are not ventilated.
-		# HOWEVER, assessment of I300 looks more lik 55% of all obs with EOH info are poorly ventilated
-                # Apply 3.4% q adjustment to all obs with a screened/unventilated exposure and a 55% of 3.4% to obs with no exposure or
-                # estimated exposure and convert across other humidity variables. DO this to orig and solar corrected obs.
-		# Apply a catch for 2015 where ALL metadata drops out to avoid big jump in adjustment - grow (3.4*0.55)*1.14
-		# This is the ratio of 2014 mean adjustment (with metadata) / 2015 mean adjustment (no metadata)
-		# Apply to VARscn and add to VARtbc
+                # Screen bias adjustments
                 TheExtDict,TheUncDict = ApplyScreenAdjUnc(TheExtDict,TheUncDict,oo,ClimP)
 		# TEST
-#		if (TheExtDict['ESTE'][oo] == 'U55'):
-#		    print("Test Output SCN: ",oo, TheExtDict['ESTE'][oo])
-#		    print('Original SLR SCN TBC uncSCN')
-#		    print('SHU: ',TheExtDict['SHU'][oo],TheExtDict['SHUslr'][oo],TheExtDict['SHUscn'][oo],TheExtDict['SHUtbc'][oo],TheUncDict['SHUuncSCN'][oo])
-#		    print('SHUA: ',TheExtDict['SHUA'][oo],TheExtDict['SHUAslr'][oo],TheExtDict['SHUAscn'][oo],TheExtDict['SHUAtbc'][oo],TheUncDict['SHUAuncSCN'][oo])
-#		    print('CRH: ',TheExtDict['CRH'][oo],TheExtDict['CRHslr'][oo],TheExtDict['CRHscn'][oo],TheExtDict['CRHtbc'][oo],TheUncDict['CRHuncSCN'][oo])
-#		    print('CRHA: ',TheExtDict['CRHA'][oo],TheExtDict['CRHAslr'][oo],TheExtDict['CRHAscn'][oo],TheExtDict['CRHAtbc'][oo],TheUncDict['CRHAuncSCN'][oo])
-#		    print('DPT: ',TheExtDict['DPT'][oo],TheExtDict['DPTslr'][oo],TheExtDict['DPTscn'][oo],TheExtDict['DPTtbc'][oo],TheUncDict['DPTuncSCN'][oo])
-#		    print('DPTA: ',TheExtDict['DPTA'][oo],TheExtDict['DPTAslr'][oo],TheExtDict['DPTAscn'][oo],TheExtDict['DPTAtbc'][oo],TheUncDict['DPTAuncSCN'][oo])
-#	            pdb.set_trace()
+		if (TheExtDict['ESTE'][oo] == 'U55'):
+		    print("Test Output SCN: ",oo, TheExtDict['ESTE'][oo])
+		    print('Original SLR SCN TBC uncSCN')
+		    print('SHU: ',TheExtDict['SHU'][oo],TheExtDict['SHUslr'][oo],TheExtDict['SHUscn'][oo],TheExtDict['SHUtbc'][oo],TheUncDict['SHUuncSCN'][oo])
+		    print('SHUA: ',TheExtDict['SHUA'][oo],TheExtDict['SHUAslr'][oo],TheExtDict['SHUAscn'][oo],TheExtDict['SHUAtbc'][oo],TheUncDict['SHUAuncSCN'][oo])
+		    print('CRH: ',TheExtDict['CRH'][oo],TheExtDict['CRHslr'][oo],TheExtDict['CRHscn'][oo],TheExtDict['CRHtbc'][oo],TheUncDict['CRHuncSCN'][oo])
+		    print('CRHA: ',TheExtDict['CRHA'][oo],TheExtDict['CRHAslr'][oo],TheExtDict['CRHAscn'][oo],TheExtDict['CRHAtbc'][oo],TheUncDict['CRHAuncSCN'][oo])
+		    print('DPT: ',TheExtDict['DPT'][oo],TheExtDict['DPTslr'][oo],TheExtDict['DPTscn'][oo],TheExtDict['DPTtbc'][oo],TheUncDict['DPTuncSCN'][oo])
+		    print('DPTA: ',TheExtDict['DPTA'][oo],TheExtDict['DPTAslr'][oo],TheExtDict['DPTAscn'][oo],TheExtDict['DPTAtbc'][oo],TheUncDict['DPTAuncSCN'][oo])
+	            #pdb.set_trace()
 
-                # Obtain height info from HOB/HOT or estimate height from HOP (almost the same!??? - linear equation) or estimate height from 
-                # HOA (linear equation) or estimate height based on platform (ship = 16 to 24 scaling linearly every month between ~16m in 
-                # 1973 to ~24m by 2006 (Kent et al., 2007 in: Berry and Kent, 2011), buoy = assume 4m instrument height (howmany?, platform 
-                # = 30m?)
-                # Use height info, SST (or AT), SLP (or climP), u (or 0.5m if < 0.5, ~3 if missing?) to create an estimated height adjusted 
-                # value. Do this to orig and solar/screen corrected obs.
-		# Apply to VARhc and add to VARtbc
+                # Height bias adjustments
 #		if (oo == 2512):
 #		    print(TheExtDict['SST'][oo],TheExtDict['AT'][oo],TheExtDict['SHU'][oo],TheExtDict['W'][oo],TheExtDict['HOA'][oo],TheExtDict['HOB'][oo],TheExtDict['HOT'][oo],TheExtDict['DPT'][oo],TheExtDict['VAP'][oo],TheExtDict['CRH'][oo],TheExtDict['CWB'][oo],TheExtDict['DPD'][oo],ClimP)
 #		    print(TheExtDict['SST'][oo],TheExtDict['ATtbc'][oo],TheExtDict['SHUtbc'][oo],TheExtDict['W'][oo],TheExtDict['HOA'][oo],TheExtDict['HOB'][oo],TheExtDict['HOT'][oo],TheExtDict['DPTtbc'][oo],TheExtDict['VAPtbc'][oo],TheExtDict['CRHtbc'][oo],TheExtDict['CWBtbc'][oo],TheExtDict['DPDtbc'][oo],ClimP)
 #                    pdb.set_trace()
 		TheExtDict,TheUncDict = ApplyHeightAdjUnc(TheExtDict,TheUncDict,oo,ClimP,LocalType)
 		# TEST
-#		print("Test Output HGT: ",oo)
-#		print('Original SLR SCN HGT TBC uncHGT')
-#		print('SHU: ',TheExtDict['SHU'][oo],TheExtDict['SHUslr'][oo],TheExtDict['SHUscn'][oo],TheExtDict['SHUhc'][oo],TheExtDict['SHUtbc'][oo],TheUncDict['SHUuncHGT'][oo])
-#		print('SHUA: ',TheExtDict['SHUA'][oo],TheExtDict['SHUAslr'][oo],TheExtDict['SHUAscn'][oo],TheExtDict['SHUAhc'][oo],TheExtDict['SHUAtbc'][oo],TheUncDict['SHUAuncHGT'][oo])
-#		print('CRH: ',TheExtDict['CRH'][oo],TheExtDict['CRHslr'][oo],TheExtDict['CRHscn'][oo],TheExtDict['CRHhc'][oo],TheExtDict['CRHtbc'][oo],TheUncDict['CRHuncHGT'][oo])
-#		print('CRHA: ',TheExtDict['CRHA'][oo],TheExtDict['CRHAslr'][oo],TheExtDict['CRHAscn'][oo],TheExtDict['CRHAhc'][oo],TheExtDict['CRHAtbc'][oo],TheUncDict['CRHAuncHGT'][oo])
-#		print('DPT: ',TheExtDict['DPT'][oo],TheExtDict['DPTslr'][oo],TheExtDict['DPTscn'][oo],TheExtDict['DPThc'][oo],TheExtDict['DPTtbc'][oo],TheUncDict['DPTuncHGT'][oo])
-#		print('DPTA: ',TheExtDict['DPTA'][oo],TheExtDict['DPTAslr'][oo],TheExtDict['DPTAscn'][oo],TheExtDict['DPTAhc'][oo],TheExtDict['DPTAtbc'][oo],TheUncDict['DPTAuncHGT'][oo])
-#		print('AT: ',TheExtDict['AT'][oo],TheExtDict['ATslr'][oo],TheExtDict['ATscn'][oo],TheExtDict['AThc'][oo],TheExtDict['ATtbc'][oo],TheUncDict['ATuncHGT'][oo])
-#		print('ATA: ',TheExtDict['ATA'][oo],TheExtDict['ATAslr'][oo],TheExtDict['ATAscn'][oo],TheExtDict['ATAhc'][oo],TheExtDict['ATAtbc'][oo],TheUncDict['ATAuncHGT'][oo])
-#	        if ((TheUncDict['SHUuncHGT'][oo] == 0.0) & (TheExtDict['ESTH'][oo] != 10)): # could test AT but when there isn't an SST SST is set to AT so no height adjustment will be made to AT
-#		# This was triggered when HOH was actually 10m so no adjustment was applied and therefore no uncertainty!
-#		    pdb.set_trace()
+		print("Test Output HGT: ",oo)
+		print('Original SLR SCN HGT TBC uncHGT')
+		print('SHU: ',TheExtDict['SHU'][oo],TheExtDict['SHUslr'][oo],TheExtDict['SHUscn'][oo],TheExtDict['SHUhc'][oo],TheExtDict['SHUtbc'][oo],TheUncDict['SHUuncHGT'][oo])
+		print('SHUA: ',TheExtDict['SHUA'][oo],TheExtDict['SHUAslr'][oo],TheExtDict['SHUAscn'][oo],TheExtDict['SHUAhc'][oo],TheExtDict['SHUAtbc'][oo],TheUncDict['SHUAuncHGT'][oo])
+		print('CRH: ',TheExtDict['CRH'][oo],TheExtDict['CRHslr'][oo],TheExtDict['CRHscn'][oo],TheExtDict['CRHhc'][oo],TheExtDict['CRHtbc'][oo],TheUncDict['CRHuncHGT'][oo])
+		print('CRHA: ',TheExtDict['CRHA'][oo],TheExtDict['CRHAslr'][oo],TheExtDict['CRHAscn'][oo],TheExtDict['CRHAhc'][oo],TheExtDict['CRHAtbc'][oo],TheUncDict['CRHAuncHGT'][oo])
+		print('DPT: ',TheExtDict['DPT'][oo],TheExtDict['DPTslr'][oo],TheExtDict['DPTscn'][oo],TheExtDict['DPThc'][oo],TheExtDict['DPTtbc'][oo],TheUncDict['DPTuncHGT'][oo])
+		print('DPTA: ',TheExtDict['DPTA'][oo],TheExtDict['DPTAslr'][oo],TheExtDict['DPTAscn'][oo],TheExtDict['DPTAhc'][oo],TheExtDict['DPTAtbc'][oo],TheUncDict['DPTAuncHGT'][oo])
+		print('AT: ',TheExtDict['AT'][oo],TheExtDict['ATslr'][oo],TheExtDict['ATscn'][oo],TheExtDict['AThc'][oo],TheExtDict['ATtbc'][oo],TheUncDict['ATuncHGT'][oo])
+		print('ATA: ',TheExtDict['ATA'][oo],TheExtDict['ATAslr'][oo],TheExtDict['ATAscn'][oo],TheExtDict['ATAhc'][oo],TheExtDict['ATAtbc'][oo],TheUncDict['ATAuncHGT'][oo])
+	        #pdb.set_trace()
+		if ((TheUncDict['SHUuncHGT'][oo] == 0.0) & (TheExtDict['ESTH'][oo] != 10)): # could test AT but when there isn't an SST SST is set to AT so no height adjustment will be made to AT
+		# This was triggered when HOH was actually 10m so no adjustment was applied and therefore no uncertainty!
+		    print('Odd HGT unc?')
+		    pdb.set_trace()
 		
 		# Now that we have applied all of the bias corrections append the completed VARtbc from ExtDict into those in UncDict
 		TheUncDict['ATtbc'].append(TheExtDict['ATtbc'][oo])
@@ -3018,30 +3061,41 @@ def main(argv):
 #		print('AT DPT SHU VAP CRH CWB DPD')
 #		print(TheUncDict['ATuncR'][oo],TheUncDict['DPTuncR'][oo],TheUncDict['SHUuncR'][oo],TheUncDict['VAPuncR'][oo],TheUncDict['CRHuncR'][oo],TheUncDict['CWBuncR'][oo],TheUncDict['DPDuncR'][oo])
 #		print(TheUncDict['ATAuncR'][oo],TheUncDict['DPTAuncR'][oo],TheUncDict['SHUAuncR'][oo],TheUncDict['VAPAuncR'][oo],TheUncDict['CRHAuncR'][oo],TheUncDict['CWBAuncR'][oo],TheUncDict['DPDAuncR'][oo])
+                #pdb.set_trace()
 #	        if (TheUncDict['SHUuncR'][oo] > 0.0):
 #		    pdb.set_trace()
+
+		# Climatology Uncertainty
+		TheUncDict = ApplyClimUnc(TheUncDict,oo)		
+		# TEST
+#		print("Test Output uncC: ",oo)
+#		print('AT DPT SHU VAP CRH CWB DPD')
+#		print(TheUncDict['ATuncC'][oo],TheUncDict['DPTuncC'][oo],TheUncDict['SHUuncC'][oo],TheUncDict['VAPuncC'][oo],TheUncDict['CRHuncC'][oo],TheUncDict['CWBuncC'][oo],TheUncDict['DPDuncC'][oo])
+#		print(TheUncDict['ATAuncC'][oo],TheUncDict['DPTAuncC'][oo],TheUncDict['SHUAuncC'][oo],TheUncDict['VAPAuncC'][oo],TheUncDict['CRHAuncC'][oo],TheUncDict['CWBAuncC'][oo],TheUncDict['DPDAuncC'][oo])
+		#pdb.set_trace()
 		
 		# Combine the uncertainties assuming uncorrelated WRONG WRONG WRONG DIDILLY WRONG WRONG
-		TheUncDict['ATuncT'].append(np.sqrt(TheUncDict['ATuncSLR'][oo]**2 + TheUncDict['ATuncSCN'][oo]**2 + TheUncDict['ATuncHGT'][oo]**2 + TheUncDict['ATuncR'][oo]**2 + TheUncDict['ATuncM'][oo]**2))
-		TheUncDict['ATAuncT'].append(np.sqrt(TheUncDict['ATAuncSLR'][oo]**2 + TheUncDict['ATAuncSCN'][oo]**2 + TheUncDict['ATAuncHGT'][oo]**2 + TheUncDict['ATAuncR'][oo]**2 + TheUncDict['ATAuncM'][oo]**2))
-		TheUncDict['DPTuncT'].append(np.sqrt(TheUncDict['DPTuncSLR'][oo]**2 + TheUncDict['DPTuncSCN'][oo]**2 + TheUncDict['DPTuncHGT'][oo]**2 + TheUncDict['DPTuncR'][oo]**2 + TheUncDict['DPTuncM'][oo]**2))
-		TheUncDict['DPTAuncT'].append(np.sqrt(TheUncDict['DPTAuncSLR'][oo]**2 + TheUncDict['DPTAuncSCN'][oo]**2 + TheUncDict['DPTAuncHGT'][oo]**2 + TheUncDict['DPTAuncR'][oo]**2 + TheUncDict['DPTAuncM'][oo]**2))
-		TheUncDict['SHUuncT'].append(np.sqrt(TheUncDict['SHUuncSLR'][oo]**2 + TheUncDict['SHUuncSCN'][oo]**2 + TheUncDict['SHUuncHGT'][oo]**2 + TheUncDict['SHUuncR'][oo]**2 + TheUncDict['SHUuncM'][oo]**2))
-		TheUncDict['SHUAuncT'].append(np.sqrt(TheUncDict['SHUAuncSLR'][oo]**2 + TheUncDict['SHUAuncSCN'][oo]**2 + TheUncDict['SHUAuncHGT'][oo]**2 + TheUncDict['SHUAuncR'][oo]**2 + TheUncDict['SHUAuncM'][oo]**2))
-		TheUncDict['VAPuncT'].append(np.sqrt(TheUncDict['VAPuncSLR'][oo]**2 + TheUncDict['VAPuncSCN'][oo]**2 + TheUncDict['VAPuncHGT'][oo]**2 + TheUncDict['VAPuncR'][oo]**2 + TheUncDict['VAPuncM'][oo]**2))
-		TheUncDict['VAPAuncT'].append(np.sqrt(TheUncDict['VAPAuncSLR'][oo]**2 + TheUncDict['VAPAuncSCN'][oo]**2 + TheUncDict['VAPAuncHGT'][oo]**2 + TheUncDict['VAPAuncR'][oo]**2 + TheUncDict['VAPAuncM'][oo]**2))
-		TheUncDict['CRHuncT'].append(np.sqrt(TheUncDict['CRHuncSLR'][oo]**2 + TheUncDict['CRHuncSCN'][oo]**2 + TheUncDict['CRHuncHGT'][oo]**2 + TheUncDict['CRHuncR'][oo]**2 + TheUncDict['CRHuncM'][oo]**2))
-		TheUncDict['CRHAuncT'].append(np.sqrt(TheUncDict['CRHAuncSLR'][oo]**2 + TheUncDict['CRHAuncSCN'][oo]**2 + TheUncDict['CRHAuncHGT'][oo]**2 + TheUncDict['CRHAuncR'][oo]**2 + TheUncDict['CRHAuncM'][oo]**2))
-		TheUncDict['CWBuncT'].append(np.sqrt(TheUncDict['CWBuncSLR'][oo]**2 + TheUncDict['CWBuncSCN'][oo]**2 + TheUncDict['CWBuncHGT'][oo]**2 + TheUncDict['CWBuncR'][oo]**2 + TheUncDict['CWBuncM'][oo]**2))
-		TheUncDict['CWBAuncT'].append(np.sqrt(TheUncDict['CWBAuncSLR'][oo]**2 + TheUncDict['CWBAuncSCN'][oo]**2 + TheUncDict['CWBAuncHGT'][oo]**2 + TheUncDict['CWBAuncR'][oo]**2 + TheUncDict['CWBAuncM'][oo]**2))
-		TheUncDict['DPDuncT'].append(np.sqrt(TheUncDict['DPDuncSLR'][oo]**2 + TheUncDict['DPDuncSCN'][oo]**2 + TheUncDict['DPDuncHGT'][oo]**2 + TheUncDict['DPDuncR'][oo]**2 + TheUncDict['DPDuncM'][oo]**2))
-		TheUncDict['DPDAuncT'].append(np.sqrt(TheUncDict['DPDAuncSLR'][oo]**2 + TheUncDict['DPDAuncSCN'][oo]**2 + TheUncDict['DPDAuncHGT'][oo]**2 + TheUncDict['DPDAuncR'][oo]**2 + TheUncDict['DPDAuncM'][oo]**2))
+		TheUncDict['ATuncT'].append(np.sqrt(TheUncDict['ATuncSLR'][oo]**2 + TheUncDict['ATuncSCN'][oo]**2 + TheUncDict['ATuncHGT'][oo]**2 + TheUncDict['ATuncR'][oo]**2 + TheUncDict['ATuncM'][oo]**2 + TheUncDict['ATuncC'][oo]**2))
+		TheUncDict['ATAuncT'].append(np.sqrt(TheUncDict['ATAuncSLR'][oo]**2 + TheUncDict['ATAuncSCN'][oo]**2 + TheUncDict['ATAuncHGT'][oo]**2 + TheUncDict['ATAuncR'][oo]**2 + TheUncDict['ATAuncM'][oo]**2 + TheUncDict['ATAuncC'][oo]**2))
+		TheUncDict['DPTuncT'].append(np.sqrt(TheUncDict['DPTuncSLR'][oo]**2 + TheUncDict['DPTuncSCN'][oo]**2 + TheUncDict['DPTuncHGT'][oo]**2 + TheUncDict['DPTuncR'][oo]**2 + TheUncDict['DPTuncM'][oo]**2+ TheUncDict['DPTuncC'][oo]**2))
+		TheUncDict['DPTAuncT'].append(np.sqrt(TheUncDict['DPTAuncSLR'][oo]**2 + TheUncDict['DPTAuncSCN'][oo]**2 + TheUncDict['DPTAuncHGT'][oo]**2 + TheUncDict['DPTAuncR'][oo]**2 + TheUncDict['DPTAuncM'][oo]**2 + TheUncDict['DPTAuncC'][oo]**2))
+		TheUncDict['SHUuncT'].append(np.sqrt(TheUncDict['SHUuncSLR'][oo]**2 + TheUncDict['SHUuncSCN'][oo]**2 + TheUncDict['SHUuncHGT'][oo]**2 + TheUncDict['SHUuncR'][oo]**2 + TheUncDict['SHUuncM'][oo]**2 + TheUncDict['SHUuncC'][oo]**2))
+		TheUncDict['SHUAuncT'].append(np.sqrt(TheUncDict['SHUAuncSLR'][oo]**2 + TheUncDict['SHUAuncSCN'][oo]**2 + TheUncDict['SHUAuncHGT'][oo]**2 + TheUncDict['SHUAuncR'][oo]**2 + TheUncDict['SHUAuncM'][oo]**2 + TheUncDict['SHUuncC'][oo]**2))
+		TheUncDict['VAPuncT'].append(np.sqrt(TheUncDict['VAPuncSLR'][oo]**2 + TheUncDict['VAPuncSCN'][oo]**2 + TheUncDict['VAPuncHGT'][oo]**2 + TheUncDict['VAPuncR'][oo]**2 + TheUncDict['VAPuncM'][oo]**2 + TheUncDict['VAPuncC'][oo]**2))
+		TheUncDict['VAPAuncT'].append(np.sqrt(TheUncDict['VAPAuncSLR'][oo]**2 + TheUncDict['VAPAuncSCN'][oo]**2 + TheUncDict['VAPAuncHGT'][oo]**2 + TheUncDict['VAPAuncR'][oo]**2 + TheUncDict['VAPAuncM'][oo]**2 + TheUncDict['VAPAuncC'][oo]**2))
+		TheUncDict['CRHuncT'].append(np.sqrt(TheUncDict['CRHuncSLR'][oo]**2 + TheUncDict['CRHuncSCN'][oo]**2 + TheUncDict['CRHuncHGT'][oo]**2 + TheUncDict['CRHuncR'][oo]**2 + TheUncDict['CRHuncM'][oo]**2 + TheUncDict['CRHuncC'][oo]**2))
+		TheUncDict['CRHAuncT'].append(np.sqrt(TheUncDict['CRHAuncSLR'][oo]**2 + TheUncDict['CRHAuncSCN'][oo]**2 + TheUncDict['CRHAuncHGT'][oo]**2 + TheUncDict['CRHAuncR'][oo]**2 + TheUncDict['CRHAuncM'][oo]**2 + TheUncDict['CRHAuncC'][oo]**2))
+		TheUncDict['CWBuncT'].append(np.sqrt(TheUncDict['CWBuncSLR'][oo]**2 + TheUncDict['CWBuncSCN'][oo]**2 + TheUncDict['CWBuncHGT'][oo]**2 + TheUncDict['CWBuncR'][oo]**2 + TheUncDict['CWBuncM'][oo]**2 + TheUncDict['CWBuncC'][oo]**2))
+		TheUncDict['CWBAuncT'].append(np.sqrt(TheUncDict['CWBAuncSLR'][oo]**2 + TheUncDict['CWBAuncSCN'][oo]**2 + TheUncDict['CWBAuncHGT'][oo]**2 + TheUncDict['CWBAuncR'][oo]**2 + TheUncDict['CWBAuncM'][oo]**2 + TheUncDict['CWBAuncC'][oo]**2))
+		TheUncDict['DPDuncT'].append(np.sqrt(TheUncDict['DPDuncSLR'][oo]**2 + TheUncDict['DPDuncSCN'][oo]**2 + TheUncDict['DPDuncHGT'][oo]**2 + TheUncDict['DPDuncR'][oo]**2 + TheUncDict['DPDuncM'][oo]**2 + TheUncDict['DPDuncC'][oo]**2))
+		TheUncDict['DPDAuncT'].append(np.sqrt(TheUncDict['DPDAuncSLR'][oo]**2 + TheUncDict['DPDAuncSCN'][oo]**2 + TheUncDict['DPDAuncHGT'][oo]**2 + TheUncDict['DPDAuncR'][oo]**2 + TheUncDict['DPDAuncM'][oo]**2 + TheUncDict['DPDAuncC'][oo]**2))
 		# TEST
-#		print("Test Output uncT: ",oo)
-#		print('AT DPT SHU VAP CRH CWB DPD')
-#		print(TheUncDict['ATuncT'][oo],TheUncDict['DPTuncT'][oo],TheUncDict['SHUuncT'][oo],TheUncDict['VAPuncT'][oo],TheUncDict['CRHuncT'][oo],TheUncDict['CWBuncT'][oo],TheUncDict['DPDuncT'][oo])
-#		print(TheUncDict['ATAuncT'][oo],TheUncDict['DPTAuncT'][oo],TheUncDict['SHUAuncT'][oo],TheUncDict['VAPAuncT'][oo],TheUncDict['CRHAuncT'][oo],TheUncDict['CWBAuncT'][oo],TheUncDict['DPDAuncT'][oo])
-#	        if (oo == 145621):
+		print("Test Output uncT: ",oo)
+		print('AT DPT SHU VAP CRH CWB DPD')
+		print(TheUncDict['ATuncT'][oo],TheUncDict['DPTuncT'][oo],TheUncDict['SHUuncT'][oo],TheUncDict['VAPuncT'][oo],TheUncDict['CRHuncT'][oo],TheUncDict['CWBuncT'][oo],TheUncDict['DPDuncT'][oo])
+		print(TheUncDict['ATAuncT'][oo],TheUncDict['DPTAuncT'][oo],TheUncDict['SHUAuncT'][oo],TheUncDict['VAPAuncT'][oo],TheUncDict['CRHAuncT'][oo],TheUncDict['CWBAuncT'][oo],TheUncDict['DPDAuncT'][oo])
+                #pdb.set_trace()
+#	        if (oo == 76400):
 #		    pdb.set_trace()
 
 #                if (TheExtDict['ESTE'][oo] != 'U55'):
