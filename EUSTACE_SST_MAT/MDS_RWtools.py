@@ -1595,7 +1595,7 @@ def MakeUncDict(FillDict=False):
     MDSDict['DPDuncR'] = []
     MDSDict['DPDAuncR'] = []
 
-    MDSDict['ATuncR'] = [] # climatological uncertainties
+    MDSDict['ATuncC'] = [] # climatological uncertainties
     MDSDict['ATAuncC'] = []
     MDSDict['DPTuncC'] = []
     MDSDict['DPTAuncC'] = []
