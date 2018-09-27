@@ -2806,6 +2806,9 @@ def ApplyClimUnc(UncDict,Counter):
     Open netcdf and read in that gridbox - <var>2m_OBSclim2NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc <var>2m_stdevs
     Assume low NobsCLIM of 10 - 
     Calculate climatological uncertainty
+    
+    IF NO STANDARD DEVIATION THEN FORCE CLIMATOLOGICAL UNCERTAINTY TO BE 10.
+    THE GRIDDER ONLY TAKES OBS WHERE THE clim FLAG = 0. IF NO CLIM THEN clim FLAG = 8
 
     '''
     
@@ -2839,7 +2842,10 @@ def ApplyClimUnc(UncDict,Counter):
     
     PtStDev,LatList,LonList = ReadNCF.GetGrid4Slice(InDirClim+'t'+ClimFile,['t'+VarName],SliceInfo,['latitude'],['longitude'])
 #    print('Pentad Standard Deviation: ',PtStDev, LatList,LonList)
-    #pdb.set_trace()    
+    # If there is no valid stdev then force clim unc to be 10.
+    if (PtStDev < -100):
+        PtStDev = np.sqrt(10.)*10.
+#    pdb.set_trace()    
     # Set the Uncertainties
     # SORT OUT THE [[[sd]]] issue as it really needs to be a scalar
     #PtStDevA = np.reshape(PtStDev[[[0]]],1)
@@ -2848,6 +2854,10 @@ def ApplyClimUnc(UncDict,Counter):
     #pdb.set_trace()
     
     PtStDev,LatList,LonList = ReadNCF.GetGrid4Slice(InDirClim+'td'+ClimFile,['td'+VarName],SliceInfo,['latitude'],['longitude'])    
+    # If there is no valid stdev then force clim unc to be 10.
+    if (PtStDev < -100):
+        PtStDev = np.sqrt(10.)*10.
+#    pdb.set_trace()    
     # Set the Uncertainties
     UncDict['DPTuncC'].append(np.squeeze(PtStDev) / np.sqrt(10.))  
     UncDict['DPTAuncC'].append(np.squeeze(PtStDev) / np.sqrt(10.))    
@@ -2949,12 +2959,12 @@ def main(argv):
             # Loop through each ob
 	    for oo in range(nobs):
 	        
-#		TestNum = 1005 # 94048 1980 01 has <0.01 q HGT uncertainty 
+#		TestNum = 67380 # 94048 1980 01 has <0.01 q HGT uncertainty 
 #		if (oo < TestNum):
 #		    TheExtDict,TheUncDict = FillABad(TheExtDict,TheUncDict,oo)
 #		    continue
 #		    
-#		elif (oo > TestNum):
+#		elif (oo > TestNum+1):
 #		    print('Stopping to prevent any output saving')
 #		    pdb.set_trace()
 #		
@@ -2971,7 +2981,8 @@ def main(argv):
 		    # Fill in everything as an empty and then move to next iteration of the loop
 		    TheExtDict,TheUncDict = FillABad(TheExtDict,TheUncDict,oo)
 		    print("Found a Screwy! ",oo,TheExtDict['AT'][oo],TheExtDict['DPT'][oo],TheExtDict['SHU'][oo])
-		    continue
+		    sys.exit("Found a Screwy! ",oo,TheExtDict['AT'][oo],TheExtDict['DPT'][oo],TheExtDict['SHU'][oo])
+		    
 		
 	        # Pull out the nearest 1x1 pentad climatological SLP for this ob
 		#print(oo,TheExtDict['LAT'][oo],TheExtDict['LON'][oo],TheExtDict['MO'][oo],TheExtDict['DY'][oo])
@@ -3104,12 +3115,18 @@ def main(argv):
 #                if ((TheExtDict['HOB'][oo] < 0) & ((TheExtDict['HOT'][oo] > 0) | (TheExtDict['HOP'][oo] > 0))):
 #                if ((TheExtDict['HOT'][oo] > 0) | (TheExtDict['HOP'][oo] > 0)):
 #		    pdb.set_trace()
+#
+
+	        # Test for extra long line length
+	        if (len(TheUncDict) > 156):
+	            print('LONG LINE!')
+		    sys.exit('LONG LINE!')
 
             # Make sure typee is now BC instead of NBC
 	    newtypee = typee[0:7]+typee[8:]
 	    LenTypee = len(typee)
 	    newtypee = typee[0:(LenTypee-3)]+typee[(LenTypee-2):]+LocalType
-	    #pdb.set_trace()
+	    #pdb.set_trace()	    
 	    
 	    # Write out extendeds
             mrw.WriteMDSextended("{:4d}".format(yy+int(year1)),"{:02}".format(mm+int(month1)),newtypee,TheExtDict)
