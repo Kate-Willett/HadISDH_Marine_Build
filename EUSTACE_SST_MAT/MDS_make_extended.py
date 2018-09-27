@@ -162,6 +162,10 @@
 # this needs to be caught - should have failed QC (but will be included in warts and all!
 # I've also added a check for SHU = 0.0 as over ocean this isn't really possible. Even if it is, it totally
 # screws with the corrections as we get /0.0 in some cases. 
+# 
+# WE USE THE OBSclim1NBC CLIMATOLOGY FOR UNCERTAINTY TO BE CONSISTENT WITH THAT USED TO CREATE THE OBSclim2NBC ANOMALIES
+# THIS IS NOT THE BEST GUESS CLIM AS IT CONTAINS POOR DATA NOT YET KICKED OUT BY THE BUDDY CHECK BUT DOES MAXIMISE COVERAGE
+# AND LARGE SCALE AVERAGES LIKE CLIMATOLOGIES SHOULD BE MORE ROBUST TO ERRORS 
 #
 # -----------------------
 # LIST OF MODULES
@@ -230,7 +234,7 @@
 # UncRound updated to latest deck/stats up to 2017
 #	# At some point these should be read in externally so that we do not have to change the code base every year
 #
-# Added UncCLIM: StDevCLIM / SQRT(NobsCLIM)
+# Added UncCLIM: StDevCLIM / SQRT(NobsCLIM) or 10. if no St Dev available,
 #
 #  
 # Bug fixes
@@ -2803,7 +2807,11 @@ def ApplyClimUnc(UncDict,Counter):
     '''
     Obtain the climatological uncertainty for individual obs based on StDevCLIM / SQRT(NobsCLIM)
     Work out the gridbox associated with the station lon/lat/pentad
-    Open netcdf and read in that gridbox - <var>2m_OBSclim2NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc <var>2m_stdevs
+    Open netcdf and read in that gridbox - <var>2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc <var>2m_stdevs
+    NOTE THAT THIS IS NOT THE MOST UP TO DATE CLIMATOLOGY BUT IT IS THE ONE USED TO BUILD OBSclim2NBC AND MAXIMISES COVERAGE
+    IF WE USE OBSclim2NBC IT IS NOT CONSISTENT WITH THE CLIMS USED TO BUILD THE ANOMALIES
+    PERHAPS WE NEED TO RUN AN OBSclim3NBC FROM THE OBSclim2NBC clims BUT WE WOULD REDUCE COVERAGE BECAUSE THE BUDDY CHECK REMOVES A LARGE AMOUNT OF DATA
+    ARGUABLY THIS DATA SHOULDN@T BE USED FOR A CLIMATOLOGY BUT SUCH LARGE AVERAGING IS FAIRLY ROBUST
     Assume low NobsCLIM of 10 - 
     Calculate climatological uncertainty
     
@@ -2815,7 +2823,7 @@ def ApplyClimUnc(UncDict,Counter):
     # Set up the directories for the climatology
     InDirClim = '/project/hadobs2/hadisdh/marine/otherdata/'
     
-    ClimFile = '2m_OBSclim2NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
+    ClimFile = '2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
     
     VarName = '2m_stdevs'
     
