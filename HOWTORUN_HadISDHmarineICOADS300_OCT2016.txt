@@ -174,7 +174,8 @@
         -> OUTPUTS
 	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSERAclimNBC/ERAclimNBC_5x5_monthly_197301_from_daily_both_relax.nc
 
-   2.2.2) Package all individual year/month files into one big gridded file
+   2.2.2) Package all individual year/month files into one big gridded file If this is an update (any start year other than 1973) then this merges with the existing gridded
+   file
 -> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/make_complete_datafiles.py (could the climatology and renorm-if-ERA be rolled
 into this?)
    RUN for Jan 1973 to Dec 2015 for months 
@@ -729,6 +730,7 @@ VERY LITTLE DIFFERENCE IN CLIMATOLOGY COVERAGE!!!
 	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2NBC/OBSclim2NBC_5x5_monthly_197301_from_daily_both_relax.nc
 
    4.2.2) Package all individual year/month files into one big gridded file
+   If this is an update (any start year other than 1973) then this merges with the existing gridded file
 -> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/make_complete_datafiles.py (could the climatology and renorm-if-ERA be rolled
 into this?)
    RUN for Jan 1973 to Dec 2015 for months 
@@ -877,7 +879,7 @@ into this?)
 NOTE: We may wish to create an interpolated bias corrected climatology but no point clim checking non-bias corrected data 
 with bias corrected climatology!
 
-5.1) Bias adjust the QC'd and buddy checked obs
+5.1) Bias adjust the QC'd and buddy checked obs and estimate uncertainties
 -> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/MDS_make_extended.py
    RUN for January 1973
 --> python2.7 MDS_make_extended.py --year1 1973 --year2 1973 --month1 1 --month2 1 --typee OBSclim2NBC
@@ -900,7 +902,18 @@ with bias corrected climatology!
    RUN for January 1973
 -> python2.7 gridding_cam.py --start_year 1973 --end_year 1973 --start_month 01 --end_month 01 --suffix relax --doBCtotal (--doBChgt, --doBCscn) 
    RUN from SLURM for iteration 2 - this code creates the slurm scripts and runs them
-   submit_spice_jobs_itBCtotal.bash (submit_spice_jobs_itBChgt.bash, submit_spice_jobs_itBCscn.bash)
+   submit_spice_jobs_BCtotal.bash (submit_spice_jobs_BChgt.bash, submit_spice_jobs_BCscn.bash,
+   submit_spice_jobs_BCtotalship.bash)
+   The above will grid the data only. You then need to run seperately for each uncertainty source (too big to run as one)
+   RUN WITH --doBCtotal --ShipOnly
+   We'll only go with ShipOnly for uncertainty anyway.
+   - --doUSCN or --doUSCNship submit_spice_jobs_USCN.bash or submit_spice_jobs_USCNship.bash
+   - --doUHGT or --doUHGTship submit_spice_jobs_UHGT.bash or submit_spice_jobs_UHGTship.bash
+   - --doUR or --doURship submit_spice_jobs_UR.bash or submit_spice_jobs_URship.bash
+   - --doUM or --doUMship submit_spice_jobs_UM.bash or submit_spice_jobs_UMship.bash
+   - --doUC or --doUCship submit_spice_jobs_UC.bash or submit_spice_jobs_UCship.bash
+   - --doUTOT or --doUTOTship submit_spice_jobs_UTOT.bash or submit_spice_jobs_UTOTship.bash
+   - --doUSLR or --doUSLRship submit_spice_jobs_USLR.bash or submit_spice_jobs_USLRship.bash - NOT CURRENTLY ACTIVE!!!
    	-> REQUIRES:
 	utils.py
 	set_paths_and_vars.py - set file paths and some universal variables - have set PLOTS to no plots
@@ -912,6 +925,7 @@ with bias corrected climatology!
 	set plots = False in set_paths_and_vars.py to turn off all plotting
 	-> INPUTS:
         /project/hadobs2/hadisdh/marine/ICOADS.3.0.0/OBSclim2BClocal/new_suite_197301_OBSclim2BClocal_extended.txt
+        /project/hadobs2/hadisdh/marine/ICOADS.3.0.0/OBSclim2BClocal/new_suite_197301_OBSclim2BClocal_uncertainty.txt
 	-> OUTPUTS:
 	BCtotal
 	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocal/
@@ -928,11 +942,23 @@ with bias corrected climatology!
 	OBSclim2BClocal_5x5_monthly_197301_from_daily_day_relax.nc
 	OBSclim2BClocal_5x5_monthly_197301_from_daily_night_relax.nc
 	OBSclim2BClocal_5x5_monthly_197301_from_daily_all_relax.nc
+	BCtotal --ShipOnly
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocalship/
+	OBSclim2BClocal_5x5_monthly_197301_from_daily_day_relax.nc
+	OBSclim2BClocal_5x5_monthly_197301_from_daily_night_relax.nc
+	OBSclim2BClocal_5x5_monthly_197301_from_daily_all_relax.nc
+	OBSclim2BClocal_uSCN_5x5_monthly_197301_from_daily_day_relax.nc
+	OBSclim2BClocal_uSCN_5x5_monthly_197301_from_daily_night_relax.nc
+	OBSclim2BClocal_uSCN_5x5_monthly_197301_from_daily_all_relax.nc
+	...for each uncertainty
 	
    5.2.1) Merge the day and night monthly 5by5s to create both (supercedes 'all')	
 -> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/merge_day_night.py
    RUN for January 1973 to December 2015 no clims (loops through each month)
--> python2.7 merge_day_night.py --suffix relax --months --start_year 1973 --end_year 2015 --start_month 01 --end_month 12 --doBCtotal (--doBChgt, --doBCinst)
+-> python2.7 merge_day_night.py --suffix relax --months --start_year 1973 --end_year 2015 --start_month 01 --end_month 12 --doBCtotal (--doBChgt, --doBCinst,
+--ShipOnly)
+   This will then need to be done for each uncertainty using the correct --doUXXX suffix in addition to --doBCtotal and --ShipOnly
+   --doUSCN --doUHGT --doUR --doUM --doUC --doUTOT --doUSLR 
         -> TWEAK:
 	-> REQUIRES:
 	utils.py
@@ -950,6 +976,13 @@ with bias corrected climatology!
 	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocalINST/
 	OBSclim2BClocal_5x5_monthly_197301_from_daily_day_relax.nc
 	OBSclim2BClocal_5x5_monthly_197301_from_daily_night_relax.nc
+	BCtotal ShipOnly
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocalship/
+	OBSclim2BClocal_5x5_monthly_197301_from_daily_day_relax.nc
+	OBSclim2BClocal_5x5_monthly_197301_from_daily_night_relax.nc
+	OBSclim2BClocal_uSCN_5x5_monthly_197301_from_daily_day_relax.nc
+	OBSclim2BClocal_uSCN_5x5_monthly_197301_from_daily_night_relax.nc
+	...and all other uncertainty sources
         -> OUTPUTS
 	BCtotal
 	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocal/OBSclim2BClocal_5x5_monthly_197301_from_daily_both_relax.nc
@@ -957,8 +990,13 @@ with bias corrected climatology!
 	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocalHGT/OBSclim2BClocal_5x5_monthly_197301_from_daily_both_relax.nc
 	BCscn
 	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocalINST/OBSclim2BClocal_5x5_monthly_197301_from_daily_both_relax.nc
+	BCtotal --ShipOnly
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocalship/OBSclim2BClocal_5x5_monthly_197301_from_daily_both_relax.nc
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocalship/OBSclim2BClocal_uSCN_5x5_monthly_197301_from_daily_both_relax.nc
+	...and all other uncertainty sources
 
    5.2.2) Package all individual year/month files into one big gridded file
+   If this is an update (any start year other than 1973) or uncertainty field then this merges with the existing gridded file
 -> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/make_complete_datafiles.py (could the climatology and renorm-if-ERA be rolled
 into this?)
    RUN for Jan 1973 to Dec 2015 for months 
@@ -968,19 +1006,36 @@ into this?)
 -> python2.7 make_complete_data_files.py --suffix relax --months --daily --period day --start_year 1973 --end_year 2015 --start_month 01 --end_month 12 --doBCtotal (--doBChgt, --doBCscn)  
    night
 -> python2.7 make_complete_data_files.py --suffix relax --months --daily --period night --start_year 1973 --end_year 2015 --start_month 01 --end_month 12 --doBCtotal (--doBChgt, --doBCscn)
+   Do this for each uncertainty field too AFTER doing the data grids first - this should append to to existing data file
+   Use --doUSCN (or other uncertainty sources) with --doBCtotal and --ShipOnly
+   --doUSCN --doUHGT --doUR --doUM --doUC --doUTOT --doUSLR 
         -> TWEAK:
 	-> REQUIRES:
 	utils.py
 	set_paths_and_vars.py - set file paths and some universal variables.
 	-> INPUTS:
-	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocal/
 	BCtotal
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocal/
 	OBSclim2BClocal_5x5_monthly_197301_from_daily_day_relax.nc
 	OBSclim2BClocal_5x5_monthly_197301_from_daily_night_relax.nc
         OBSclim2BClocal_5x5_monthly_197301_from_daily_both_relax.nc
+	BCtotal --ShipOnly
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocalship/
+	OBSclim2BClocal_5x5_monthly_197301_from_daily_day_relax.nc
+	OBSclim2BClocal_5x5_monthly_197301_from_daily_night_relax.nc
+        OBSclim2BClocal_5x5_monthly_197301_from_daily_both_relax.nc
+	OBSclim2BClocal_uSCN_5x5_monthly_197301_from_daily_day_relax.nc
+	OBSclim2BClocal_uSCN_5x5_monthly_197301_from_daily_night_relax.nc
+        OBSclim2BClocal_uSCN_5x5_monthly_197301_from_daily_both_relax.nc
+	...and all other uncertainty sources
 	-> OUTPUTS:
 	BCtotal
 	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocal/
+	OBSclim2BClocal_5x5_monthly_from_daily_day_relax.nc
+	OBSclim2BClocal_5x5_monthly_from_daily_night_relax.nc
+        OBSclim2BClocal_5x5_monthly_from_daily_both_relax.nc
+	BCtotal ShipOnly
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocalship/
 	OBSclim2BClocal_5x5_monthly_from_daily_day_relax.nc
 	OBSclim2BClocal_5x5_monthly_from_daily_night_relax.nc
         OBSclim2BClocal_5x5_monthly_from_daily_both_relax.nc
