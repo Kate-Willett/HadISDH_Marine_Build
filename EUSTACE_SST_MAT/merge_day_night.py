@@ -16,6 +16,8 @@ CODE PURPOSE AND OUTPUT
 -----------------------
 Merge outputs from _day and _night to create _both.  An alternative approach to the _all files
 
+For uncertainty this assumes correlation of r=1 for SLR, SCN, HGT and C and no correlation (r=0) for R, M and TOT
+
 
 -----------------------
 LIST OF MODULES
@@ -26,13 +28,23 @@ utils.py
 DATA
 -----------------------
 Input data stored in:
-/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS2
-
+/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2noQC/
+/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSERAclimNBC/
+/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim1NBC/
+/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2NBC/
+/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BCtotal/
+/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BChgt/
+/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BCinstr/
+/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BCtotalship/
 
 -----------------------
 HOW TO RUN THE CODE
 -----------------------
-python2.7 merge_day_night.py --suffix relax --clims --months --start_year YYYY --end_year YYYY --start_month MM --end_month MM (OPTIONAL: one of --doQC, --doQC1it, --doQC2it, --doQC3it, --doBC)
+python2.7 merge_day_night.py --suffix relax --clims --months --start_year YYYY --end_year YYYY --start_month MM --end_month MM (OPTIONAL: one of --doQC1it, --doQC2it, --doQC3it, --doBCtotal, --doBCinstr, --doBChgt, + --ShipOnly)
+Run for uncertainty (with BCtotal and ShipOnly)
+python2.7 merge_day_night.py --suffix relax --months --start_year YYYY --end_year YYYY --start_month MM --end_month MM --doBCtotal --doUSCN --ShipOnly
+ (--doUHGT, --doUR, --doUC, --doUM, --doUTOT, --doUSLR)
+
 
 python2.7 gridding_cam.py --help 
 will show all options
@@ -43,11 +55,29 @@ will show all options
 -----------------------
 OUTPUT
 -----------------------
-/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/GRIDS2/
+/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2noQC/
+/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSERAclimNBC/
+/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim1NBC/
+/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2NBC/
+/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BCtotal/
+/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BChgt/
+/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BCinstr/
+/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BCtotalship/
 
 -----------------------
 VERSION/RELEASE NOTES
 -----------------------
+
+Version 3 (9 Oct 2018) Kate Willett
+---------
+ 
+Enhancements
+This now works with the uncertainty fields which are only present for --doBCtotalship
+ 
+Changes
+ 
+Bug fixes
+
 
 Version 2 (26 Sep 2016) Kate Willett
 ---------
@@ -97,13 +127,16 @@ import matplotlib
 matplotlib.use('Agg') 
 import calendar
 import netCDF4 as ncdf
+import pdb
 
 import utils
 import set_paths_and_vars
 defaults = set_paths_and_vars.set()
 
 #************************************************************************
-def do_merge(fileroot, mdi, suffix = "relax", clims = False, doMedian = False):
+def do_merge(fileroot, mdi, suffix = "relax", clims = False, doMedian = False, TimeFreq = 'M',
+# UNC NEW
+             doUSLR = False, doUSCN = False, doUHGT = False, doUR = False, doUM = False, doUC = False, doUTOT = False):
     '''
     Merge the _day and _night files
 
@@ -115,7 +148,34 @@ def do_merge(fileroot, mdi, suffix = "relax", clims = False, doMedian = False):
     :param flt mdi: missing data indicator
     :param str suffix: "relax" or "strict" criteria
     :param bool clims: if climatologies then don't try and process anomalies.
+    :param bool doMedian: switch to enforce use of median over means
+    :param str TimeFreq: note to say which time resolution we're working with to write out - default M = monthly
+# UNC NEW
+    :param bool doUSLR: do solar adjustment uncertainties
+    :param bool doUSCN: do instrument adjustment uncertainties
+    :param bool doUHGT: do height adjustment uncertainties
+    :param bool doUR: do rounding uncertainties
+    :param bool doUM: do measurement uncertainties
+    :param bool doUC: do climatology uncertainties
+    :param bool doUTOT: do total uncertainties
     '''
+
+# UNC NEW
+    # If there is an uncertainty run set then set uSource to the name of hte uncertainty
+    if doUSLR:
+        uSource = 'uSLR'
+    elif doUSCN:
+        uSource = 'uSCN'
+    elif doUHGT:
+        uSource = 'uHGT'
+    elif doUR:
+        uSource = 'uR'
+    elif doUM:
+        uSource = 'uM'
+    elif doUC:
+        uSource = 'uC'
+    elif doUTOT:
+        uSource = 'uTOT'
 
     OBS_ORDER = utils.make_MetVars(mdi, multiplier = False)
 
@@ -143,13 +203,19 @@ def do_merge(fileroot, mdi, suffix = "relax", clims = False, doMedian = False):
 
             if v == 0 and p == 0:
 
-                shape = list(ncdf_file.variables[var.name][:].shape)
+                if doUSLR | doUSCN | doUHGT | doUR | doUM | doUC | doUTOT:
+		    shape = list(ncdf_file.variables[var.name+"_"+uSource][:].shape)
+		else:
+		    shape = list(ncdf_file.variables[var.name][:].shape)
                 shape.insert(0, len(OBS_ORDER)+2) # add all the variables
                 shape.insert(0, 2) # insert extra dimension to allow day + night
 
                 all_data = np.ma.zeros(shape)
 
-                all_data[p, v] = ncdf_file.variables[var.name][:]
+                if doUSLR | doUSCN | doUHGT | doUR | doUM | doUC | doUTOT:
+                    all_data[p, v] = ncdf_file.variables[var.name+"_"+uSource][:]
+                else:
+		    all_data[p, v] = ncdf_file.variables[var.name][:]
 
                 # get lats/lons of box centres
                 lat_centres = ncdf_file.variables["latitude"]
@@ -171,7 +237,10 @@ def do_merge(fileroot, mdi, suffix = "relax", clims = False, doMedian = False):
                 times.data = ncdf_file.variables["time"][:]
 
             else:
-                all_data[p, v] = ncdf_file.variables[var.name][:]
+                if doUSLR | doUSCN | doUHGT | doUR | doUM | doUC | doUTOT:
+                    all_data[p, v] = ncdf_file.variables[var.name+"_"+uSource][:]
+                else:
+		    all_data[p, v] = ncdf_file.variables[var.name][:]
 
         # and get n_obs and n_grids
         all_data[p, -2] = ncdf_file.variables["n_grids"][:]
@@ -182,10 +251,32 @@ def do_merge(fileroot, mdi, suffix = "relax", clims = False, doMedian = False):
     all_data = all_data[:,:,:,::-1,:]
 
     # got all the info, now merge
-    if doMedian:
-        merged_data = utils.bn_median(all_data[:, :len(OBS_ORDER)], axis = 0)
+    # If this is an uncertainty field then combine in quadrature with or without correlations
+    if doMedian: # THIS IS A BIG PILE OF RUBBISH FOR UNCERTAINTY SO DON'T DO IT
+# UNC NEW
+        # Assumed correlating at r=1
+        if doUSLR | doUSCN | doUHGT | doUC:
+            merged_data = utils.bn_median(all_data[:, :len(OBS_ORDER)], axis = 0) / np.sqrt(np.ma.count(all_data[:, :len(OBS_ORDER)], axis = 0))
+        # Assumed no correlation r=0
+	elif doUR | doUM | doUTOT:
+            merged_data = utils.bn_median(all_data[:, :len(OBS_ORDER)], axis = 0) / np.sqrt(np.ma.count(all_data[:, :len(OBS_ORDER)], axis = 0))
+        else:
+            merged_data = utils.bn_median(all_data[:, :len(OBS_ORDER)], axis = 0)
     else:
-        merged_data = np.ma.mean(all_data[:, :len(OBS_ORDER)], axis = 0)
+        # Assumed correlating at r=1
+        if doUSLR | doUSCN | doUHGT | doUC:
+            merged_data = np.sqrt(np.ma.power(np.ma.sum(all_data[:, :len(OBS_ORDER)], axis = 0),2.)) / np.sqrt(np.ma.count(all_data[:, :len(OBS_ORDER)], axis = 0))
+#            print('Doing correlated mean combo:',merged_data)
+#	    pdb.set_trace()
+	# Assumed no correlation r=0
+	elif doUR | doUM | doUTOT:
+            merged_data = np.sqrt(np.ma.sum(np.ma.power(all_data[:, :len(OBS_ORDER)],2.), axis = 0)) / np.sqrt(np.ma.count(all_data[:, :len(OBS_ORDER)], axis = 0))
+#            print('Doing uncorrelated mean combo:',merged_data)
+#	    pdb.set_trace()
+        else:
+            merged_data = np.ma.mean(all_data[:, :len(OBS_ORDER)], axis = 0)
+#            print('Doing flat mean combo:',merged_data)
+#	    pdb.set_trace()
 
     # and process the grids and observations (split off here so have incorporated latitude inversion)
     n_grids = np.ma.sum(all_data[:, -2], axis = 0)
@@ -194,18 +285,23 @@ def do_merge(fileroot, mdi, suffix = "relax", clims = False, doMedian = False):
     n_grids.fill_value = -1
 
     # write the output file
-    utils.netcdf_write("{}_{}_{}.nc".format(fileroot, "both", suffix), merged_data, n_grids, n_obs, OBS_ORDER, latitudes, longitudes, times, frequency = "P")
+# UNC NEW
+    if doUSLR | doUSCN | doUHGT | doUR | doUM | doUC | doUTOT:
+        utils.netcdf_write_unc(uSource, "{}_{}_{}.nc".format(fileroot, "both", suffix), merged_data, n_grids, n_obs, OBS_ORDER, latitudes, longitudes, times, frequency = TimeFreq, \
+	                       doUSLR = doUSLR, doUSCN = doUSCN, doUHGT = doUHGT, doUR = doUR, doUM = doUM, doUC = doUC, doUTOT = doUTOT)
+    else:
+        utils.netcdf_write("{}_{}_{}.nc".format(fileroot, "both", suffix), merged_data, n_grids, n_obs, OBS_ORDER, latitudes, longitudes, times, frequency = TimeFreq)
 
     # test distribution of obs with grid boxes
     outfile = file("{}_{}_{}.txt".format(fileroot.split("/")[-1], "both", suffix), "w")
     utils.boxes_with_n_obs(outfile, n_obs, merged_data[0], "")
 
-
     return # do_merge
 
-
 #************************************************************************
-def get_fileroot(settings, climatology = False, pentads = False, months = [], do3hr = True, time = [], daily = True, stdev = False):
+def get_fileroot(settings, climatology = False, pentads = False, months = [], do3hr = True, time = [], daily = True, stdev = False,
+# UNC NEW 
+                 doUSLR = False, doUSCN = False, doUHGT = False, doUR = False, doUM = False, doUC = False, doUTOT = False):
     '''
     Get the filename root depending on switches
 
@@ -217,8 +313,32 @@ def get_fileroot(settings, climatology = False, pentads = False, months = [], do
     :param list monthly: pass in [YYYY] or [YYYY, MM] for pentad or monthly files
     :param bool daily: run for monthly grids created from 1x1 daily
     :param bool stdev: run on the standard deviation files from climatology
+# UNC NEW
+    :param bool doUSLR: run for solar uncertainties
+    :param bool doUSCN run for instrument uncertainties
+    :param bool doUHGt: run for height uncertainties
+    :param bool doUR: run for rounding uncertainties
+    :param bool doUM: run for measurement uncertainties
+    :param bool doUC: run for climatology uncertainties
+    :param bool doUTOT: run for total uncertainties
+    
     '''
-
+# UNC NEW
+    # If there is an uncertainty run set then set uSource to the name of hte uncertainty
+    if doUSLR:
+        uSource = 'uSLR'
+    elif doUSCN:
+        uSource = 'uSCN'
+    elif doUHGT:
+        uSource = 'uHGT'
+    elif doUR:
+        uSource = 'uR'
+    elif doUM:
+        uSource = 'uM'
+    elif doUC:
+        uSource = 'uC'
+    elif doUTOT:
+        uSource = 'uTOT'
 
     if climatology and months != []:
         print "Cannot run both for Climatology files and for Monthly files"
@@ -243,11 +363,18 @@ def get_fileroot(settings, climatology = False, pentads = False, months = [], do
             fileroot = settings.DATA_LOCATION + settings.OUTROOT + "_1x1_pentad_{}".format(time[0])
 
     elif months != []:
-        if daily:
-            fileroot = settings.DATA_LOCATION + settings.OUTROOT + "_5x5_monthly_from_daily_{}{:02d}".format(time[0], time[1])
+# UNC NEW
+        if doUSLR | doUSCN | doUHGT | doUR | doUM | doUC | doUTOT:
+            if daily:
+                fileroot = settings.DATA_LOCATION + settings.OUTROOT + "_{}_5x5_monthly_from_daily_{}{:02d}".format(uSource, time[0], time[1])
+            else:
+                fileroot = settings.DATA_LOCATION + settings.OUTROOT + "_{}_5x5_monthly_{}{:02d}".format(uSource, time[0], time[1])
         else:
-            fileroot = settings.DATA_LOCATION + settings.OUTROOT + "_5x5_monthly_{}{:02d}".format(time[0], time[1])
-             
+	    if daily:
+                fileroot = settings.DATA_LOCATION + settings.OUTROOT + "_5x5_monthly_from_daily_{}{:02d}".format(time[0], time[1])
+            else:
+                fileroot = settings.DATA_LOCATION + settings.OUTROOT + "_5x5_monthly_{}{:02d}".format(time[0], time[1])
+                
 
     return fileroot # get_fileroot
 
@@ -256,7 +383,8 @@ def get_fileroot(settings, climatology = False, pentads = False, months = [], do
 #************************************************************************
 # KATE modified
 def set_up_merge(suffix = "relax", clims = False, months = False, pentads = False, start_year = defaults.START_YEAR, end_year = defaults.END_YEAR, start_month = 1, end_month = 12, 
-                 doQC = False, doQC1it = False, doQC2it = False, doQC3it = False, doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, ShipOnly = False):
+                 doQC = False, doQC1it = False, doQC2it = False, doQC3it = False, doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, 
+		 doUSLR = False, doUSCN = False, doUHGT = False, doUR = False, doUM = False, doUC = False, doUTOT = False, ShipOnly = False):
 #def set_up_merge(suffix = "relax", clims = False, months = False, pentads = False, start_year = defaults.START_YEAR, end_year = defaults.END_YEAR, start_month = 1, end_month = 12, doQC = False, doBC = False):
 # end
     '''
@@ -282,6 +410,14 @@ def set_up_merge(suffix = "relax", clims = False, months = False, pentads = Fals
     :param bool doBCscn: work on the screen only bias corrected data
 # end
     :param bool doBC: work on the bias corrected data
+# UNC NEW
+    :param bool doUSLR: work on solar adjustment uncertainty    
+    :param bool doUSCN: work on instrument adjustment uncertainty    
+    :param bool doUHGT: work on height adjustment uncertainty    
+    :param bool doUR: work on rounding uncertainty    
+    :param bool doUM: work on measurement uncertainty    
+    :param bool doUM: work on climatology uncertainty    
+    :param bool doUTOT: work on solar adjustment uncertainty    
 # KATE modified
     :param bool ShipOnly: work on the ship only data
 # end
@@ -292,11 +428,13 @@ def set_up_merge(suffix = "relax", clims = False, months = False, pentads = Fals
     '''
     
 # KATE modified
-    settings = set_paths_and_vars.set(doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn, doQC = doQC, doQC1it = doQC1it, doQC2it = doQC2it, doQC3it = doQC3it, ShipOnly = ShipOnly)
+    settings = set_paths_and_vars.set(doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn, doQC = doQC, doQC1it = doQC1it, doQC2it = doQC2it, doQC3it = doQC3it, \
+                                      doUSLR = doUSLR, doUSCN = doUSCN, doUHGT = doUHGT, doUR = doUR, doUM = doUM, doUC = doUC, doUTOT = doUTOT, ShipOnly = ShipOnly)
     #settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC)
 # end
     if clims:
         print "Processing Climatologies"
+	TimeFreq = 'C' # this is used when writing out netCDF file so needs to be passed to do_merge
         
 #        fileroot = get_fileroot(settings, climatology = True)
 #        do_merge(fileroot, settings.mdi, suffix, doMedian = settings.doMedian)
@@ -304,7 +442,7 @@ def set_up_merge(suffix = "relax", clims = False, months = False, pentads = Fals
         fileroot = get_fileroot(settings, climatology = True, do3hr = True)
 # KATE MEDIAN WATCH
 # KATE modified - forcing MEAN 
-        do_merge(fileroot, settings.mdi, suffix, clims = True, doMedian = False)
+        do_merge(fileroot, settings.mdi, suffix, clims = True, doMedian = False, TimeFreq = TimeFreq)
         #do_merge(fileroot, settings.mdi, suffix, clims = True, doMedian = settings.doMedian)
 # end
         # and stdev
@@ -313,12 +451,13 @@ def set_up_merge(suffix = "relax", clims = False, months = False, pentads = Fals
         fileroot = get_fileroot(settings, climatology = True, do3hr = True, stdev = True)
 # KATE MEDIAN WATCH
 # KATE modified - forcing MEAN 
-        do_merge(fileroot, settings.mdi, suffix, clims = True, doMedian = False)
+        do_merge(fileroot, settings.mdi, suffix, clims = True, doMedian = False, TimeFreq = TimeFreq)
         #do_merge(fileroot, settings.mdi, suffix, clims = True, doMedian = settings.doMedian)
 # end
 
     if pentads:
         print "Processing Pentads"
+	TimeFreq = 'P' # this is used when writing out netCDF file so needs to be passed to do_merge
         
 #        fileroot = get_fileroot(settings, pentads = True)
 #        do_merge(fileroot, settings.mdi, suffix, doMedian = settings.doMedian)
@@ -328,11 +467,12 @@ def set_up_merge(suffix = "relax", clims = False, months = False, pentads = Fals
             fileroot = get_fileroot(settings, pentads = True, do3hr = True, time = [year])
 # KATE MEDIAN WATCH
 # KATE modified - forcing MEAN 
-            do_merge(fileroot, settings.mdi, suffix, doMedian = False)
+            do_merge(fileroot, settings.mdi, suffix, doMedian = False, TimeFreq = TimeFreq)
             #do_merge(fileroot, settings.mdi, suffix, doMedian = settings.doMedian)
 # end
     if months:
         print "Processing Monthly Files"
+	TimeFreq = 'M' # this is used when writing out netCDF file so needs to be passed to do_merge
 
 # KATE modified - START_YEAR not defined - commented these out as they are all set in the call to function
         #start_year = START_YEAR
@@ -349,10 +489,14 @@ def set_up_merge(suffix = "relax", clims = False, months = False, pentads = Fals
 #                fileroot = get_fileroot(settings, months = True, time = [year, month])
 #                do_merge(fileroot, settings.mdi, suffix, doMedian = settings.doMedian)
 
-                fileroot = get_fileroot(settings, months = True, time = [year, month], daily = True)
+                fileroot = get_fileroot(settings, months = True, time = [year, month], daily = True, \
+# UNC NEW
+		doUSLR = doUSLR, doUSCN = doUSCN, doUHGT = doUHGT, doUR = doUR, doUM = doUM, doUC = doUC, doUTOT = doUTOT)
 # KATE MEDIAN WATCH
 # KATE modified - forcing MEAN 
-                do_merge(fileroot, settings.mdi, suffix, doMedian = False)
+                do_merge(fileroot, settings.mdi, suffix, doMedian = False, TimeFreq = TimeFreq, \
+# UNC NEW
+		doUSLR = doUSLR, doUSCN = doUSCN, doUHGT = doUHGT, doUR = doUR, doUM = doUM, doUC = doUC, doUTOT = doUTOT)
                 #do_merge(fileroot, settings.mdi, suffix, doMedian = settings.doMedian)
 # end
 
@@ -401,6 +545,22 @@ if __name__=="__main__":
     parser.add_argument('--doBCscn', dest='doBCscn', action='store_true', default = False,
                         help='process the height only bias corrected data, default = False')
 # end
+# UNC NEW - THESE MUST BE RUN WITH --doBCtotal and --ShipOnly
+    parser.add_argument('--doUSCN', dest='doUSCN', action='store_true', default = False,
+                        help='process the bias corrected data uncertainties for instrument adjustment, default = False')
+    parser.add_argument('--doUHGT', dest='doUHGT', action='store_true', default = False,
+                        help='process the bias corrected data uncertainties for height adjustment, default = False')
+    parser.add_argument('--doUR', dest='doUR', action='store_true', default = False,
+                        help='process the bias corrected data uncertainties for rounding, default = False')
+    parser.add_argument('--doUM', dest='doUM', action='store_true', default = False,
+                        help='process the bias corrected data uncertainties for measurement, default = False')
+    parser.add_argument('--doUC', dest='doUC', action='store_true', default = False,
+                        help='process the bias corrected data uncertainties for climatology, default = False')
+    parser.add_argument('--doUTOT', dest='doUTOT', action='store_true', default = False,
+                        help='process the bias corrected data uncertainties combined, default = False')
+    parser.add_argument('--doUSLR', dest='doUSLR', action='store_true', default = False,
+                        help='process the bias corrected data uncertainties for solar radiation, default = False')
+
 # KATE modified
     parser.add_argument('--ShipOnly', dest='ShipOnly', action='store_true', default = False,
                         help='process the ship platform type only data, default = False')
@@ -409,11 +569,13 @@ if __name__=="__main__":
 
 
 # KATE modified
+# UNC NEW
     set_up_merge(suffix = str(args.suffix), clims = args.clims, months = args.months, pentads = args.pentads, \
                      start_year = int(args.start_year), end_year = int(args.end_year), \
                      start_month = int(args.start_month), end_month = int(args.end_month), \
 		     doQC = args.doQC, doQC1it = args.doQC1it, doQC2it = args.doQC2it, doQC3it = args.doQC3it, \
 		     doBC = args.doBC, doBCtotal = args.doBCtotal, doBChgt = args.doBChgt, doBCscn = args.doBCscn, \
+		     doUSLR = args.doUSLR, doUSCN = args.doUSCN, doUHGT = args.doUHGT, doUR = args.doUR, doUM = args.doUM, doUC = args.doUC, doUTOT = args.doUTOT, \
 		     ShipOnly = args.ShipOnly)
     #set_up_merge(suffix = str(args.suffix), clims = args.clims, months = args.months, pentads = args.pentads, \
     #                 start_year = int(args.start_year), end_year = int(args.end_year), \
