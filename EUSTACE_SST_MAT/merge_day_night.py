@@ -72,7 +72,7 @@ Version 3 (9 Oct 2018) Kate Willett
 ---------
  
 Enhancements
-This now works with the uncertainty fields which are only present for --doBCtotalship
+This now works with the uncertainty fields which are only present for --doBCtotal --ShipOnly
  
 Changes
  
