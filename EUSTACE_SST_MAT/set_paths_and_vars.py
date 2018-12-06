@@ -116,7 +116,8 @@ class Settings(object):
 
 #*********************************************
 # *** KATE MODIFIED
-def set(doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doQC = True, doQC1it = False, doQC2it = False, doQC3it = False, ShipOnly = False):
+def set(doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doQC = True, doQC1it = False, doQC2it = False, doQC3it = False, 
+        doUSLR = False, doUSCN = False, doUHGT = False, doUR = False, doUM = False, doUC = False, doUTOT = False, ShipOnly = False):
 #def set(doBC = False, doQC = True):
 # end
     '''
@@ -134,6 +135,14 @@ def set(doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doQC 
     :param bool doQC2it: set up for 2nd iteration quality control with no buddy check
     :param bool doQC3it: set up for 3rd iteration quality control with buddy check
 # end
+# UNC NEW
+    :param bool doUSLR: work on BC and solar adj uncertainty with correlation
+    :param bool doUSCN: work on BC and instrument adj uncertainty with correlation
+    :param bool doUHGT: work on BC and height adj uncertainty with correlation
+    :param bool doUR: work on BC and rounding uncertainty with no correlation
+    :param bool doUM: work on BC and measurement uncertainty with no correlation
+    :param bool doUC: work on BC and climatological uncertainty with no correlation
+    :param bool doUTOT: work on BC and total uncertainty with no correlation
 # *** KATE MODIFIED
     :param bool ShipOnly: set up for working with ship data only
 # end

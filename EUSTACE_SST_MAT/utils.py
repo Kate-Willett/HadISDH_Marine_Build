@@ -82,6 +82,7 @@ import argparse
 import matplotlib
 import struct
 import netCDF4 as ncdf
+import pdb
 
 
 #*********************************************
@@ -204,6 +205,7 @@ def read_qc_data(filename, location, fieldwidths, doBC = False, doBCtotal = Fals
     platform_obs = []
     platform_qc = []
 
+#    pdb.set_trace()
 
     with open(os.path.join(location, filename), 'r') as infile:
         for line in infile:
@@ -338,6 +340,125 @@ def read_qc_data(filename, location, fieldwidths, doBC = False, doBCtotal = Fals
 # end
 
 #*****************************************************
+# UNC NEW for doBCtotal only
+def read_unc_data(filename, location, fieldwidths, 
+                  doUSLR = False, doUSCN = False, doUHGT = False, doUR = False, doUM = False, doUC = False, doUTOT = False,
+		  ShipOnly = False):
+    """
+    Read in the uncertainty data and return
+    Expects fixed field format
+
+    :param str filename: filename to read
+    :param str location: location of file
+    :param str fieldwidths: fixed field widths to use
+# UNC NEW
+    :param bool doUSLR: work on BC and solar adj uncertainty with correlation
+    :param bool doUSCN: work on BC and instrument adj uncertainty with correlation
+    :param bool doUHGT: work on BC and height adj uncertainty with correlation
+    :param bool doUR: work on BC and rounding uncertainty with no correlation
+    :param bool doUM: work on BC and measurement uncertainty with no correlation
+    :param bool doUC: work on BC and climatological uncertainty with no correlation
+    :param bool doUTOT: work on BC and total uncertainty with no correlation
+    :param bool ShipOnly: select only ship platform (0:5) data
+
+    :returns: data - np.array of string data
+    """
+
+    fmtstring = ''.join('%ds' % f for f in fieldwidths)
+    parse = struct.Struct(fmtstring).unpack_from
+
+    platform_meta = []
+    
+    uncSLR_data = []
+    uncSCN_data = []
+    uncHGT_data = []
+    uncR_data = []
+    uncM_data = []
+    uncC_data = []
+    uncTOT_data = []
+
+    with open(os.path.join(location, filename), 'r') as infile:
+        for line in infile:
+
+            try:
+                # some lines might not be the correct length
+                assert len(line) == 1055
+                
+                fields = parse(line)
+                
+                # now unpack and process
+                dummy_obs = [fields[: 8+14]] # skip over these ones
+		uncTOT_data += [fields[8+14 : 8+14+14]]
+		uncSLR_data += [fields[8+14+14 : 8+14+14+14]]
+		uncSCN_data += [fields[8+14+14+14 : 8+14+14+14+14]]
+		uncHGT_data += [fields[8+14+14+14+14 : 8+14+14+14+14+14]]
+		uncM_data   += [fields[8+14+14+14+14+14 : 8+14+14+14+14+14+14]]
+		uncR_data   += [fields[8+14+14+14+14+14+14 : 8+14+14+14+14+14+14+14]]
+		uncC_data   += [fields[8+14+14+14+14+14+14+14 : 8+14+14+14+14+14+14+14+14]]
+		platform_meta += [fields[8+14+14+14+14+14+14+14+14 : 8+14+14+14+14+14+14+14+14+3]]
+		# there are more elements but we do not need them
+
+            except AssertionError:
+                print "skipping line in {} - malformed data".format(filename)
+                print line
+                               
+            except OSError:
+                print "file {} missing".format(filename)
+                sys.exit()
+
+    # convert to arrays
+    platform_meta = np.array(platform_meta)
+    uncSLR_data = np.array(uncSLR_data)
+    uncSCN_data = np.array(uncSCN_data)
+    uncHGT_data = np.array(uncHGT_data)
+    uncR_data = np.array(uncR_data)
+    uncM_data = np.array(uncM_data)
+    uncC_data = np.array(uncC_data)
+    uncTOT_data = np.array(uncTOT_data)
+
+# KATE modified - if ShipOnly is set then pull out only ship data
+    if ShipOnly:
+
+        # filter PT=0:5 only
+	# If its a BC (ext or unc) run then PT is element 2 (3rd) but if its QC only then PT is element 3 (4th)
+
+	PT = np.array([int(x) for x in platform_meta[:,2]])
+        
+	goods, = np.where(PT <= 5)
+	print("Pulling out SHIPS only ",len(goods))
+        
+	if doUSLR:
+            return uncSLR_data[goods].astype(int) # read_unc_data
+	elif doUSCN:
+            return uncSCN_data[goods].astype(int) # read_unc_data
+	elif doUHGT:
+            return uncHGT_data[goods].astype(int) # read_unc_data
+	elif doUR:
+            return uncR_data[goods].astype(int) # read_unc_data
+	elif doUM:
+            return uncM_data[goods].astype(int) # read_unc_data
+	elif doUC:
+            return uncC_data[goods].astype(int) # read_unc_data
+	elif doUTOT:
+            return uncTOT_data[goods].astype(int) # read_unc_data
+	
+    else:
+	if doUSLR:
+            return uncSLR_data.astype(int) # read_unc_data
+	elif doUSCN:
+            return uncSCN_data.astype(int) # read_unc_data
+	elif doUHGT:
+            return uncHGT_data.astype(int) # read_unc_data
+	elif doUR:
+            return uncR_data.astype(int) # read_unc_data
+	elif doUM:
+            return uncM_data.astype(int) # read_unc_data
+	elif doUC:
+            return uncC_data.astype(int) # read_unc_data
+	elif doUTOT:
+            return uncTOT_data.astype(int) # read_unc_data
+
+#*****************************************************
 def process_platform_obs(raw_data):
     '''
     Extract the lats, lons and timestamps of each obs
@@ -448,6 +569,72 @@ def write_netcdf_variable(outfile, var, v, data, frequency, do_zip = True):
 
     return # write_netcdf_variable
 
+#************************************************************************
+def write_netcdf_variable_unc(uSource,outfile, var, v, unc_data, frequency, do_zip = True,
+                      doUSLR = False, doUSCN = False, doUHGT = False, doUR = False, doUM = False, doUC = False, doUTOT = False):
+    '''
+    Create the netcdf variable
+    :param str uSource: name of uncertainty source    
+    :param obj outfile: output file object
+    :param obj var: variable object
+    :param int v: sequence number of variable
+    :param array unc?_data: uncertainty data to write
+    :param str frequency: frequency of input data
+    :param bool do_zip: allow compression?
+# UNC NEW
+    :param bool doUSLR: work on BC and solar adj uncertainty with correlation
+    :param bool doUSCN: work on BC and instrument adj uncertainty with correlation
+    :param bool doUHGT: work on BC and height adj uncertainty with correlation
+    :param bool doUR: work on BC and rounding uncertainty with no correlation
+    :param bool doUM: work on BC and measurement uncertainty with no correlation
+    :param bool doUC: work on BC and climatological uncertainty with no correlation
+    :param bool doUTOT: work on BC and total uncertainty with no correlation
+        NB: AT THIS POINT WE MULTIPLY THE STANDARD UNCERTAINTY BY 2 TO GIVE A COVERAGE FACTOR OF 2 (2SIGMA)
+    
+    '''
+
+    # CREATING 2 SIGMA UNCERTAINTY
+    unc_data = unc_data
+
+    nc_var = outfile.createVariable(var.name+'_'+uSource, var.dtype, ('time','latitude','longitude',), zlib = do_zip, fill_value = var.mdi)
+
+    if doUSLR:
+        nc_var.long_name = var.long_name+' SOLAR RADIATION ADJUSTMENT uncertainty (2 sigma) - correlated r=1'
+        nc_var.standard_name = var.standard_name+' solar uncertainty'
+    elif doUSCN:
+        nc_var.long_name = var.long_name+' NON-ASPIRATED INSTRUMENT ADJUSTMENT uncertainty (2 sigma) - correlated r=1'
+        nc_var.standard_name = var.standard_name+' instrument uncertainty'
+    elif doUHGT:
+        nc_var.long_name = var.long_name+' PLATFORM HEIGHT ADJUSTMENT uncertainty (2 sigma) - correlated r=1'
+        nc_var.standard_name = var.standard_name+' height uncertainty'
+    elif doUR:
+        nc_var.long_name = var.long_name+' ROUNDING uncertainty (2 sigma) - uncorrelated'
+        nc_var.standard_name = var.standard_name+' rounding uncertainty'
+    elif doUM:
+        nc_var.long_name = var.long_name+' MEASUREMENT uncertainty (2 sigma) - uncorrelated'
+        nc_var.standard_name = var.standard_name+' measurement uncertainty'
+    elif doUC:
+        nc_var.long_name = var.long_name+' CLIMATOLOGY uncertainty (2 sigma) - correlated r=1'
+        nc_var.standard_name = var.standard_name+' climatology uncertainty'
+    elif doUTOT:
+        nc_var.long_name = var.long_name+' TOTAL OBSERVATIONAL uncertainty (2 sigma) - no correlation'
+        nc_var.standard_name = var.standard_name+' total uncertainty'
+    
+    nc_var.units = var.units
+    nc_var.missing_value = var.mdi
+    
+    if frequency == "M":
+        nc_var.valid_min = np.min(unc_data[v, :, :]) / var.multiplier
+        nc_var.valid_max = np.max(unc_data[v, :, :]) / var.multiplier
+        nc_var[:] = np.ma.array([unc_data[v, :, :]]) / var.multiplier
+        
+    else:
+        nc_var.valid_min = np.min(unc_data[v, :, :, :]) / var.multiplier
+        nc_var.valid_max = np.max(unc_data[v, :, :, :]) / var.multiplier
+        nc_var[:] = unc_data[v, :, :, :] / var.multiplier
+
+    return # write_netcdf_variable_unc
+
 #*****************************************************
 def netcdf_write(filename, data, n_grids, n_obs, variables, lats, lons, time, do_zip = True, frequency = "H", single = ""):
     '''
@@ -556,6 +743,128 @@ def netcdf_write(filename, data, n_grids, n_obs, variables, lats, lons, time, do
     outfile.close()
 
     return # netcdf_write
+
+#*****************************************************
+def netcdf_write_unc(uSource, filename, data, n_grids, n_obs, variables, lats, lons, time, do_zip = True, frequency = "H", single = "",
+                      doUSLR = False, doUSCN = False, doUHGT = False, doUR = False, doUM = False, doUC = False, doUTOT = False):
+    '''
+    Write the relevant fields out to a netCDF file.
+    
+    :param str uSource: name of uncertainty source
+    :param str filename: output filename
+    :param array data: the whole uncertainty data array [nvars, nhours, nlats, nlons]
+    :param array n_grids: number of grid boxes/days/hours for each field from prior processing step
+    :param array n_obs: number of observations for each field
+    :param list variables: the variables in order to output
+    :param array lats: the latitudes
+    :param array lons: the longitudes
+    :param array time: the times as TimeVar object
+    :param bool do_zip: allow compression?
+    :param str frequency: frequency of input data
+    :param str single: only write a single variable if != ""
+# UNC NEW
+    :param bool doUSLR: work on BC and solar adj uncertainty with correlation
+    :param bool doUSCN: work on BC and instrument adj uncertainty with correlation
+    :param bool doUHGT: work on BC and height adj uncertainty with correlation
+    :param bool doUR: work on BC and rounding uncertainty with no correlation
+    :param bool doUM: work on BC and measurement uncertainty with no correlation
+    :param bool doUC: work on BC and climatological uncertainty with no correlation
+    :param bool doUTOT: work on BC and total uncertainty with no correlation
+
+    '''
+
+    # remove file
+    if os.path.exists(filename):
+        os.remove(filename)
+
+    outfile = ncdf.Dataset(filename,'w', format='NETCDF4')
+
+    if frequency == "M":
+        time_dim = outfile.createDimension('time',1)
+    elif frequency == "P":
+        time_dim = outfile.createDimension('time',data.shape[1])
+    elif frequency == "Y":
+        time_dim = outfile.createDimension('time',data.shape[1])
+    else:
+        time_dim = outfile.createDimension('time',data.shape[1])
+
+    lat_dim = outfile.createDimension('latitude',len(lats)) # as TRC of box edges given, size = # box centres to be written
+    lon_dim = outfile.createDimension('longitude',len(lons))
+    
+    #***********
+    # set up basic variables linked to dimensions
+    # make time variable
+    nc_var = outfile.createVariable(time.name, np.dtype('int'), ('time'), zlib = do_zip)
+    nc_var.long_name = time.long_name
+    nc_var.units = time.units
+    nc_var.standard_name = time.standard_name
+    nc_var[:] = time.data
+    
+    # make latitude variable
+    nc_var = outfile.createVariable('latitude', np.dtype('float32'), ('latitude'), zlib = do_zip)
+    nc_var.long_name = "latitude"
+    nc_var.units = "degrees north"
+    nc_var.standard_name = "latitude"
+    nc_var[:] = lats[:] - (lats[1] - lats[0])/2.
+    
+
+    # make longitude variable
+    nc_var = outfile.createVariable('longitude', np.dtype('float32'), ('longitude'), zlib = do_zip)
+    nc_var.long_name = "longitude"
+    nc_var.units = "degrees east"
+    nc_var.standard_name = "longitude"
+    nc_var[:] = lons[:] - (lons[1] - lons[0])/2.
+
+    #***********
+    # create variables:
+    if single != "":
+        var = single
+        v = 0
+
+        write_netcdf_variable_unc(uSource, outfile, var, v, data, frequency, do_zip = do_zip, \
+	                          doUSLR = False, doUSCN = False, doUHGT = False, doUR = False, doUM = False, doUC = False, doUTOT = False)
+        
+    else: # spin through all of the variables
+
+        for v, var in enumerate(variables):
+            write_netcdf_variable_unc(uSource, outfile, var, v, data, frequency, do_zip = do_zip, \
+	                              doUSLR = False, doUSCN = False, doUHGT = False, doUR = False, doUM = False, doUC = False, doUTOT = False)
+
+    # write number of observations 
+
+
+    nc_var = outfile.createVariable("n_grids", np.dtype('int32'), ('time','latitude','longitude',), zlib = do_zip, fill_value = -1)
+
+    nc_var.long_name = "Number of grid boxes/days/hours going into this grid box"
+    nc_var.units = "1"
+    nc_var.missing_value = -1
+    nc_var.standard_name = "Number of grid boxes/days/hours"
+    nc_var[:] = np.ma.masked_where(n_grids <=0, n_grids)
+
+    nc_var = outfile.createVariable("n_obs", np.dtype('int32'), ('time','latitude','longitude',), zlib = do_zip, fill_value = -1)
+
+    nc_var.long_name = "Number of raw observations going into this grid box"
+    nc_var.units = "1"
+    nc_var.missing_value = -1
+    nc_var.standard_name = "Number of Observations"
+    nc_var[:] = np.ma.masked_where(n_obs <= 0, n_obs)
+
+    # Global Attributes
+    # from file
+    attribs = read_global_attributes("attributes.dat")
+    
+    for attr in attribs:
+        
+        outfile.__setattr__(attr, attribs[attr])
+ 
+    outfile.date_created = dt.datetime.strftime(dt.datetime.now(), "%Y-%m-%d, %H:%M")
+    outfile.Conventions = 'CF-1.5' 
+    outfile.Metadata_Conventions = 'Unidata Dataset Discovery v1.0,CF Discrete Sampling Geometries Conventions'
+    outfile.featureType = 'gridded'
+    
+    outfile.close()
+
+    return # netcdf_write_unc
 
 #*****************************************************
 def set_MetVar_attributes(name, long_name, standard_name, units, mdi, dtype, column, multiplier = False):
@@ -878,6 +1187,135 @@ def grid_1by1_cam(clean_data, raw_qc, hours_since, lat_index, lon_index, grid_ho
             this_month_grid.mask[:, :, lt, :] = True # ensure mask is set
 
     return this_month_grid, this_month_obs, this_month_time # grid_1by1_cam
+#*********************************************************
+def grid_1by1_cam_unc(clean_data, unc_clean_data,
+                      raw_qc, hours_since, lat_index, lon_index, grid_hours, grid_lats, grid_lons, OBS_ORDER, mdi, doMedian = True, 
+		      doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False,
+		      doUSLR = False, doUSCN = False, doUHGT = False, doUR = False, doUM = False, doUC = False, doUTOT = False):
+    '''
+    Grid using the Climate Anomaly Method on 1x1 degree for each month
+
+    :param array clean_data: input data
+    :param array u?_clean_data: input uncertainty data
+    :param array hours_since: counting in hours since start of month
+    :param array lat_index: discretised input latitudes
+    :param array lon_index: discretised input longitudes
+    :param array grid_hours: discretised hours
+    :param array grid_lats: grid box corner lats
+    :param array grid_lons: grid box corner lons
+    :param list OBS_ORDER: list of MetVar variables
+    :param float mdi: missing data indicator
+    :param bool doMedian: use the median (default) instead of the mean
+    :param bool doBC: do bias corrected
+    :param bool doBCtotal: do total bias corrected
+    :param bool doBCscn: do instrument bias corrected
+    :param bool doBChgt: do height bias corrected
+# UNC NEW
+    :param bool doUSLR: work on BC and solar adj uncertainty with correlation
+    :param bool doUSCN: work on BC and instrument adj uncertainty with correlation
+    :param bool doUHGT: work on BC and height adj uncertainty with correlation
+    :param bool doUR: work on BC and rounding uncertainty with no correlation
+    :param bool doUM: work on BC and measurement uncertainty with no correlation
+    :param bool doUC: work on BC and climatological uncertainty with no correlation
+    :param bool doUTOT: work on BC and total uncertainty with no correlation
+    '''
+
+# KATE modified - BC options
+#    QC_FLAGS = set_qc_flag_list(doBC = doBC)
+    QC_FLAGS = set_qc_flag_list(doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn)
+# end
+
+    day_flag_loc, = np.where(QC_FLAGS == 'day')[0]
+
+    # set up the arrays
+    this_month_grid = np.ma.zeros([len(OBS_ORDER),len(grid_hours),len(grid_lats), len(grid_lons)], fill_value = mdi)
+    this_month_grid.mask = np.zeros([len(OBS_ORDER),len(grid_hours),len(grid_lats), len(grid_lons)])
+    this_month_obs = np.zeros([len(grid_hours),len(grid_lats), len(grid_lons)]) # number of raw observations
+    this_month_time = np.zeros([len(grid_hours),len(grid_lats), len(grid_lons)]) # day or night
+
+    unc_this_month_grid = np.ma.zeros([len(OBS_ORDER),len(grid_hours),len(grid_lats), len(grid_lons)], fill_value = mdi)
+    unc_this_month_grid.mask = np.zeros([len(OBS_ORDER),len(grid_hours),len(grid_lats), len(grid_lons)])
+
+    mesh_lats, mesh_lons = np.meshgrid(grid_lats, grid_lons)
+
+    cols = np.array([obs.column for obs in OBS_ORDER])
+
+    for lt, glat in enumerate(grid_lats):
+        locs_lat, = np.where(lat_index == lt)
+        
+        if len(locs_lat) > 0: # only continue if there are data to process
+            
+            for ln, glon in enumerate(grid_lons):
+                locs_lon, = np.where(lon_index == ln)
+                locs_ll = np.intersect1d(locs_lat, locs_lon) # get the combination
+                
+                if len(locs_ll) > 0: # only continue if there are data to process
+                    
+                    for gh, timestamp in enumerate(grid_hours):                        
+                        locs_h, = np.where(hours_since == timestamp)
+
+                        locs = np.intersect1d(locs_h, locs_ll)
+
+                        if len(locs) > 0: # only continue if there are data to process
+
+# FOR NOW ASSUMING THAT PROPOGATION OF UNCERTAINTY IN MEDIAN IS SAME FUNCTION / SQRT(N) - applying SQRT after counting n. obs
+# FOR THE MEAN I USE THE QUADRATURE SUM OF THE UNC / SQRT(N)
+# Strictly I should apply the same function to the unc as the data so the UncMEDIAN shouldn't be divided by SQRT(N) but otherwise it does not reduce with higher numbers of observations like the mean
+# We only actually use the median here and in this case as an estimate for the mean which avoids outliers so I justify /SQRT(N)
+# There is ma.power and ma.sum but no ma.sqrt. However, I have read and tested that np.sqrt works as desired on masked arrays.                      
+                            if doMedian: 
+                                average = np.ma.median(clean_data[locs, :][:, cols], axis = 0)
+				# If its correlated r=1 do it this way - REALLY NOT RIGHT FOR MEDIAN
+				if doUSLR | doUSCN | doUHGT | doUC:
+				    unc_average = np.ma.median(unc_clean_data[locs, :][:, cols], axis = 0)
+				# If its NOT correlated do it this way
+				elif doUR | doUM | doUTOT:
+				    unc_average = np.ma.median(unc_clean_data[locs, :][:, cols], axis = 0)
+                            else:
+                                average = np.ma.mean(clean_data[locs, :][:, cols], axis = 0)
+				# If its correlated do it this way
+				if doUSLR | doUSCN | doUHGT | doUC:
+				    unc_average = np.sqrt(np.ma.power(np.ma.sum(unc_clean_data[locs, :][:, cols], axis = 0),2.))
+				# If its NOT correlated do it this way
+				if doUR | doUM | doUTOT:
+				    unc_average = np.sqrt(np.ma.sum(np.ma.power(unc_clean_data[locs, :][:, cols],2.), axis = 0))
+
+                            day_flags = raw_qc[locs, :][:, day_flag_loc]                            
+
+                            # if there is data then copy into final array
+                            if len(average.compressed()) > 0:
+                                # number of raw observations going into this grid box time stamp
+                                this_month_obs[gh, lt, ln] = np.ma.compress_rows(clean_data[locs, :][:, cols]).shape[0]
+
+                                this_month_grid[:, gh, lt, ln] = average
+                                this_month_grid.mask[:, gh, lt, ln] = False # unset the mask
+				
+				unc_this_month_grid[:, gh, lt, ln] = unc_average/np.sqrt(this_month_obs[gh, lt, ln])
+				unc_this_month_grid.mask[:, gh, lt, ln] = False # unset the mask
+				
+                                # restricting to day or night then set the flag and it's allowed value (Extended_IMMA.py line 668 - #0=night, 1=day)
+                                if len(np.unique(day_flags)) == 1:
+                                    this_month_time[gh, lt, ln] = np.unique(day_flags)
+                                else: # if a mix then force to be a day (KW in discussion with RD, 6 April 2016)
+                                    this_month_time[gh, lt, ln] = 1
+
+                            # ensure that mask is set otherwise
+                            else:
+                                this_month_grid.mask[:, gh, lt, ln] = True
+				unc_this_month_grid.mask[:, gh, lt, ln] = True
+				
+                        # ensure that mask is set otherwise
+                        else:
+                            this_month_grid.mask[:, gh, lt, ln] = True # ensure mask is set
+			    unc_this_month_grid.mask[:, gh, lt, ln] = True
+                else:
+                    this_month_grid.mask[:, :, lt, ln] = True # ensure mask is set
+		    unc_this_month_grid.mask[:, :, lt, ln] = True
+        else:
+            this_month_grid.mask[:, :, lt, :] = True # ensure mask is set
+	    unc_this_month_grid.mask[:, :, lt, :] = True
+
+    return this_month_grid, unc_this_month_grid, this_month_obs, this_month_time # grid_1by1_cam_unc
 
 #*********************************************************
 def grid_5by5(data, n_obs, grid_lats, grid_lons, doMedian = True, daily = True):
@@ -952,6 +1390,115 @@ def grid_5by5(data, n_obs, grid_lats, grid_lons, doMedian = True, daily = True):
                     n_obs_array[lt, ln] = np.ma.sum(n_obs[lat-DELTA:lat, lon-DELTA:lon])
 
     return new_data, n_grids_array, n_obs_array, new_lats, new_lons # grid_5by5
+
+#*********************************************************
+def grid_5by5_unc(data, unc_data, n_obs, grid_lats, grid_lons, doMedian = True, daily = True,
+                  doUSLR = False, doUSCN = False, doUHGT = False, doUR = False, doUM = False, doUC = False, doUTOT = False):
+    '''
+    Make a coarser grid and go from daily to monthly
+
+    As passing in only one month at a time, just average over all timestamps
+
+    :param array data: input 1x1 data (daily)
+    :param array unc?_data: input 1x1 uncertainty data (daily)
+    :param array n_obs: number of raw observations going into each daily 1x1 grid box
+    :param array grid_lats: input 1degree lats (box edges)
+    :param array grid_lons: input 1degree lons (box edges)
+    :param bool doMedian: use the median (default) instead of the mean
+    :param bool daily: input data is daily or not (i.e. monthly)
+# UNC NEW
+    :param bool doUSLR: work on BC and solar adj uncertainty with correlation
+    :param bool doUSCN: work on BC and instrument adj uncertainty with correlation
+    :param bool doUHGT: work on BC and height adj uncertainty with correlation
+    :param bool doUR: work on BC and rounding uncertainty with no correlation
+    :param bool doUM: work on BC and measurement uncertainty with no correlation
+    :param bool doUC: work on BC and climatological uncertainty with no correlation
+    :param bool doUTOT: work on BC and total uncertainty with no correlation
+    
+    :returns: new_data, new_lats, new_lons - updated to 5x5
+    '''
+
+    # assert the shapes are correct - blc at -89, -179, trc at 90, 180
+    #    Using upper right corner of box as index, and have nothing at -90, -180
+    assert len(grid_lats) == 180
+    assert len(grid_lons) == 360
+
+    if daily:
+        N_OBS = 0.3 * data.shape[1]  # 30% of days in month
+    else:
+        N_OBS = 1 # out of possible 25 1x1 monthly fields
+
+    DELTA = 5
+    # box edges
+    new_lats = np.arange(-90+DELTA, 90+DELTA, DELTA)
+    new_lons = np.arange(-180+DELTA, 180+DELTA, DELTA)
+
+    new_data = np.ma.zeros((data.shape[0], len(new_lats), len(new_lons)))
+    new_data.mask = np.ones((data.shape[0], len(new_lats), len(new_lons)))
+    new_data.fill_value = data.fill_value
+# UNC NEW
+    unc_new_data = np.ma.zeros((unc_data.shape[0], len(new_lats), len(new_lons)))
+    unc_new_data.mask = np.ones((unc_data.shape[0], len(new_lats), len(new_lons)))
+    unc_new_data.fill_value = unc_data.fill_value
+    
+    n_grids_array = np.ma.zeros((len(new_lats), len(new_lons)))
+    n_grids_array.mask = np.zeros((len(new_lats), len(new_lons)))
+    n_obs_array = np.ma.zeros((len(new_lats), len(new_lons)))
+    n_obs_array.mask = np.zeros((len(new_lats), len(new_lons)))
+
+    for lt, lat in enumerate(np.arange(0, len(grid_lats), DELTA) + DELTA):
+        for ln, lon in enumerate(np.arange(0, len(grid_lons), DELTA) + DELTA):
+           
+            # difficult to do over both space (and time) axes all at once
+            for var in range(data.shape[0]):
+                if daily:
+                    n_grids = np.ma.count(data[var, :, lat-DELTA:lat, lon-DELTA:lon])
+                else:
+                    n_grids = np.ma.count(data[var, lat-DELTA:lat, lon-DELTA:lon])
+
+                n_grids_array[lt, ln] = n_grids
+
+                if doMedian: # we're not generally choosing this anymore
+                    if daily:
+                        new_data[var, lt, ln] = np.ma.median(data[var, :, lat-DELTA:lat, lon-DELTA:lon])
+# UNC NEW np.ma.median(uTOT_this_month_grid) / np.sqrt(n_grids)
+# NO CORRELATION OPTION HERE AS I HAVE NO IDEA!!!
+                        unc_new_data[var, lt, ln] = np.ma.median(unc_data[var, :, lat-DELTA:lat, lon-DELTA:lon]) / np.sqrt(n_grids)
+                    else:
+                        new_data[var, lt, ln] = np.ma.median(data[var, lat-DELTA:lat, lon-DELTA:lon])
+# UNC NEW np.ma.median(uTOT_this_month_grid) / np.sqrt(n_grids)
+			unc_new_data[var, lt, ln] = np.ma.median(unc_data[var, lat-DELTA:lat, lon-DELTA:lon]) / np.sqrt(n_grids)
+                else:
+                    if daily:
+                        new_data[var, lt, ln] = np.ma.mean(data[var, :, lat-DELTA:lat, lon-DELTA:lon])
+# UNC NEW np.sqrt(np.ma.sum(np.ma.power(uTOT_this_month_grid, 2.), axis = 2)) / np.sqrt(n_hrs_per_day)
+                        # if correlation at r=1 then do like this
+			if doUSLR | doUSCN | doUHGT | doUC:
+                            unc_new_data[var, lt, ln] = np.sqrt(np.ma.power(np.ma.sum(unc_data[var, :, lat-DELTA:lat, lon-DELTA:lon]), 2.)) / np.sqrt(n_grids)
+                        # if NO correlation at r=0 then do like this
+			elif doUR | doUM | doUTOT:
+                            unc_new_data[var, lt, ln] = np.sqrt(np.ma.sum(np.ma.power(unc_data[var, :, lat-DELTA:lat, lon-DELTA:lon], 2.))) / np.sqrt(n_grids)
+                    else:
+                        new_data[var, lt, ln] = np.ma.mean(data[var, lat-DELTA:lat, lon-DELTA:lon])
+# UNC NEW np.sqrt(np.ma.sum(np.ma.power(uTOT_this_month_grid, 2.), axis = 2)) / np.sqrt(n_hrs_per_day)
+                        # if correlation at r=1 then do like this
+			if doUSLR | doUSCN | doUHGT | doUC:
+                            unc_new_data[var, lt, ln] = np.sqrt(np.ma.power(np.ma.sum(unc_data[var, lat-DELTA:lat, lon-DELTA:lon]), 2.)) / np.sqrt(n_grids)
+                        # if NO correlation at r=0 then do like this
+			elif doUR | doUM | doUTOT:
+                            unc_new_data[var, lt, ln] = np.sqrt(np.ma.sum(np.ma.power(unc_data[var, lat-DELTA:lat, lon-DELTA:lon], 2.))) / np.sqrt(n_grids)
+
+                if n_grids < N_OBS:
+                    new_data.mask[var, lt, ln] = True
+# UNC NEW
+                    unc_new_data.mask[var, lt, ln] = True
+                 
+                if daily:
+                    n_obs_array[lt, ln] = np.ma.sum(n_obs[:, lat-DELTA:lat, lon-DELTA:lon])
+                else:
+                    n_obs_array[lt, ln] = np.ma.sum(n_obs[lat-DELTA:lat, lon-DELTA:lon])
+
+    return new_data, unc_new_data, n_grids_array, n_obs_array, new_lats, new_lons # grid_5by5_unc
 
 #*********************************************************
 def days_in_year(year):
