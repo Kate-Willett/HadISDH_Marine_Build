@@ -43,6 +43,10 @@ python2.7 make_complete_data_files.py --suffix relax --months --daily (if monthl
  night
 python2.7 make_complete_data_files.py --suffix relax --months --daily (if monthly_from_daily) --period night --start_year YYYY --end_year YYYY --start_month MM --end_month MM (OPTIONAL: one of --doQC, --doQC1it, --doQC2it, --doQC3it, --doBC)
 
+both for uncertainty (must set --doBCtotal and --ShipOnly)
+python2.7 make_complete_data_files.py --suffix relax --months --daily (if monthly_from_daily) --period both --start_year YYYY --end_year YYYY --start_month MM --end_month MM --doUSCN --doBCtotal --ShipOnly
+for each of --doUHGT --doUC --doUR --doUM --doUTOT and if I ever get aroudn to it --doUSLR
+
 python2.7 make_complete_data_files.py --help 
 will show all options
 
@@ -55,6 +59,17 @@ OUTPUT
 -----------------------
 VERSION/RELEASE NOTES
 -----------------------
+
+Version 3 (29 Oct 2018) Kate Willett
+---------
+ 
+Enhancements
+This can now work with either all months and years or append the latest. If the start year is not 1973 then it appends
+This can now work with the uncertainty fields (full and append) - I'm keeping each file seperate at the moment - later I may make this code merge the uncertainty fields and data fields
+ 
+Changes
+ 
+Bug fixes
 
 Version 2 (26 Sep 2016) Kate Willett
 ---------
@@ -100,6 +115,7 @@ matplotlib.use('Agg')
 import calendar
 import netCDF4 as ncdf
 import gc
+import pdb
 
 import utils
 import set_paths_and_vars
@@ -110,7 +126,9 @@ defaults = set_paths_and_vars.set()
 #************************************************************************
 # KATE modified
 def combine_files(suffix = "relax", pentads = False, do3hr = False, months = False, daily = False, start_year = defaults.START_YEAR, end_year = defaults.END_YEAR, start_month = 1, end_month = 12, period = "both", 
-                  doQC = False, doQC1it = False, doQC2it = False, doQC3it = False, doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, ShipOnly = False):
+                  doQC = False, doQC1it = False, doQC2it = False, doQC3it = False, doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False,
+# UNC NEW		  
+		  doUSLR = False, doUSCN = False, doUHGT = False, doUR = False, doUM = False, doUC = False, doUTOT = False, ShipOnly = False):
 #def combine_files(suffix = "relax", pentads = False, do3hr = False, months = False, daily = False, start_year = defaults.START_YEAR, end_year = defaults.END_YEAR, start_month = 1, end_month = 12, period = "both", doQC = False, doBC = False):
 # end
     '''
@@ -138,6 +156,14 @@ def combine_files(suffix = "relax", pentads = False, do3hr = False, months = Fal
     :param bool doBChgt: work on the hieght only bias corrected data
     :param bool doBCscn: work on the screen only bias corrected data
 # end
+# UNC NEW
+    :param bool doUSLR: do solar adjustment uncertainties
+    :param bool doUSCN: do instrument adjustment uncertainties
+    :param bool doUHGT: do height adjustment uncertainties
+    :param bool doUR: do rounding uncertainties
+    :param bool doUM: do measurement uncertainties
+    :param bool doUC: do climatology uncertainties
+    :param bool doUTOT: do total uncertainties
 # KATE modified
     :param bool ShipOnly: work on the sship platform type only data
 # end
@@ -145,14 +171,33 @@ def combine_files(suffix = "relax", pentads = False, do3hr = False, months = Fal
     :returns:
     '''
 
+# UNC NEW
+    # If there is an uncertainty run set then set uSource to the name of hte uncertainty
+    if doUSLR:
+        uSource = 'uSLR'
+    elif doUSCN:
+        uSource = 'uSCN'
+    elif doUHGT:
+        uSource = 'uHGT'
+    elif doUR:
+        uSource = 'uR'
+    elif doUM:
+        uSource = 'uM'
+    elif doUC:
+        uSource = 'uC'
+    elif doUTOT:
+        uSource = 'uTOT'
+
 # KATE modified
-    settings = set_paths_and_vars.set(doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn, doQC = doQC, doQC1it = doQC1it, doQC2it = doQC2it, doQC3it = doQC3it, ShipOnly = ShipOnly)
+    settings = set_paths_and_vars.set(doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn, doQC = doQC, doQC1it = doQC1it, doQC2it = doQC2it, doQC3it = doQC3it, 
+                                      doUSLR = doUSLR, doUSCN = doUSCN, doUHGT = doUHGT, doUR = doUR, doUM = doUM, doUC = doUC, doUTOT = doUTOT, ShipOnly = ShipOnly)
     #settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC)
     
     # I've added this to test if there is an existing file to merge with so that it is easy to do annual updates.
     DefaultStartYear = 1973
 # end
     # pentads
+    # NO UNC SET UP FOR PENTADS AS WE ONLY WORK WITH MONTHS NOW
     if pentads:
 
         OBS_ORDER = utils.make_MetVars(settings.mdi, multiplier = False)
@@ -246,6 +291,8 @@ def combine_files(suffix = "relax", pentads = False, do3hr = False, months = Fal
         del OBS_ORDER
         gc.collect()
 
+    # months
+    # UNC SET UP FOR MONTHS!!!
     if months:
 
         OBS_ORDER = utils.make_MetVars(settings.mdi, multiplier = False)
@@ -257,10 +304,19 @@ def combine_files(suffix = "relax", pentads = False, do3hr = False, months = Fal
 	if start_year != DefaultStartYear:
 	
 	    # We must merge with the existing file
-            if daily:
-                filename = settings.DATA_LOCATION + "{}_5x5_monthly_from_daily_{}_{}.nc".format(settings.OUTROOT, period, suffix)
-            else:
-                filename = settings.DATA_LOCATION + "{}_5x5_monthly_{}_{}.nc".format(settings.OUTROOT, period, suffix)
+# UNC NEW	    
+	    # Check first whether we're working on uncertainty fields or not
+	    if doUSLR | doUSCN | doUHGT | doUR | doUM | doUC | doUTOT:
+                if daily:
+                    filename = settings.DATA_LOCATION + "{}_{}_5x5_monthly_from_daily_{}_{}.nc".format(settings.OUTROOT, uSource, period, suffix)
+                else:
+                    filename = settings.DATA_LOCATION + "{}_{}_5x5_monthly_{}_{}.nc".format(settings.OUTROOT, uSource, period, suffix)
+	    
+	    else:
+                if daily:
+                    filename = settings.DATA_LOCATION + "{}_5x5_monthly_from_daily_{}_{}.nc".format(settings.OUTROOT, period, suffix)
+                else:
+                    filename = settings.DATA_LOCATION + "{}_5x5_monthly_{}_{}.nc".format(settings.OUTROOT, period, suffix)
 
             ncdf_file = ncdf.Dataset(filename,'r', format='NETCDF4')
 
@@ -277,7 +333,12 @@ def combine_files(suffix = "relax", pentads = False, do3hr = False, months = Fal
 
             for v, var in enumerate(OBS_ORDER):
 
-                nc_var = ncdf_file.variables[var.name]
+# UNC NEW	    
+	        # Check first whether we're working on uncertainty fields or not because the var.name is different
+	        if doUSLR | doUSCN | doUHGT | doUR | doUM | doUC | doUTOT:
+                    nc_var = ncdf_file.variables[var.name+"_"+uSource]
+                else:
+                    nc_var = ncdf_file.variables[var.name]
 
                 try:
                     var.data = utils.ma_append(var.data, nc_var[:], axis = 0)
@@ -306,12 +367,22 @@ def combine_files(suffix = "relax", pentads = False, do3hr = False, months = Fal
             for month in np.arange(start_month, end_month + 1):
                 print "   {}".format(month)
 
-                if daily:
-                    filename = settings.DATA_LOCATION + "{}_5x5_monthly_from_daily_{}{:02d}_{}_{}.nc".format(settings.OUTROOT, year, month, period, suffix)
-                else:
-                    filename = settings.DATA_LOCATION + "{}_5x5_monthly_{}{:02d}_{}_{}.nc".format(settings.OUTROOT, year, month, period, suffix)
+# UNC NEW	    
+	        # Check first whether we're working on uncertainty fields or not
+	        if doUSLR | doUSCN | doUHGT | doUR | doUM | doUC | doUTOT:
+                    if daily:
+                        filename = settings.DATA_LOCATION + "{}_{}_5x5_monthly_from_daily_{}{:02d}_{}_{}.nc".format(settings.OUTROOT, uSource, year, month, period, suffix)
+                    else:
+                        filename = settings.DATA_LOCATION + "{}_{}_5x5_monthly_{}{:02d}_{}_{}.nc".format(settings.OUTROOT, uSource, year, month, period, suffix)
+	    
+	        else:
+                    if daily:
+                        filename = settings.DATA_LOCATION + "{}_5x5_monthly_from_daily_{}{:02d}_{}_{}.nc".format(settings.OUTROOT, year, month, period, suffix)
+                    else:
+                        filename = settings.DATA_LOCATION + "{}_5x5_monthly_{}{:02d}_{}_{}.nc".format(settings.OUTROOT, year, month, period, suffix)
 
-                ncdf_file = ncdf.Dataset(filename,'r', format='NETCDF4')
+                #pdb.set_trace()
+		ncdf_file = ncdf.Dataset(filename,'r', format='NETCDF4')
 
                 time = ncdf_file.variables["time"]
 
@@ -326,7 +397,12 @@ def combine_files(suffix = "relax", pentads = False, do3hr = False, months = Fal
 
                 for v, var in enumerate(OBS_ORDER):
 
-                    nc_var = ncdf_file.variables[var.name]
+# UNC NEW	    
+	            # Check first whether we're working on uncertainty fields or not because the var.name is different
+	            if doUSLR | doUSCN | doUHGT | doUR | doUM | doUC | doUTOT:
+                        nc_var = ncdf_file.variables[var.name+"_"+uSource]
+                    else:
+                        nc_var = ncdf_file.variables[var.name]
 
                     try:
                         var.data = utils.ma_append(var.data, nc_var[:], axis = 0)
@@ -393,14 +469,29 @@ def combine_files(suffix = "relax", pentads = False, do3hr = False, months = Fal
 # end
         times.data = np.arange(var.data.shape[0])
 
-        # and write file
-        if daily:
-            out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_5x5_monthly_from_daily_{}_{}_new.nc".format(period, suffix)
+# UNC NEW	    
+	# Check first whether we're working on uncertainty fields or not because the var.name is different
+	if doUSLR | doUSCN | doUHGT | doUR | doUM | doUC | doUTOT:
+            # and write file
+            if daily:
+                out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_{}_5x5_monthly_from_daily_{}_{}_new.nc".format(uSource, period, suffix)
+            else:
+                out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_{}_5x5_monthly_{}_{}.nc".format(uSource, period, suffix)
         else:
-            out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_5x5_monthly_{}_{}.nc".format(period, suffix)
+	    # and write file
+            if daily:
+                out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_5x5_monthly_from_daily_{}_{}_new.nc".format(period, suffix)
+            else:
+                out_filename = settings.DATA_LOCATION + settings.OUTROOT + "_5x5_monthly_{}_{}.nc".format(period, suffix)
 
 # KATE modified - now always using latitudes and longitudes
-        utils.netcdf_write(out_filename, all_data, n_grids, n_obs, OBS_ORDER, latitudes, longitudes, times, frequency = "Y")
+# UNC NEW	    
+	# Check first whether we're working on uncertainty fields or not because the var.name is different
+	if doUSLR | doUSCN | doUHGT | doUR | doUM | doUC | doUTOT:
+	    utils.netcdf_write_unc(uSource, out_filename, all_data, n_grids, n_obs, OBS_ORDER, latitudes, longitudes, times, frequency = "Y",
+	                           doUSLR = doUSLR, doUSCN = doUSCN, doUHGT = doUHGT, doUR = doUR, doUM = doUM, doUC = doUC, doUTOT = doUTOT)
+	else:
+	    utils.netcdf_write(out_filename, all_data, n_grids, n_obs, OBS_ORDER, latitudes, longitudes, times, frequency = "Y")
         #if period == "both":
         #    utils.netcdf_write(out_filename, all_data, n_grids, n_obs, OBS_ORDER, latitudes, longitudes, times, frequency = "Y")
         #else:
@@ -457,6 +548,22 @@ if __name__=="__main__":
     parser.add_argument('--doBCscn', dest='doBCscn', action='store_true', default = False,
                         help='process the screen only bias corrected data, default = False')
 # end
+# UNC NEW - THESE MUST BE RUN WITH --doBCtotal and --ShipOnly
+    parser.add_argument('--doUSCN', dest='doUSCN', action='store_true', default = False,
+                        help='process the bias corrected data uncertainties for instrument adjustment, default = False')
+    parser.add_argument('--doUHGT', dest='doUHGT', action='store_true', default = False,
+                        help='process the bias corrected data uncertainties for height adjustment, default = False')
+    parser.add_argument('--doUR', dest='doUR', action='store_true', default = False,
+                        help='process the bias corrected data uncertainties for rounding, default = False')
+    parser.add_argument('--doUM', dest='doUM', action='store_true', default = False,
+                        help='process the bias corrected data uncertainties for measurement, default = False')
+    parser.add_argument('--doUC', dest='doUC', action='store_true', default = False,
+                        help='process the bias corrected data uncertainties for climatology, default = False')
+    parser.add_argument('--doUTOT', dest='doUTOT', action='store_true', default = False,
+                        help='process the bias corrected data uncertainties combined, default = False')
+    parser.add_argument('--doUSLR', dest='doUSLR', action='store_true', default = False,
+                        help='process the bias corrected data uncertainties for solar radiation, default = False')
+
 # KATE modified
     parser.add_argument('--ShipOnly', dest='ShipOnly', action='store_true', default = False,
                         help='process the ship platform type data only, default = False')
@@ -470,6 +577,8 @@ if __name__=="__main__":
 # KATE modified
                       doQC = args.doQC, doQC1it = args.doQC1it, doQC2it = args.doQC2it, doQC3it = args.doQC3it, \
 		      doBC = args.doBC, doBCtotal = args.doBCtotal, doBChgt = args.doBChgt, doBCscn = args.doBCscn, \
+# UNC NEW		      
+		      doUSLR = args.doUSLR, doUSCN = args.doUSCN, doUHGT = args.doUHGT, doUR = args.doUR, doUM = args.doUM, doUC = args.doUC, doUTOT = args.doUTOT, \
 		      ShipOnly = args.ShipOnly)
                       #doQC = args.doQC, doBC = args.doBC)
 # end
