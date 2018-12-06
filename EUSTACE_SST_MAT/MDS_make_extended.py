@@ -2841,7 +2841,7 @@ def ApplyClimUnc(UncDict,Counter):
     PtArr = np.arange(0,365,5) # an array of pentad day start boundaries
     
     DayTotal = np.sum(MonthDays[0:(UncDict['MO'][Counter]-1)]) + UncDict['DY'][Counter] # The 'MO' is 1 to 12 so 0:1 would be 0:0 and give 0, 0:2 would be 0:1 and give 31, 0:3 would be 0:1 and give 59 etc.
-    PtBox = len(PtArr[np.where(PtArr <= DayTotal)])-1
+    PtBox = len(PtArr[np.where(PtArr < DayTotal)])-1
 #    print('Pentad: ',PtArr[PtBox],DayTotal,UncDict['MO'][Counter],UncDict['DY'][Counter])
     #pdb.set_trace()
     
@@ -2871,22 +2871,37 @@ def ApplyClimUnc(UncDict,Counter):
     UncDict['DPTAuncC'].append(np.squeeze(PtStDev) / np.sqrt(10.))    
     
     PtStDev,LatList,LonList = ReadNCF.GetGrid4Slice(InDirClim+'q'+ClimFile,['q'+VarName],SliceInfo,['latitude'],['longitude'])    
+    # If there is no valid stdev then force clim unc to be 10.
+    if (PtStDev < -100):
+        PtStDev = np.sqrt(10.)*10.
     # Set the Uncertainties
     UncDict['SHUuncC'].append(np.squeeze(PtStDev) / np.sqrt(10.))    
     UncDict['SHUAuncC'].append(np.squeeze(PtStDev) / np.sqrt(10.))     
     PtStDev,LatList,LonList = ReadNCF.GetGrid4Slice(InDirClim+'e'+ClimFile,['e'+VarName],SliceInfo,['latitude'],['longitude'])    
+    # If there is no valid stdev then force clim unc to be 10.
+    if (PtStDev < -100):
+        PtStDev = np.sqrt(10.)*10.
     # Set the Uncertainties
     UncDict['VAPuncC'].append(np.squeeze(PtStDev) / np.sqrt(10.))     
     UncDict['VAPAuncC'].append(np.squeeze(PtStDev) / np.sqrt(10.))     
     PtStDev,LatList,LonList = ReadNCF.GetGrid4Slice(InDirClim+'rh'+ClimFile,['rh'+VarName],SliceInfo,['latitude'],['longitude'])    
+    # If there is no valid stdev then force clim unc to be 10.
+    if (PtStDev < -100):
+        PtStDev = np.sqrt(10.)*10.
     # Set the Uncertainties
     UncDict['CRHuncC'].append(np.squeeze(PtStDev) / np.sqrt(10.))     
     UncDict['CRHAuncC'].append(np.squeeze(PtStDev) / np.sqrt(10.))     
     PtStDev,LatList,LonList = ReadNCF.GetGrid4Slice(InDirClim+'tw'+ClimFile,['tw'+VarName],SliceInfo,['latitude'],['longitude'])    
+    # If there is no valid stdev then force clim unc to be 10.
+    if (PtStDev < -100):
+        PtStDev = np.sqrt(10.)*10.
     # Set the Uncertainties
     UncDict['CWBuncC'].append(np.squeeze(PtStDev) / np.sqrt(10.))     
     UncDict['CWBAuncC'].append(np.squeeze(PtStDev) / np.sqrt(10.))    
     PtStDev,LatList,LonList = ReadNCF.GetGrid4Slice(InDirClim+'dpd'+ClimFile,['dpd'+VarName],SliceInfo,['latitude'],['longitude'])    
+    # If there is no valid stdev then force clim unc to be 10.
+    if (PtStDev < -100):
+        PtStDev = np.sqrt(10.)*10.
     # Set the Uncertainties
     UncDict['DPDuncC'].append(np.squeeze(PtStDev) / np.sqrt(10.))    
     UncDict['DPDAuncC'].append(np.squeeze(PtStDev) / np.sqrt(10.))    
@@ -3136,8 +3151,9 @@ def main(argv):
 	    newtypee = typee[0:(LenTypee-3)]+typee[(LenTypee-2):]+LocalType
 	    #pdb.set_trace()	    
 	    
-	    # Write out extendeds
-            mrw.WriteMDSextended("{:4d}".format(yy+int(year1)),"{:02}".format(mm+int(month1)),newtypee,TheExtDict)
+# Commenting out while I'm just re-running the uncertainty
+#	    # Write out extendeds
+#            mrw.WriteMDSextended("{:4d}".format(yy+int(year1)),"{:02}".format(mm+int(month1)),newtypee,TheExtDict)
 #	    pdb.set_trace()
 
             # Write out uncertainties
