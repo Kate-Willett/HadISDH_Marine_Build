@@ -742,7 +742,8 @@ def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = d
                 del monthly_5by5_n_grids
                 del monthly_5by5_n_obs
 # UNC NEW
-		if doBCtotal:
+#		if doBCtotal:
+                if doUSLR | doUSCN | doUHGT | doUR | doUM | doUC | doUTOT:
 		    del unc_daily_grid
 		    del unc_monthly_5by5
 		

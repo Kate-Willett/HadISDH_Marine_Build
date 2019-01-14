@@ -18,6 +18,9 @@ all to be specified in the configuration files.
 # KW edited to read in threshold limits from the configuration.txt file. If these are not provided in the config file then defaults
 are used. This is to allow me to play with the thresholds - knowing that obs clims and stdevs are interpolated from monthly so stdevs 
 at least are likely too low! This also involves changes to base_qc_report, ex.mdsKATE_buddy_check and ex.get_buddy_limits
+
+# KW edited to only read in ships (0-5) and moored buoys (6-8) 
+
 '''
 
 import gzip

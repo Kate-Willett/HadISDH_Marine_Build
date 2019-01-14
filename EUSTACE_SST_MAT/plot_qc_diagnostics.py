@@ -119,8 +119,8 @@ def values_vs_lat(var, lats, data, qc_flags, these_flags, filename, multiplier =
     # all data
     plt.subplot(1,2,1)
 # KATE modified - lats should only be div 100, not 10 (absolute.multiplier) so hard wired to 100.
-    plt.scatter(data/multiplier, lats/100., c = 'gold', marker = '.') # KATE changed to gold
-    plt.scatter(dirty_data/multiplier, lats/100., c = 'r', marker = '.')
+    plt.scatter(data/multiplier, lats/100., c = 'gold', marker = '.',edgecolor='none') # KATE changed to gold
+    plt.scatter(dirty_data/multiplier, lats/100., c = 'r', marker = '.',edgecolor='none')
     #plt.scatter(data/multiplier, lats/multiplier, c = 'k', marker = '.')
     #plt.scatter(dirty_data/multiplier, lats/multiplier, c = 'r', marker = '.')
 # end
@@ -134,7 +134,7 @@ def values_vs_lat(var, lats, data, qc_flags, these_flags, filename, multiplier =
     # clean data
     plt.subplot(1,2,2)
 # KATE modified - lats should only be div 100, not 10 (absolute.multiplier) so hard wired to 100.
-    plt.scatter(clean_data/multiplier, lats/100., c = 'b', marker = '.')
+    plt.scatter(clean_data/multiplier, lats/100., c = 'b', marker = '.',edgecolor='none')
     #plt.scatter(clean_data/multiplier, lats/multiplier, c = 'b', marker = '.')
 # end
 
@@ -191,7 +191,7 @@ def values_vs_lat_dist(var, lats, data, qc_flags, these_flags, filename, multipl
     ax1 = plt.subplot(1,2,1)
 # KATE modified - lats should only be div 100, not 10 (absolute.multiplier) so hard wired to 100.
     ax1.scatter(data/multiplier, lats/100., s=10, c = 'deepskyblue', marker = 'o', edgecolor='none') # KATE changed to gold
-    ax1.scatter(dirty_data/multiplier, lats/100., s=10, c = 'r', marker = 'o', edgecolor='none') # KATE changed to gold
+    ax1.scatter(dirty_data/multiplier, lats/100., s=10, c = 'darksalmon', marker = 'o', edgecolor='none') # KATE changed to gold
 #    ax1.scatter(data/multiplier, lats/100., c = 'gold', marker = '.')
 #    ax1.scatter(dirty_data/multiplier, lats/100., c = 'r', marker = '.')
     #plt.scatter(data/multiplier, lats/multiplier, c = 'k', marker = '.')
@@ -216,19 +216,19 @@ def values_vs_lat_dist(var, lats, data, qc_flags, these_flags, filename, multipl
     ThisHist = np.histogram(data/multiplier,binsies)
     y2Max = np.max(ThisHist[0])
     HalfX = (ThisHist[1][1] - ThisHist[1][0]) / 2.
-    ax2.plot(ThisHist[1][0:50]+HalfX,ThisHist[0],c='deepskyblue',linestyle='solid',linewidth=4) 
+    ax2.plot(ThisHist[1][0:50]+HalfX,ThisHist[0],c='royalblue',linestyle='solid',linewidth=4) 
     meanHist = '{:5.1f}'.format(np.mean(data/multiplier))
     sdHist = '{:5.1f}'.format(np.std(data/multiplier))
-    ax2.annotate('All ('+meanHist+', '+sdHist+')',xy=(0.05,0.96),xycoords='axes fraction',size=12,color='deepskyblue')
+    ax2.annotate('All ('+meanHist+', '+sdHist+')',xy=(0.05,0.96),xycoords='axes fraction',size=12,color='royalblue')
 
     # Plot for failed data
     ThisHist = np.histogram(dirty_data[~dirty_data.mask]/multiplier,binsies)
     HalfX = (ThisHist[1][1] - ThisHist[1][0]) / 2.
-    ax2.plot(ThisHist[1][0:50]+HalfX,ThisHist[0],c='r',linestyle='solid',linewidth=4) 
+    ax2.plot(ThisHist[1][0:50]+HalfX,ThisHist[0],c='lightcoral',linestyle='solid',linewidth=4) 
     meanHist = '{:5.1f}'.format(np.mean(dirty_data[~dirty_data.mask]/multiplier))
     sdHist = '{:5.1f}'.format(np.std(dirty_data[~dirty_data.mask]/multiplier))
     PctFail = '{:5.1f}'.format((len(dirty_data[~dirty_data.mask]) / np.float(len(data))) * 100.)+'%'
-    ax2.annotate('Bad Obs ('+meanHist+', '+sdHist+', '+PctFail+')',xy=(0.05,0.92),xycoords='axes fraction',size=12,color='r')
+    ax2.annotate('Bad Obs ('+meanHist+', '+sdHist+', '+PctFail+')',xy=(0.05,0.92),xycoords='axes fraction',size=12,color='lightcoral')
 
     ax1.set_ylim([-90,90])
     ax1.set_xlim([xMin,xMax])
@@ -249,7 +249,7 @@ def values_vs_lat_dist(var, lats, data, qc_flags, these_flags, filename, multipl
     # clean data
     ax1 = plt.subplot(1,2,2)
 # KATE modified - lats should only be div 100, not 10 (absolute.multiplier) so hard wired to 100.
-    ax1.scatter(clean_data/multiplier, lats/100., s=10, c = 'b', marker = 'o', edgecolor='none')
+    ax1.scatter(clean_data/multiplier, lats/100., s=10, c = 'springgreen', marker = 'o', edgecolor='none')
 #    ax1.scatter(clean_data/multiplier, lats/100., c = 'b', marker = '.')
     #plt.scatter(clean_data/multiplier, lats/multiplier, c = 'b', marker = '.')
 # end
@@ -264,10 +264,10 @@ def values_vs_lat_dist(var, lats, data, qc_flags, these_flags, filename, multipl
     ThisHist = np.histogram(clean_data[~clean_data.mask]/multiplier,binsies)
 #    y2Max = np.max(ThisHist[0])
     HalfX = (ThisHist[1][1] - ThisHist[1][0]) / 2.
-    ax2.plot(ThisHist[1][0:50]+HalfX,ThisHist[0],c='b',linestyle='solid',linewidth=4) 
+    ax2.plot(ThisHist[1][0:50]+HalfX,ThisHist[0],c='limegreen',linestyle='solid',linewidth=4) 
     meanHist = '{:5.1f}'.format(np.mean(clean_data[~clean_data.mask]/multiplier))
     sdHist = '{:5.1f}'.format(np.std(clean_data[~clean_data.mask]/multiplier))
-    ax2.annotate('Clean Obs ('+meanHist+', '+sdHist+')',xy=(0.05,0.96),xycoords='axes fraction',size=12,color='b')
+    ax2.annotate('Clean Obs ('+meanHist+', '+sdHist+')',xy=(0.05,0.96),xycoords='axes fraction',size=12,color='limegreen')
 
     ax1.set_ylim([-90,90])
     ax1.set_xlim([xMin,xMax])
