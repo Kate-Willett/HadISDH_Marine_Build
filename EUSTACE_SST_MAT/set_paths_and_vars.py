@@ -303,7 +303,7 @@ def set(doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doQC 
         PLOT_LOCATION=PLOT_DIR+"PLOTSOBSclim2noQC/"
 
         if ShipOnly:
-	    OUTROOT = "OBSclim2noQC"
+	    OUTROOT = "OBSclim2NBC"
             ICOADS_LOCATION=ICOADS_DIR+"{}/".format(OUTROOT)
             DATA_LOCATION=DATA_DIR+"GRIDSOBSclim2noQCship/"
             PLOT_LOCATION=PLOT_DIR+"PLOTSOBSclim2noQCship/"
