@@ -6,9 +6,9 @@
 #
 #************************************************************************
 '''
-Author: Robert Dunn
+Author: Robert Dunn and Kate Willett
 Created: March 2016
-Last update: 12 April 2016
+Last update: 21 January 2019
 Location: /project/hadobs2/hadisdh/marine/PROGS/Build
 
 -----------------------
@@ -37,7 +37,7 @@ HOW TO RUN THE CODE
 
 python2.7
 import timeseries_comparison_plots as tcp
-# run day, night, both comparison for all or ship only
+# run day, night, both comparison for all or ship only (NBC and BClocal)
 tcp.compare_timings('all') # or 'ship'
 # run QC noQC comparison for all or ship only
 tcp.compare_QCraw('all') # or 'ship' (ship not set up yet for raw)
@@ -59,6 +59,17 @@ OLD: /project/hadobs2/hadisdh/marine/ICOADS.2.5.1/PLOTS_comparison/
 -----------------------
 VERSION/RELEASE NOTES
 -----------------------
+
+Version 4 (21 Jan 2019)
+---------
+ 
+Enhancements
+compare_timings now also plots BClocal as well as NBC
+ 
+Changes
+ 
+Bug fixes
+
 
 Version 3 (19 Jan 2017)
 ---------
@@ -343,7 +354,7 @@ def mpw_plot_points(slope, years, values):
 #***************************************
 # Day versus Night
 def compare_timings(Ob_Type = 'all'):
-    ''' Run the day, night, both comparison plot '''
+    ''' Run the day, night, both comparison plot for NBC and then BClocal'''
     ''' Ob_Type = all, ship - default = all '''
 
     version = "_renorm19812010_anomalies"
@@ -403,13 +414,65 @@ def compare_timings(Ob_Type = 'all'):
         elif Ob_Type == 'ship':
 	    do_plot(to_plot, title, "{}_{}_day-night-both_SHIP.png".format(var.name, correction))
 
+    correction = "BClocal"
+
+    for v, var in enumerate(OBS_ORDER):
+    #    if "anomalies" not in var.name:
+    #        continue
+
+        to_plot = []
+
+        for time_res in ["annual", "monthly"]:
+            if time_res == "annual":
+                zorder = 10
+                lw = 2
+            else:
+                zorder = 1
+                lw = 1
+
+            for period in ["both", "day", "night"]:
+                if period == "both":
+                    color = "grey" #"lime"
+                elif period == "day":
+                    color = "darkorange" #"r"
+                elif period == "night":
+                    color = "darkblue" #"c"
+
+                # KATE ADDED ship bit
+		if Ob_Type == 'all':
+		    filename = "{}/{}/OBSclim2{}_5x5_monthly{}_from_daily_{}_{}_ts_{}.nc".format(DATA_LOCATION, GRID_LOCATION[correction], correction, version, period, suffix, time_res) 
+                elif Ob_Type == 'ship':
+		    filename = "{}/{}ship/OBSclim2{}_5x5_monthly{}_from_daily_{}_{}_ts_{}.nc".format(DATA_LOCATION, GRID_LOCATION[correction], correction, version, period, suffix, time_res) 
+		
+# OLD:            filename = "{}/{}/ERAclim{}_5x5_monthly{}_from_daily_{}_{}_ts_{}.nc".format(DATA_LOCATION, GRID_LOCATION[correction], correction, version, period, suffix, time_res) 
+
+                y, t = get_data(filename,var)
+
+                label = "{}".format(period)
+
+                if time_res == "annual":
+                    to_plot += [PlotData(var.name, y, t, label, color, zorder, lw)]
+                else:
+                    to_plot += [PlotData(var.name, y, t, "", color, zorder, lw)]
+                
+        title = "{} - {}".format(" ".join([s.capitalize() for s in var.name.split("_")]), correction)
+
+        if "specific_humidity" in var.name:
+            nocs_m, nocs_a = read_nocs()
+            to_plot += [nocs_m, nocs_a]
+        # KATE ADDED ship bit
+        if Ob_Type == 'all':
+	    do_plot(to_plot, title, "{}_{}_day-night-both.png".format(var.name, correction))
+        elif Ob_Type == 'ship':
+	    do_plot(to_plot, title, "{}_{}_day-night-both_SHIP.png".format(var.name, correction))
+
+
 #***************************************
 #***************************************
 # QC vs noQC
 def compare_QCraw(Ob_Type = 'all'):
     ''' Run the QC vs noQC comparison plot '''
     ''' Ob_Type = all, ship - default = all '''
-    ''' SHIP ONLY RAW VERSION NOT COMPUTED YET!!! '''
 
     version = "_renorm19812010_anomalies"
     # OLD: version = "_anomalies"
@@ -541,7 +604,6 @@ def compare_BCNBC(Ob_Type = 'all'):
 def compare_BCtype(Ob_Type = 'all'):
     ''' Run the BC types total, scn and hgt comparison plot '''
     ''' Ob_Type = 'all'. 'ship' - default = all '''
-    ''' NO SHIP SCN or HGT COMPUTED YET!!! '''
 
     version = "_renorm19812010_anomalies"
     #OLD: version = "_anomalies"
@@ -619,7 +681,6 @@ def compare_BCtype(Ob_Type = 'all'):
 def compare_PTs(Plot_Type = 'NBC'):
     ''' Run the platform (ship vs all) comparison plot '''
     ''' Plot_Type = 'NBC'. 'BClocal' - default = NBC  '''
-    ''' NO SHIP SCN or HGT COMPUTED YET!!! '''
 
     version = "_renorm19812010_anomalies"
     #OLD: version = "_anomalies"
