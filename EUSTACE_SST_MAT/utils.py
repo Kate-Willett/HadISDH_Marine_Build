@@ -593,31 +593,32 @@ def write_netcdf_variable_unc(uSource,outfile, var, v, unc_data, frequency, do_z
     
     '''
 
-    # CREATING 2 SIGMA UNCERTAINTY
-    unc_data = unc_data
+# Never set this up so keep everything 1 sigma until producing combined files
+#    # CREATING 2 SIGMA UNCERTAINTY
+#    unc_data = unc_data
 
     nc_var = outfile.createVariable(var.name+'_'+uSource, var.dtype, ('time','latitude','longitude',), zlib = do_zip, fill_value = var.mdi)
 
     if doUSLR:
-        nc_var.long_name = var.long_name+' SOLAR RADIATION ADJUSTMENT uncertainty (2 sigma) - correlated r=1'
+        nc_var.long_name = var.long_name+' SOLAR RADIATION ADJUSTMENT uncertainty (1 sigma) - correlated r=1'
         nc_var.standard_name = var.standard_name+' solar uncertainty'
     elif doUSCN:
-        nc_var.long_name = var.long_name+' NON-ASPIRATED INSTRUMENT ADJUSTMENT uncertainty (2 sigma) - correlated r=1'
+        nc_var.long_name = var.long_name+' NON-ASPIRATED INSTRUMENT ADJUSTMENT uncertainty (1 sigma) - correlated r=1'
         nc_var.standard_name = var.standard_name+' instrument uncertainty'
     elif doUHGT:
-        nc_var.long_name = var.long_name+' PLATFORM HEIGHT ADJUSTMENT uncertainty (2 sigma) - correlated r=1'
+        nc_var.long_name = var.long_name+' PLATFORM HEIGHT ADJUSTMENT uncertainty (1 sigma) - correlated r=1'
         nc_var.standard_name = var.standard_name+' height uncertainty'
     elif doUR:
-        nc_var.long_name = var.long_name+' ROUNDING uncertainty (2 sigma) - uncorrelated'
+        nc_var.long_name = var.long_name+' ROUNDING uncertainty (1 sigma) - uncorrelated'
         nc_var.standard_name = var.standard_name+' rounding uncertainty'
     elif doUM:
-        nc_var.long_name = var.long_name+' MEASUREMENT uncertainty (2 sigma) - uncorrelated'
+        nc_var.long_name = var.long_name+' MEASUREMENT uncertainty (1 sigma) - uncorrelated'
         nc_var.standard_name = var.standard_name+' measurement uncertainty'
     elif doUC:
-        nc_var.long_name = var.long_name+' CLIMATOLOGY uncertainty (2 sigma) - correlated r=1'
+        nc_var.long_name = var.long_name+' CLIMATOLOGY uncertainty (1 sigma) - correlated r=1'
         nc_var.standard_name = var.standard_name+' climatology uncertainty'
     elif doUTOT:
-        nc_var.long_name = var.long_name+' TOTAL OBSERVATIONAL uncertainty (2 sigma) - no correlation'
+        nc_var.long_name = var.long_name+' TOTAL OBSERVATIONAL uncertainty (1 sigma) - no correlation'
         nc_var.standard_name = var.standard_name+' total uncertainty'
     
     nc_var.units = var.units
