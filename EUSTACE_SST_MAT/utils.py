@@ -589,7 +589,6 @@ def write_netcdf_variable_unc(uSource,outfile, var, v, unc_data, frequency, do_z
     :param bool doUM: work on BC and measurement uncertainty with no correlation
     :param bool doUC: work on BC and climatological uncertainty with no correlation
     :param bool doUTOT: work on BC and total uncertainty with no correlation
-        NB: AT THIS POINT WE MULTIPLY THE STANDARD UNCERTAINTY BY 2 TO GIVE A COVERAGE FACTOR OF 2 (2SIGMA)
     
     '''
 
