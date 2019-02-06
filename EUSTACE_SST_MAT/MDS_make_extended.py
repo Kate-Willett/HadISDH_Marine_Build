@@ -3151,7 +3151,7 @@ def main(argv):
 # Commenting out while I'm just re-running the uncertainty
 	    # Write out extendeds
             mrw.WriteMDSextended("{:4d}".format(yy+int(year1)),"{:02}".format(mm+int(month1)),newtypee,TheExtDict)
-	    pdb.set_trace()
+#	    pdb.set_trace()
 
             # Write out uncertainties
             mrw.WriteMDSuncertainty("{:4d}".format(yy+int(year1)),"{:02}".format(mm+int(month1)),newtypee,TheUncDict)
