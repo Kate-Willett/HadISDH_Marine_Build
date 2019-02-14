@@ -1,0 +1,15 @@
+description		HadISDH monthly mean marine surface climate monitoring product from 1973 onwards. Quality control, buddy check, uncertainty estimation, averaging over gridboxes (no smoothing or interpolation).
+title			HadISDH monthly mean marine surface climate monitoring product from 1973 onwards.
+institution		Met Office Hadley Centre (UK), National Oceanography Centre - Southampton (UK)
+history			First version of the year
+source			ICOADS 3.0.0 and ICOADS 3.0.1 icoads.noaa.gov
+comment			''
+references		Willett, Dunn, et al, 2019, in prep
+creator_name		Kate Willett
+creator_url		www.metoffice.gov.uk
+creator_email		kate.willett@metoffice.gov.uk
+time_coverage_start	1973-01-01T00:00Z
+time_coverage_end	2018-12-31T00:00Z
+cdm_data_type		gridded
+keywords		monthly, gridded, humidity
+version			1.0.0.2018f
