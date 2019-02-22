@@ -177,7 +177,8 @@ def get_pseudo_stations(NGridsArr,Nlats,Nlons,TheMDI):
     # Maybe for well sampled gridboxes (600+ daily 1by1 grids within a month) I use 25 and scale appropriately depending on n_grids
     # Yes - sounds like a plan
     # I'm generally getting fewer than 100 grids per month
-    # use np.linspace to get 25 steps from 1 to 600 such that the largest bin has 25 pseudo n_stations and the smallest has 1 '''
+    # use np.linspace to get 25 steps from 1 to 600 such that the largest bin has 25 pseudo n_stations and the smallest has 1
+    # Make sure that grids with NO DATA have 0 '''
     
     Pseudo_station_bins = np.round(np.linspace(25,600,24)) # integer array from 25 to 600 in 24 steps
     Pseudo_station_bins = np.append(Pseudo_station_bins,6000) # now 25 elements with a huge 6000 at the end to catch all 
@@ -191,7 +192,7 @@ def get_pseudo_stations(NGridsArr,Nlats,Nlons,TheMDI):
     for lt in range(Nlats):
         for ln in range(Nlons):
         
-            Gots = np.where(NGridsArr[:,lt,ln] > TheMDI)[0]
+            Gots = np.where(NGridsArr[:,lt,ln] > 0)[0]
             if (len(Gots) > 0):
                 MeanGrids = np.mean(NGridsArr[Gots,lt,ln])
                 MeanNPointsArr[lt,ln] = Pseudo_station_counts[np.where(Pseudo_station_bins > np.ceil(MeanGrids))[0][0]] 		 
@@ -247,8 +248,8 @@ def calc_total_obs_unc(TheURArr,TheUCArr,TheUMArr,TheUSCNArr,TheUHGTArr,TheNLats
     # Convert all 0 values to TheMDI - hope floating points don't do anything silly
     TheTotObsUncArr[np.where(TheTotObsUncArr == 0.)] = TheMDI
     
-    print("Test TheTotObsUncArr!")
-    pdb.set_trace()
+#    print("Test TheTotObsUncArr!")
+#    pdb.set_trace()
     
     return TheTotObsUncArr
 
@@ -285,16 +286,18 @@ def calc_full_unc(TheUOBSArr,TheUSAMPArr,TheNLats,TheNLons,TheMDI):
 
     # Convert all 0 values to TheMDI - hope floating points don't do anything silly
     TheFullUncArr[np.where(TheFullUncArr == 0.)] = TheMDI
+    TheUOBSArr[np.where(TheUOBSArr == 0)] = TheMDI
+    TheUSAMPArr[np.where(TheUSAMPArr == 0)] = TheMDI
     
-    print("Test TheFullUncArr!")
-    pdb.set_trace()
+#    print("Test TheFullUncArr!")
+#    pdb.set_trace()
     
     return TheFullUncArr
 
 ##################################################
 # Write_Netcdf_Variable_Unc #
 ##################################################
-def Write_Netcdf_Variable_Unc(uSource,outfile, var, vlong, vstandard, vunit, unc_data):
+def Write_Netcdf_Variable_Unc(uSource,outfile, var, vlong, vstandard, vunit, unc_data, TheMDI):
     '''
     This is basically a tweak of the utils.py version but set up to work here
     
@@ -302,39 +305,69 @@ def Write_Netcdf_Variable_Unc(uSource,outfile, var, vlong, vstandard, vunit, unc
     :param str uSource: name of uncertainty source    
     :param obj outfile: output file object
     :param list var: variable name
-    :param int v: sequence number of variable
     :param list vlong: long variable name
     :param list vstandard: standard variable name
     :param str vunit: unit of variable
     :param np array unc_data: times, lats, lons uncertainty data to write
     
     '''
-    
-    nc_var = outfile.createVariable(var+'_'+uSource, np.dtype('float64'), ('time','latitude','longitude',), zlib = True, fill_value = TheMDI) # with compression
 
-    if uSource == 'SAMP':
-        nc_var.long_name = vlong+' GRIDBOX SAMPLING uncertainty (1 sigma)'
-        nc_var.standard_name = vstandard+' sampling uncertainty'
-    elif uSource == 'sbarSQ':
-        nc_var.long_name = vlong+' GRIDBOX mean station variance'
-        nc_var.standard_name = vstandard+' mean station variance'
-    elif uSource == 'rbar':
-        nc_var.long_name = vlong+' GRIDBOX mean intersite correlation'
-        nc_var.standard_name = vstandard+' mean intersite correlation'
-    elif uSource == 'OBS':
-        nc_var.long_name = vlong+' TOTAL OBSERVATION uncertainty (1 sigma)'
-        nc_var.standard_name = vstandard+' total obs uncertainty'
-    elif uSource == 'FULL':
-        nc_var.long_name = vlong+' FULL uncertainty (1 sigma)'
-        nc_var.standard_name = vstandard+' full uncertainty'
+    # For sbarSQ adn SAMP there will be an n_grids variable which needs to be treated differently
+    if (var == 'n_grids'):
+
+        # Create the Variable but rbar and sbarSQ do not have a time dimension
+        if (uSource != 'sbarSQ'):
+            nc_var = outfile.createVariable(var, np.dtype('int'), ('time','latitude','longitude',), zlib = True, fill_value = -1) # with compression
+        else:
+            nc_var = outfile.createVariable(uSource, np.dtype('int'), ('latitude','longitude',), zlib = True, fill_value = -1) # with compression
     
-    nc_var.units = vunit
-    nc_var.missing_value = TheMDI
+        nc_var.long_name = 'Number of pseudo stations within gridbox'
+        nc_var.standard_name = 'Number of pseudo station grids'
     
-    # We're not using masked arrays here - hope that' snot a problem
-    nc_var.valid_min = np.min(unc_data[np.where(unc_data != TheMDI)]) 
-    nc_var.valid_max = np.max(unc_data[np.where(unc_data != TheMDI)]) 
+        nc_var.units = vunit
+        nc_var.missing_value = -1
+    
+        # We're not using masked arrays here - hope that' snot a problem
+        nc_var.valid_min = np.min(unc_data[np.where(unc_data > -1)]) 
+        nc_var.valid_max = np.max(unc_data[np.where(unc_data > -1)]) 
+
+    # For all other variables...
+    else:     
+    
+        # Create the Variable but rbar and sbarSQ do not have a time dimension
+        if (uSource != 'rbar') & (uSource != 'sbarSQ'):
+             nc_var = outfile.createVariable(var+'_'+uSource, np.dtype('float64'), ('time','latitude','longitude',), zlib = True, fill_value = TheMDI) # with compression
+        else:
+            nc_var = outfile.createVariable(var+'_'+uSource, np.dtype('float64'), ('latitude','longitude',), zlib = True, fill_value = TheMDI) # with compression
+    
+        if uSource == 'SAMP':
+            nc_var.long_name = vlong+' GRIDBOX SAMPLING uncertainty (1 sigma)'
+            nc_var.standard_name = vstandard+' sampling uncertainty'
+        elif uSource == 'sbarSQ':
+            nc_var.long_name = vlong+' GRIDBOX mean station variance'
+            nc_var.standard_name = vstandard+' mean station variance'
+        elif uSource == 'rbar':
+            nc_var.long_name = vlong+' GRIDBOX mean intersite correlation'
+            nc_var.standard_name = vstandard+' mean intersite correlation'
+        elif uSource == 'OBS':
+            nc_var.long_name = vlong+' TOTAL OBSERVATION uncertainty (1 sigma)'
+            nc_var.standard_name = vstandard+' total obs uncertainty'
+        elif uSource == 'FULL':
+            nc_var.long_name = vlong+' FULL uncertainty (1 sigma)'
+            nc_var.standard_name = vstandard+' full uncertainty'
+    
+        nc_var.units = vunit
+        nc_var.missing_value = TheMDI
+    
+        # We're not using masked arrays here - hope that' snot a problem
+        nc_var.valid_min = np.min(unc_data[np.where(unc_data != TheMDI)]) 
+        nc_var.valid_max = np.max(unc_data[np.where(unc_data != TheMDI)]) 
+        
     nc_var[:] = unc_data
+    
+#    print("Testing netCDF output to find why its putting MDI as 0",var)
+#    print(unc_data[0,0:10,0:5])
+#    pdb.set_trace()
         
     return # write_netcdf_variable_unc
     
@@ -365,26 +398,28 @@ def Write_NetCDF_Unc(uSource, filename, data_abs, data_anoms, lats, lons, time, 
     :param float TheMDI: the missing data indicator
 
     '''
-
+    
     # remove file
     if os.path.exists(filename):
         os.remove(filename)
 
     outfile = ncdf.Dataset(filename,'w', format='NETCDF4')
 
-    # Set up dimensions
-    time_dim = outfile.createDimension('time',len(time))
+    # Set up dimensions - with time only for SAMP, FULL and OBS
+    if (uSource != 'rbar') & (uSource != 'sbarSQ'):
+        time_dim = outfile.createDimension('time',len(time))
     lat_dim = outfile.createDimension('latitude',len(lats)) # as TRC of box edges given, size = # box centres to be written
     lon_dim = outfile.createDimension('longitude',len(lons))
     
     #***********
     # set up basic variables linked to dimensions
     # make time variable
-    nc_var = outfile.createVariable('time', np.dtype('int'), ('time'), zlib = True) # with compression!!!
-    nc_var.long_name = "time since 1/1/1973 in months"
-    nc_var.units = "months"
-    nc_var.standard_name = "time"
-    nc_var[:] = time
+    if (uSource != 'rbar') & (uSource != 'sbarSQ'):
+        nc_var = outfile.createVariable('time', np.dtype('int'), ('time'), zlib = True) # with compression!!!
+        nc_var.long_name = "time since 1/1/1973 in months"
+        nc_var.units = "months"
+        nc_var.standard_name = "time"
+        nc_var[:] = time
     
     # make latitude variable
     nc_var = outfile.createVariable('latitude', np.dtype('float32'), ('latitude'), zlib = True) # with compression!!!
@@ -403,12 +438,17 @@ def Write_NetCDF_Unc(uSource, filename, data_abs, data_anoms, lats, lons, time, 
 
     #***********
     # create variables actuals - makes 1 sigma:
-    for v, var in enumerate(variables_abs):
-            Write_Netcdf_Variable_Unc(uSource, outfile, var, v, long_abs, standard_abs, unitsarr[v], data_abs[v])
+#    print("Test data again for MDI")
+    for v in range(len(variables_abs)):
+        var = variables_abs[v]
+        print(v, var)      
+        Write_Netcdf_Variable_Unc(uSource, outfile, var, long_abs[v], standard_abs[v], unitsarr[v], data_abs[v], TheMDI)
 
     # create variables anomalies - makes 1 sigma:
-    for v, var in enumerate(variables_anoms):
-            Write_Netcdf_Variable_Unc(uSource, outfile, var, v, long_anoms, standard_anoms, unitsarr[v], data_anoms[v])
+    for v in range(len(variables_anoms)):
+        var = variables_anoms[v]
+        print(v, var)
+        Write_Netcdf_Variable_Unc(uSource, outfile, var, long_anoms[v], standard_anoms[v], unitsarr[v], data_anoms[v], TheMDI)
 
     # Global Attributes 
     
@@ -431,9 +471,9 @@ def Write_NetCDF_Unc(uSource, filename, data_abs, data_anoms, lats, lons, time, 
         attributes[split_line[0]] = " ".join(split_line[1:])    
     
     # Set the attributes
-    for attr in attribs:
+    for attr in attributes:
         
-        outfile.__setattr__(attr, attribs[attr])
+        outfile.__setattr__(attr, attributes[attr])
  
     outfile.date_created = dt.datetime.strftime(dt.datetime.now(), "%Y-%m-%d, %H:%M")
     outfile.Conventions = 'CF-1.5' 
@@ -487,12 +527,12 @@ def main(argv):
                 sys.exit("Failed: month2 not an integer")
         elif opt == "--timings":
             try:
-                typee = arg
+                timings = arg
             except:
                 sys.exit("Failed: timings not a string")
         elif opt == "--platform":
             try:
-                typee = arg
+                platform = arg
             except:
                 sys.exit("Failed: platform not a string")
 
@@ -503,15 +543,16 @@ def main(argv):
     # Set up this run files, directories and dates/clims: years, months, ship or all
 
     VarList = ['marine_air_temperature','dew_point_temperature','specific_humidity','vapor_pressure','relative_humidity','wet_bulb_temperature','dew_point_depression','n_grids'] # This is the ReadInfo
-    VarLong = ['Marine Air Temperature','Dew Point Temperature','Specific Humidity','Vapor Pressure','Relative Humidity','Wet Bulb Temperature','Dew Point Pepression'] # This is the ReadInfo
-    VarStandard = ['marine air temperature','dew point temperature','specific humidity','vapor pressure','relative humidity','wet bulb temperature','dew point depression'] # This is the ReadInfo
+    VarLong = ['Marine Air Temperature','Dew Point Temperature','Specific Humidity','Vapor Pressure','Relative Humidity','Wet Bulb Temperature','Dew Point Depression','n_grids'] # This is the ReadInfo
+    VarStandard = ['marine air temperature','dew point temperature','specific humidity','vapor pressure','relative humidity','wet bulb temperature','dew point depression','n_grids'] # This is the ReadInfo
     AnomsVarList = [i+'_anomalies' for i in VarList[0:7]]
     AnomsVarList.append(VarList[7])
-    AnomsVarLong = [i+' Anomalies' for i in VarLong]
-    AnomsVarStandard = [i+' anomalies' for i in VarStandard]
+    AnomsVarLong = [i+' Anomalies' for i in VarLong[0:7]]
+    AnomsVarStandard = [i+' anomalies' for i in VarStandard[0:7]]
     var_loop = ['T','Td','q','e','RH','Tw','DPD']
-    var_loop = ['T']
-    units_loop = ['degrees C','degrees C','g/ke','hPa','%rh','degrees C','degrees C']
+    units_loop = ['degrees C','degrees C','g/ke','hPa','%rh','degrees C','degrees C','standard']
+
+#    var_loop = ['T']
     
     # gridbox_sampling_uncertainty.calc_sampling_unc IsMarine switch
     IsMarine = True # In this code this should always be True!!!
@@ -535,12 +576,12 @@ def main(argv):
     FilUHGT = 'OBSclim2BClocal_uHGT_5x5_monthly_from_daily_'+timings+'_relax.nc'
 
     # Output Files
-    # If running as hadobs
-    OutFilUTotObs = WorkingDir+'OBSclim2BClocal_uOBS_5x5_monthly_from_daily_'+timings+'_relax.nc'
-    OutFilUSamp = WorkingDir+'OBSclim2BClocal_uSAMP_5x5_monthly_from_daily_'+timings+'_relax.nc'
-    OutFilUsbarSQ = WorkingDir+'OBSclim2BClocal_usbarSQ_5x5_monthly_from_daily_'+timings+'_relax.nc'
-    OutFilUrbar = WorkingDir+'OBSclim2BClocal_urbar_5x5_monthly_from_daily_'+timings+'_relax.nc'
-    OutFilUFull = WorkingDir+'OBSclim2BClocal_uFULL_5x5_monthly_from_daily_'+timings+'_relax.nc'
+#    # If running as hadobs
+#    OutFilUTotObs = WorkingDir+'OBSclim2BClocal_uOBS_5x5_monthly_from_daily_'+timings+'_relax.nc'
+#    OutFilUSamp = WorkingDir+'OBSclim2BClocal_uSAMP_5x5_monthly_from_daily_'+timings+'_relax.nc'
+#    OutFilUsbarSQ = WorkingDir+'OBSclim2BClocal_usbarSQ_5x5_monthly_from_daily_'+timings+'_relax.nc'
+#    OutFilUrbar = WorkingDir+'OBSclim2BClocal_urbar_5x5_monthly_from_daily_'+timings+'_relax.nc'
+#    OutFilUFull = WorkingDir+'OBSclim2BClocal_uFULL_5x5_monthly_from_daily_'+timings+'_relax.nc'
     # If running as hadkw
     OutFilUTotObs = 'TMPDIR/OBSclim2BClocal_uOBS_5x5_monthly_from_daily_'+timings+'_relax.nc'
     OutFilUSamp = 'TMPDIR/OBSclim2BClocal_uSAMP_5x5_monthly_from_daily_'+timings+'_relax.nc'
@@ -576,6 +617,8 @@ def main(argv):
 
     # ANOMALIES
     
+    print("Working on sampling uncertainty anomalies...")
+       
     # Open necessary files to get all variables, n_obs, anomaly values, lats, lons - hopefully this doesn't use too much memory
     Filee = WorkingDir+FilAnoms
     LatInfo = ['latitude']
@@ -592,20 +635,30 @@ def main(argv):
     
     # Work out mean n_stations (speaudo) per gridbox (month and over whole period) to pass to sampling uncertainty
     MeanNPointsArr, NPointsArr = get_pseudo_stations(TmpDataList[7],NLats,NLons, MDI)
+    #pdb.set_trace()
         
     # Loop through each variable
     for v,var in enumerate(var_loop):
     
+        print("Working on ... ",var)
         # Calculate the sampling uncertainty - make this stand alone so that it can be called by HadISDH-land!!!
         SESQArr, rbarArr, sbarSQArr = gsu.calc_sampling_unc(TmpDataList[v],LatList,LonList,MeanNPointsArr,NPointsArr,MDI,IsMarine)
         SampUncAnomsList.append(SESQArr)
         sbarSQAnomsList.append(sbarSQArr)
         rbarAnomsList.append(rbarArr)
 
+#    # Append MeanNPointsArr to sbarSQAnomsList and NPointsArr to SampUncAnomsList
+#    SampUncAnomsList.append(NPointsArr)
+#    sbarSQAnomsList.append(MeanNPointsArr)
+
     # Clean up
     del TmpDataList
+#    print('Test Sampling Uncertainty Anoms:')
+#    pdb.set_trace()
 
     # ABSOLUTES - THIS MAY NOT PROVIDE ANYTHING SENSIBLE
+
+    print("Working on sampling uncertainty anomalies...")
     
     # Open necessary files to get all variables, n_obs, anomaly values, lats, lons - hopefully this doesn't use too much memory
     Filee = WorkingDir+FilAbs
@@ -622,20 +675,33 @@ def main(argv):
     # Loop through each variable
     for v,var in enumerate(var_loop):
     
+        print("Working on ... ",var)
         # Calculate the sampling uncertainty - make this stand alone so that it can be called by HadISDH-land!!!
         SESQArr, rbarArr, sbarSQArr = gsu.calc_sampling_unc(TmpDataList[v],LatList,LonList,MeanNPointsArr,NPointsArr,MDI,IsMarine)
         SampUncAbsList.append(SESQArr)
         sbarSQAbsList.append(sbarSQArr)
         rbarAbsList.append(rbarArr)
 
+    # Reset MeanNPointsArr and NPointsArr to 0 = -1
+    MeanNPointsArr[np.where(MeanNPointsArr == 0)] = -1
+    NPointsArr[np.where(NPointsArr == 0)] = -1
+    
+    # Append int arrays of MeanNPointsArr to sbarSQAbsList and NPointsArr to SampUncAbsList
+    SampUncAbsList.append(NPointsArr.astype(int))
+    sbarSQAbsList.append(MeanNPointsArr.astype(int))
+
     # Clean up
     del TmpDataList
+#    print('Test Sampling Uncertainty Abs:')
+#    pdb.set_trace()
 
 ############
 
     # Work on Total Obs uncertainty
 
     # ANOMALIES
+
+    print("Working on total obs uncertainty anoms...")
 
     # Open necessary files to get all variables uncertainties, lats, lons - hopefully this doesn't use too much memory
     Filee = WorkingDir+FilUR
@@ -671,7 +737,8 @@ def main(argv):
 
     # Loop through each variable
     for v,var in enumerate(var_loop):
-    
+
+        print("Working on ... ",var)    
         # Get total obs uncertainty - Combine the obs uncertainty sources across the gridbox
         TotObsUnc = calc_total_obs_unc(URDataList[v],UCDataList[v],UMDataList[v],USCNDataList[v],UHGTDataList[v],NLats,NLons,MDI)
         TotObsUncAnomsList.append(TotObsUnc)    
@@ -682,8 +749,13 @@ def main(argv):
     del UMDataList
     del USCNDataList
     del UHGTDataList
+
+#    print('Test Total Obs Uncertainty Anoms:')
+#    pdb.set_trace()
     
     # ABSOLUTES
+
+    print("Working on total obs uncertainty anoms...")
     
     # Open necessary files to get all variables uncertainties, lats, lons - hopefully this doesn't use too much memory
     Filee = WorkingDir+FilUR
@@ -720,6 +792,7 @@ def main(argv):
     # Loop through each variable
     for v,var in enumerate(var_loop):
     
+        print("Working on ... ",var)    
         # Get total obs uncertainty - Combine the obs uncertainty sources across the gridbox
         TotObsUnc = calc_total_obs_unc(URDataList[v],UCDataList[v],UMDataList[v],USCNDataList[v],UHGTDataList[v],NLats,NLons,MDI)
         TotObsUncAbsList.append(TotObsUnc)    
@@ -731,47 +804,66 @@ def main(argv):
     del USCNDataList
     del UHGTDataList
 
+#    print('Test Total Obs Uncertainty Anoms:')
+#    pdb.set_trace()
+
 ##############
 
     # Work on Full Uncertainty
 
     # ANOMALIES
 
+    print("Working on full uncertainty anoms...")
+
     # Loop through each variable
     for v,var in enumerate(var_loop):
     
+        print("Working on ... ",var)    
         # Get full uncertainty - Combine the obs and sampling uncertainties across the gridbox
-        FullUnc = calc_full_unc(SampUncAnomsList[v],TotObsUncAnomsList[v],NlLats,NLons,MDI)
+        FullUnc = calc_full_unc(TotObsUncAnomsList[v],SampUncAnomsList[v],NLats,NLons,MDI)
         FullUncAnomsList.append(FullUnc)    
+
+#    print('Test Full Uncertainty Anoms:')
+#    pdb.set_trace()
 
     # ABSOLUTES
 
+    print("Working on full uncertainty anoms...")
+
     # Loop through each variable
     for v,var in enumerate(var_loop):
     
+        print("Working on ... ",var)    
         # Get full uncertainty - Combine the obs and sampling uncertainties across the gridbox
-        FullUnc = calc_full_unc(SampUncAbsList[v],TotObsUncAbsList[v],NLats,NLons,MDI)
+        FullUnc = calc_full_unc(TotObsUncAbsList[v],SampUncAbsList[v],NLats,NLons,MDI)
         FullUncAbsList.append(FullUnc)    
+
+#    print('Test Full Uncertainty Abs:')
+#    pdb.set_trace()
 
 ##############
 
     # Write out as 1 sigma!!!!!
     
+#    print("Test for whether missing values are still MDI")
+#    pdb.set_trace()
+    
     # Write out sampling uncertainty - this has three components which are written seperately.
-    Write_NetCDF_Unc('Samp',OutFilUSamp,SampUncAbsList,SampUncAnomsList,LatList,LonList,TimesArr,
-                     VarList[0:7],AnomsVarList[0:7],VarLong,AnomsVarLong,VarStandard,AnomsVarStandard,units_loop,MDI)
+    # For testing I'm just running temperature VarList[0], AnomsVarList[0] but this should be [0:7] for all but SAMP and sbarSQ (all of VarList  to include n_grids)
+    Write_NetCDF_Unc('SAMP',OutFilUSamp,SampUncAbsList,SampUncAnomsList,LatList,LonList,TimesArr,
+                     VarList,AnomsVarList[0:7],VarLong,AnomsVarLong,VarStandard,AnomsVarStandard,units_loop,MDI)
     Write_NetCDF_Unc('sbarSQ',OutFilUsbarSQ,sbarSQAbsList,sbarSQAnomsList,LatList,LonList,TimesArr,
-                     VarList[0:7],AnomsVarList[0:7],VarLong,AnomsVarLong,VarStandard,AnomsVarStandard,units_loop,MDI)
+                     VarList,AnomsVarList[0:7],VarLong,AnomsVarLong,VarStandard,AnomsVarStandard,units_loop,MDI)
     Write_NetCDF_Unc('rbar',OutFilUrbar,rbarAbsList,rbarAnomsList,LatList,LonList,TimesArr,
-                     VarList[0:7],AnomsVarList[0:7],VarLong,AnomsVarLong,VarStandard,AnomsVarStandard,units_loop,MDI)
+                     VarList[0:7],AnomsVarList[0:7],VarLong[0:7],AnomsVarLong,VarStandard[0:7],AnomsVarStandard,units_loop[0:7],MDI)
 
     # Write out total obs uncertainty
     Write_NetCDF_Unc('OBS',OutFilUTotObs,TotObsUncAbsList,TotObsUncAnomsList,LatList,LonList,TimesArr,
-                     VarList[0:7],AnomsVarList[0:7],VarLong,AnomsVarLong,VarStandard,AnomsVarStandard,units_loop,MDI)
+                     VarList[0:7],AnomsVarList[0:7],VarLong[0:7],AnomsVarLong,VarStandard[0:7],AnomsVarStandard,units_loop[0:7],MDI)
 
     # Write out full uncertainty
     Write_NetCDF_Unc('FULL',OutFilUFull,FullUncAbsList,FullUncAnomsList,LatList,LonList,TimesArr,VarList[0:7],AnomsVarList[0:7],
-                     VarLong,AnomsVarLong,VarStandard,AnomsVarStandard,units_loop,MDI)
+                     VarLong[0:7],AnomsVarLong,VarStandard[0:7],AnomsVarStandard,units_loop[0:7],MDI)
 
 #########
 

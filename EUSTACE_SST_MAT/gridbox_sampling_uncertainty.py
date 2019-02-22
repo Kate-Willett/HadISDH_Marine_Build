@@ -158,8 +158,8 @@ def calc_sampling_unc(TheAnomsArr,TheLatsArr,TheLonsArr,TheMeanNPointsArr,TheNPo
     
     RETURNS:
     SESQArr: times, lat, lon array of 1 sigma sampling uncertainty with TheMDI missing data
-    rbarArr: lat, lon array of average intersite correlation of gridbox with TheMDI missing data
-    sbarSQArr: lat, lon array of mean station variance within gridbox with TheMDI missing data '''
+    rbarArr: lat, lon array of average intersite correlation of gridbox with TheMDI missing data - forced to be 0.8 if cannot be evaluated (mid-range - was 0.1 but this gives tiny SE**2 values)
+    sbarSQArr: lat, lon array of mean station variance within gridbox with TheMDI missing data  - forced to be 10 if cannot be evaluated (large)'''
       
 # Open land sea mask and set up - reverse lats?
     Filee = '/project/hadobs2/hadisdh/marine/otherdata/new_coverpercentjul08.nc'
@@ -207,11 +207,11 @@ def calc_sampling_unc(TheAnomsArr,TheLatsArr,TheLonsArr,TheMeanNPointsArr,TheNPo
     XdiagArr = np.empty((Nlats,Nlons),dtype = float)
     XdiagArr.fill(TheMDI)
 
-    # rbar average intersite correlation of gridbox (estimated)
+    # rbar average intersite correlation of gridbox (estimated or forced to be 0.8)
     rbarArr = np.empty((Nlats,Nlons),dtype = float)
     rbarArr.fill(TheMDI)
 
-    # Sbar^2 mean station variance within gridbox (estimated)
+    # Sbar^2 mean station variance within gridbox (estimated or forced to be 10)
     sbarSQArr = np.empty((Nlats,Nlons),dtype = float)
     sbarSQArr.fill(TheMDI)
     
@@ -251,8 +251,8 @@ def calc_sampling_unc(TheAnomsArr,TheLatsArr,TheLonsArr,TheMeanNPointsArr,TheNPo
             #pdb.set_trace()
             if (len(GoodPointsCAND) >= 120): 
 
-                print("Location: ",ln,lt)	
-                print("Data presence: ",len(GoodPointsCAND))	
+#                print("Location: ",ln,lt)	
+#                print("Data presence: ",len(GoodPointsCAND))	
             
                 # Calc Xo correlation decay distance - or set to 500 km (arbitrarily low number?)
 	        
@@ -356,9 +356,9 @@ def calc_sampling_unc(TheAnomsArr,TheLatsArr,TheLonsArr,TheMeanNPointsArr,TheNPo
                         XoArr[Nlt,Nln] = xdist[LowCorrs[0]] 
                     else:
                         XoArr[Nlt,Nln] = xdist[29]
-                    print('xdist: ',xdist)
-                    print('ycorrs: ',ycorrs)
-                    print("Smoothed Method CCD: ",len(LowCorrs),XoArr[Nlt,Nln])
+                    #print('xdist: ',xdist)
+                    #print('ycorrs: ',ycorrs)
+#                    print("Smoothed Method CCD: ",len(LowCorrs),XoArr[Nlt,Nln])
                     #pdb.set_trace()
 		    		
 		# There aren't enough matches so set XoArr[Nlt,Nln] to 500 km - artbitrarily low?
@@ -381,14 +381,14 @@ def calc_sampling_unc(TheAnomsArr,TheLatsArr,TheLonsArr,TheMeanNPointsArr,TheNPo
 		# Calc SESQArr (sbarSQ*rbar*(1-rbar))/(1+((n-1)*rbar))) - sampling error for this long and lat and all times where there are data
                 GotCounts = np.where(TheNPointsArr[:,Nlt,Nln] > 0)[0]
                 if (len(GotCounts) > 0): 
-                    print('GotCounts: ',TheNPointsArr[GotCounts[0:5],Nlt,Nln])
+#                    print('GotCounts: ',TheNPointsArr[GotCounts[0:5],Nlt,Nln])
                     SESQArr[GotCounts,Nlt,Nln] = ((sbarSQArr[Nlt,Nln] * rbarArr[Nlt,Nln] * (1. - rbarArr[Nlt,Nln])) / (1. + ((TheNPointsArr[GotCounts,Nlt,Nln] - 1.) * rbarArr[Nlt,Nln]))) #for IDL and HadISDH-land this was *2 for 2sigma
-
-                print("Sampling Unc results where there are data: ")
-                print("ShatSQ (climatological variance of gridbox) = ",ShatSQArr[Nlt,Nln])
-                print("rbar (average intersite correlation of gridbox) = ",rbarArr[Nlt,Nln])
-                print("sbarSQ (mean station variance within gridbox) = ",sbarSQArr[Nlt,Nln])
-                print("SESQ (sampling uncertainty) = ",SESQArr[GotCounts[0:5],Nlt,Nln])
+#
+#                print("Sampling Unc results where there are data: ")
+#                print("ShatSQ (climatological variance of gridbox) = ",ShatSQArr[Nlt,Nln])
+#                print("rbar (average intersite correlation of gridbox) = ",rbarArr[Nlt,Nln])
+#                print("sbarSQ (mean station variance within gridbox) = ",sbarSQArr[Nlt,Nln])
+#                print("SESQ (sampling uncertainty) = ",SESQArr[GotCounts[0:5],Nlt,Nln])
                 #pdb.set_trace()
 		# DO NOT *2 BECAUSE WE WANT 1SIGMA ERRORS
 
@@ -396,6 +396,9 @@ def calc_sampling_unc(TheAnomsArr,TheLatsArr,TheLonsArr,TheMeanNPointsArr,TheNPo
     # For each long and lat:
     for Nln,ln in enumerate(TheLonsArr):
         for Nlt,lt in enumerate(TheLatsArr):
+	
+	    ## switch this off for testing
+            #continue
 	
             # Only carry on if there are NOT enough data over climatology period - 120+ months out of 360? AND this is a LAND (IsMarine = False) or MARINE (IsLand = True) GRIDBOX!!!
             subarrCAND = TheAnomsArr[ClimMonSt:ClimMonEd+1,Nlt,Nln]
@@ -409,7 +412,7 @@ def calc_sampling_unc(TheAnomsArr,TheLatsArr,TheLonsArr,TheMeanNPointsArr,TheNPo
                 #print(len(GoodPointsCAND))		
                 #print(IsMarine)		
                 #print(PctLand[Nlt,Nln])		
-                if (len(GoodPointsCAND) == 0) & (IsMarine) & (PctLand[Nlt,Nln] >= 99.9999): # just being cautious about funny floating point things
+                if (len(GoodPointsCAND) == 0) & (IsMarine) & (PctLand[Nlt,Nln] >= 99.9): # just being cautious about funny floating point things
                     continue
 		# if we're working with marine but its 100% land then ignore gridbox
                 if (len(GoodPointsCAND) == 0) & (not IsMarine) & (PctLand[Nlt,Nln] < 0.0001): # just being cautious about funny floating point things
@@ -564,7 +567,7 @@ def calc_sampling_unc(TheAnomsArr,TheLatsArr,TheLonsArr,TheMeanNPointsArr,TheNPo
                 # Where there is nothing fill with arbitrary poor values
                 else: 
                     sbarSQArr[Nlt,Nln] = 10.  
-                    rbarArr[Nlt,Nln] = 0.1  
+                    rbarArr[Nlt,Nln] = 0.8 # This was 0.1 but this gives very low SESQ values and 0.8 is mid-range  
  
                 # Now get SE^2 = (sbar^2*rbar)	WHEN n>0 and when n=0
 		# It seems strange that SESQ is larger when intersite correlation (rbar) is higher - I would have thoought the opposite.
@@ -579,8 +582,8 @@ def calc_sampling_unc(TheAnomsArr,TheLatsArr,TheLonsArr,TheMeanNPointsArr,TheNPo
                 
                     SESQArr[GotZeros,Nlt,Nln] = (sbarSQArr[Nlt,Nln] * rbarArr[Nlt,Nln]) # for IDL and HadISDH-land this was *2 for 2sigma
                 
-                print("Sampling Unc results where there are data: ")
-                print("ShatSQ (climatological variance of gridbox) = ",ShatSQArr[Nlt,Nln])
+#                print("Sampling Unc results where there are data: ")
+#                print("ShatSQ (climatological variance of gridbox) = ",ShatSQArr[Nlt,Nln])
                 print("rbar (average intersite correlation of gridbox) = ",rbarArr[Nlt,Nln])
                 print("SbarSQ (mean station variance within gridbox) = ",sbarSQArr[Nlt,Nln])
                 print("SESQ (sampling uncertainty) = ",SESQArr[0:5,Nlt,Nln])
