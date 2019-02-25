@@ -107,7 +107,7 @@ def MakeDaysSince(TheStYr,TheStMon,TheEdYr,TheEdMon,TheInterval,Return_Boundarie
     
     # set up arrays for month mid points and month bounds
     DaysArray = np.empty(((TheEdYr-TheStYr)+1)*((TheEdMon-TheStMon)+1))
-    if Return_boundaries:
+    if Return_Boundaries:
         BoundsArray = np.empty((((TheEdYr-TheStYr)+1)*((TheEdMon-TheStMon)+1),2))
     
     # make a date object for each time point and subtract start date
@@ -119,7 +119,7 @@ def MakeDaysSince(TheStYr,TheStMon,TheEdYr,TheEdMon,TheInterval,Return_Boundarie
         for mm in range(len(DaysArray)):
             if (TheMonth < 12):
                 DaysArray[mm] = (datetime(TheYear,TheMonth+1,1,0,0,0) - datetime(TheYear,TheMonth,1,0,0,0)).days/2. + (datetime(TheYear,TheMonth,1,0,0,0) - StartDate).days
-	        if (Return_Boundaries):
+                if (Return_Boundaries):
                     BoundsArray[mm,0] = (datetime(TheYear,TheMonth,1,0,0,0) - StartDate).days+1
                     BoundsArray[mm,1] = (datetime(TheYear,TheMonth+1,1,0,0,0) - StartDate).days
             else:

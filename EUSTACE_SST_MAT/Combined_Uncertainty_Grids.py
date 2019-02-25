@@ -317,9 +317,9 @@ def Write_Netcdf_Variable_Unc(uSource,outfile, var, vlong, vstandard, vunit, unc
 
         # Create the Variable but rbar and sbarSQ do not have a time dimension
         if (uSource != 'sbarSQ'):
-            nc_var = outfile.createVariable(var, np.dtype('int'), ('time','latitude','longitude',), zlib = True, fill_value = -1) # with compression
+            nc_var = outfile.createVariable(var, np.dtype('float'), ('time','latitude','longitude',), zlib = True, fill_value = -1) # with compression
         else:
-            nc_var = outfile.createVariable(uSource, np.dtype('int'), ('latitude','longitude',), zlib = True, fill_value = -1) # with compression
+            nc_var = outfile.createVariable(var, np.dtype('float'), ('latitude','longitude',), zlib = True, fill_value = -1) # with compression
     
         nc_var.long_name = 'Number of pseudo stations within gridbox'
         nc_var.standard_name = 'Number of pseudo station grids'
@@ -550,7 +550,7 @@ def main(argv):
     AnomsVarLong = [i+' Anomalies' for i in VarLong[0:7]]
     AnomsVarStandard = [i+' anomalies' for i in VarStandard[0:7]]
     var_loop = ['T','Td','q','e','RH','Tw','DPD']
-    units_loop = ['degrees C','degrees C','g/ke','hPa','%rh','degrees C','degrees C','standard']
+    units_loop = ['degrees C','degrees C','g/kg','hPa','%rh','degrees C','degrees C','standard']
 
 #    var_loop = ['T']
     
