@@ -285,11 +285,11 @@ def read_qc_data(filename, location, fieldwidths, doBC = False, doBCtotal = Fals
                     #platform_qc += [fields[8+17+20:]]
 # end
             except AssertionError:
-                print "skipping line in {} - malformed data".format(filename)
-                print line
+                print("skipping line in {} - malformed data".format(filename))
+                print(line)
                                
             except OSError:
-                print "file {} missing".format(filename)
+                print("file {} missing".format(filename))
                 sys.exit()
 
     # convert to arrays
@@ -314,12 +314,12 @@ def read_qc_data(filename, location, fieldwidths, doBC = False, doBCtotal = Fals
         # filter PT=0:5 only
 	# If its a BC run then PT is element 2 (3rd) but if its QC only then PT is element 3 (4th)
         if doBC | doBCtotal | doBChgt | doBCscn:
-	    PT = np.array([int(x) for x in platform_meta[:,2]])
-	else:
-	    PT = np.array([int(x) for x in platform_meta[:,3]])
+            PT = np.array([int(x) for x in platform_meta[:,2]])
+        else:
+            PT = np.array([int(x) for x in platform_meta[:,3]])
         
-	goods, = np.where(PT <= 5)
-	print("Pulling out SHIPS only ",len(goods))
+        goods, = np.where(PT <= 5)
+        print("Pulling out SHIPS only ",len(goods))
         return platform_data[goods], \
             platform_obs[goods].astype(int), \
             platform_meta[goods], \
@@ -388,22 +388,22 @@ def read_unc_data(filename, location, fieldwidths,
                 
                 # now unpack and process
                 dummy_obs = [fields[: 8+14]] # skip over these ones
-		uncTOT_data += [fields[8+14 : 8+14+14]]
-		uncSLR_data += [fields[8+14+14 : 8+14+14+14]]
-		uncSCN_data += [fields[8+14+14+14 : 8+14+14+14+14]]
-		uncHGT_data += [fields[8+14+14+14+14 : 8+14+14+14+14+14]]
-		uncM_data   += [fields[8+14+14+14+14+14 : 8+14+14+14+14+14+14]]
-		uncR_data   += [fields[8+14+14+14+14+14+14 : 8+14+14+14+14+14+14+14]]
-		uncC_data   += [fields[8+14+14+14+14+14+14+14 : 8+14+14+14+14+14+14+14+14]]
-		platform_meta += [fields[8+14+14+14+14+14+14+14+14 : 8+14+14+14+14+14+14+14+14+3]]
-		# there are more elements but we do not need them
+                uncTOT_data += [fields[8+14 : 8+14+14]]
+                uncSLR_data += [fields[8+14+14 : 8+14+14+14]]
+                uncSCN_data += [fields[8+14+14+14 : 8+14+14+14+14]]
+                uncHGT_data += [fields[8+14+14+14+14 : 8+14+14+14+14+14]]
+                uncM_data   += [fields[8+14+14+14+14+14 : 8+14+14+14+14+14+14]]
+                uncR_data   += [fields[8+14+14+14+14+14+14 : 8+14+14+14+14+14+14+14]]
+                uncC_data   += [fields[8+14+14+14+14+14+14+14 : 8+14+14+14+14+14+14+14+14]]
+                platform_meta += [fields[8+14+14+14+14+14+14+14+14 : 8+14+14+14+14+14+14+14+14+3]]
+	        # there are more elements but we do not need them
 
             except AssertionError:
-                print "skipping line in {} - malformed data".format(filename)
-                print line
+                print("skipping line in {} - malformed data".format(filename))
+                print(line)
                                
             except OSError:
-                print "file {} missing".format(filename)
+                print("file {} missing".format(filename))
                 sys.exit()
 
     # convert to arrays
@@ -422,40 +422,40 @@ def read_unc_data(filename, location, fieldwidths,
         # filter PT=0:5 only
 	# If its a BC (ext or unc) run then PT is element 2 (3rd) but if its QC only then PT is element 3 (4th)
 
-	PT = np.array([int(x) for x in platform_meta[:,2]])
+        PT = np.array([int(x) for x in platform_meta[:,2]])
         
-	goods, = np.where(PT <= 5)
-	print("Pulling out SHIPS only ",len(goods))
+        goods, = np.where(PT <= 5)
+        print("Pulling out SHIPS only ",len(goods))
         
-	if doUSLR:
+        if doUSLR:
             return uncSLR_data[goods].astype(int) # read_unc_data
-	elif doUSCN:
+        elif doUSCN:
             return uncSCN_data[goods].astype(int) # read_unc_data
-	elif doUHGT:
+        elif doUHGT:
             return uncHGT_data[goods].astype(int) # read_unc_data
-	elif doUR:
+        elif doUR:
             return uncR_data[goods].astype(int) # read_unc_data
-	elif doUM:
+        elif doUM:
             return uncM_data[goods].astype(int) # read_unc_data
-	elif doUC:
+        elif doUC:
             return uncC_data[goods].astype(int) # read_unc_data
-	elif doUTOT:
+        elif doUTOT:
             return uncTOT_data[goods].astype(int) # read_unc_data
-	
+
     else:
-	if doUSLR:
+        if doUSLR:
             return uncSLR_data.astype(int) # read_unc_data
-	elif doUSCN:
+        elif doUSCN:
             return uncSCN_data.astype(int) # read_unc_data
-	elif doUHGT:
+        elif doUHGT:
             return uncHGT_data.astype(int) # read_unc_data
-	elif doUR:
+        elif doUR:
             return uncR_data.astype(int) # read_unc_data
-	elif doUM:
+        elif doUM:
             return uncM_data.astype(int) # read_unc_data
-	elif doUC:
+        elif doUC:
             return uncC_data.astype(int) # read_unc_data
-	elif doUTOT:
+        elif doUTOT:
             return uncTOT_data.astype(int) # read_unc_data
 
 #*****************************************************
@@ -508,7 +508,7 @@ def check_date(date, test, name, filename):
     if (len(unique) == 1) and (unique[0] == test):
         return True
     else:
-        print "Bad {} in file {}".format(name, filename)
+        print("Bad {} in file {}".format(name, filename))
         return False # check_date
 
 
@@ -525,7 +525,7 @@ def read_global_attributes(attr_file):
             lines = infile.readlines()
         
     except IOError:
-        print "Attributes file not found at " + attr_file
+        print("Attributes file not found at " + attr_file)
         raise IOError
     
     attributes = {}
@@ -1266,19 +1266,19 @@ def grid_1by1_cam_unc(clean_data, unc_clean_data,
                             if doMedian: 
                                 average = np.ma.median(clean_data[locs, :][:, cols], axis = 0)
 				# If its correlated r=1 do it this way - REALLY NOT RIGHT FOR MEDIAN
-				if doUSLR | doUSCN | doUHGT | doUC:
-				    unc_average = np.ma.median(unc_clean_data[locs, :][:, cols], axis = 0)
+                                if doUSLR | doUSCN | doUHGT | doUC:
+                                    unc_average = np.ma.median(unc_clean_data[locs, :][:, cols], axis = 0)
 				# If its NOT correlated do it this way
-				elif doUR | doUM | doUTOT:
-				    unc_average = np.ma.median(unc_clean_data[locs, :][:, cols], axis = 0)
+                                elif doUR | doUM | doUTOT:
+                                    unc_average = np.ma.median(unc_clean_data[locs, :][:, cols], axis = 0)
                             else:
                                 average = np.ma.mean(clean_data[locs, :][:, cols], axis = 0)
 				# If its correlated do it this way
-				if doUSLR | doUSCN | doUHGT | doUC:
-				    unc_average = np.sqrt(np.ma.power(np.ma.sum(unc_clean_data[locs, :][:, cols], axis = 0),2.))
+                                if doUSLR | doUSCN | doUHGT | doUC:
+                                    unc_average = np.sqrt(np.ma.power(np.ma.sum(unc_clean_data[locs, :][:, cols], axis = 0),2.))
 				# If its NOT correlated do it this way
-				if doUR | doUM | doUTOT:
-				    unc_average = np.sqrt(np.ma.sum(np.ma.power(unc_clean_data[locs, :][:, cols],2.), axis = 0))
+                                if doUR | doUM | doUTOT:
+                                    unc_average = np.sqrt(np.ma.sum(np.ma.power(unc_clean_data[locs, :][:, cols],2.), axis = 0))
 
                             day_flags = raw_qc[locs, :][:, day_flag_loc]                            
 
@@ -1290,8 +1290,8 @@ def grid_1by1_cam_unc(clean_data, unc_clean_data,
                                 this_month_grid[:, gh, lt, ln] = average
                                 this_month_grid.mask[:, gh, lt, ln] = False # unset the mask
 				
-				unc_this_month_grid[:, gh, lt, ln] = unc_average/np.sqrt(this_month_obs[gh, lt, ln])
-				unc_this_month_grid.mask[:, gh, lt, ln] = False # unset the mask
+                                unc_this_month_grid[:, gh, lt, ln] = unc_average/np.sqrt(this_month_obs[gh, lt, ln])
+                                unc_this_month_grid.mask[:, gh, lt, ln] = False # unset the mask
 				
                                 # restricting to day or night then set the flag and it's allowed value (Extended_IMMA.py line 668 - #0=night, 1=day)
                                 if len(np.unique(day_flags)) == 1:
@@ -1302,18 +1302,18 @@ def grid_1by1_cam_unc(clean_data, unc_clean_data,
                             # ensure that mask is set otherwise
                             else:
                                 this_month_grid.mask[:, gh, lt, ln] = True
-				unc_this_month_grid.mask[:, gh, lt, ln] = True
+                                unc_this_month_grid.mask[:, gh, lt, ln] = True
 				
                         # ensure that mask is set otherwise
                         else:
                             this_month_grid.mask[:, gh, lt, ln] = True # ensure mask is set
-			    unc_this_month_grid.mask[:, gh, lt, ln] = True
+                            unc_this_month_grid.mask[:, gh, lt, ln] = True
                 else:
                     this_month_grid.mask[:, :, lt, ln] = True # ensure mask is set
-		    unc_this_month_grid.mask[:, :, lt, ln] = True
+                    unc_this_month_grid.mask[:, :, lt, ln] = True
         else:
             this_month_grid.mask[:, :, lt, :] = True # ensure mask is set
-	    unc_this_month_grid.mask[:, :, lt, :] = True
+            unc_this_month_grid.mask[:, :, lt, :] = True
 
     return this_month_grid, unc_this_month_grid, this_month_obs, this_month_time # grid_1by1_cam_unc
 
@@ -1467,25 +1467,25 @@ def grid_5by5_unc(data, unc_data, n_obs, grid_lats, grid_lons, doMedian = True, 
                     else:
                         new_data[var, lt, ln] = np.ma.median(data[var, lat-DELTA:lat, lon-DELTA:lon])
 # UNC NEW np.ma.median(uTOT_this_month_grid) / np.sqrt(n_grids)
-			unc_new_data[var, lt, ln] = np.ma.median(unc_data[var, lat-DELTA:lat, lon-DELTA:lon]) / np.sqrt(n_grids)
+                        unc_new_data[var, lt, ln] = np.ma.median(unc_data[var, lat-DELTA:lat, lon-DELTA:lon]) / np.sqrt(n_grids)
                 else:
                     if daily:
                         new_data[var, lt, ln] = np.ma.mean(data[var, :, lat-DELTA:lat, lon-DELTA:lon])
 # UNC NEW np.sqrt(np.ma.sum(np.ma.power(uTOT_this_month_grid, 2.), axis = 2)) / np.sqrt(n_hrs_per_day)
                         # if correlation at r=1 then do like this
-			if doUSLR | doUSCN | doUHGT | doUC:
+                        if doUSLR | doUSCN | doUHGT | doUC:
                             unc_new_data[var, lt, ln] = np.sqrt(np.ma.power(np.ma.sum(unc_data[var, :, lat-DELTA:lat, lon-DELTA:lon]), 2.)) / np.sqrt(n_grids)
                         # if NO correlation at r=0 then do like this
-			elif doUR | doUM | doUTOT:
+                        elif doUR | doUM | doUTOT:
                             unc_new_data[var, lt, ln] = np.sqrt(np.ma.sum(np.ma.power(unc_data[var, :, lat-DELTA:lat, lon-DELTA:lon], 2.))) / np.sqrt(n_grids)
                     else:
                         new_data[var, lt, ln] = np.ma.mean(data[var, lat-DELTA:lat, lon-DELTA:lon])
 # UNC NEW np.sqrt(np.ma.sum(np.ma.power(uTOT_this_month_grid, 2.), axis = 2)) / np.sqrt(n_hrs_per_day)
                         # if correlation at r=1 then do like this
-			if doUSLR | doUSCN | doUHGT | doUC:
+                        if doUSLR | doUSCN | doUHGT | doUC:
                             unc_new_data[var, lt, ln] = np.sqrt(np.ma.power(np.ma.sum(unc_data[var, lat-DELTA:lat, lon-DELTA:lon]), 2.)) / np.sqrt(n_grids)
                         # if NO correlation at r=0 then do like this
-			elif doUR | doUM | doUTOT:
+                        elif doUR | doUM | doUTOT:
                             unc_new_data[var, lt, ln] = np.sqrt(np.ma.sum(np.ma.power(unc_data[var, lat-DELTA:lat, lon-DELTA:lon], 2.))) / np.sqrt(n_grids)
 
                 if n_grids < N_OBS:
