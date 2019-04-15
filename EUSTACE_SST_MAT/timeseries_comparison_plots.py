@@ -1,4 +1,4 @@
-#!/usr/local/sci/bin/python2.7
+#!/usr/local/sci/bin/python3 hopefully
 #*****************************
 #
 # Take monthly merged files and output global average timeseries
@@ -8,7 +8,7 @@
 '''
 Author: Robert Dunn and Kate Willett
 Created: March 2016
-Last update: 21 January 2019
+Last update: 15 April 2019
 Location: /project/hadobs2/hadisdh/marine/PROGS/Build
 
 -----------------------
@@ -17,6 +17,18 @@ CODE PURPOSE AND OUTPUT
 Create global average timeseries comparison plots 
 
 For actuals and anomalies
+
+import timeseries_comparison_plots as tcp
+* compare_fimings function:
+# run day, night, both comparison for all or ship only, NBC and BClocal
+compare_QCraw function
+# run QC verses noQC comparison for all or ship only
+compare_BCNBC
+# run BC NBC comparison for all or ship only
+* compare_BCtype
+# run BC types comparison for all or ship only which includes NBC and noQC
+* compare_PTs
+# run ship vs all comparison for dayQC, nightQC, bothQC, dayBC, nightBC, bothBC - also has ERA-Interim on there
 
 -----------------------
 LIST OF MODULES
@@ -38,15 +50,19 @@ HOW TO RUN THE CODE
 python2.7
 import timeseries_comparison_plots as tcp
 # run day, night, both comparison for all or ship only (NBC and BClocal)
-tcp.compare_timings('all') # or 'ship'
+tcp.compare_timings('all',AddNOCS = False) # or 'ship' If AddNOCS is not set to false then NOCS will be plotted for specific humidity
 # run QC noQC comparison for all or ship only
-tcp.compare_QCraw('all') # or 'ship' (ship not set up yet for raw)
+tcp.compare_QCraw('all',AddNOCS = False) # or 'ship' (ship not set up yet for raw) If AddNOCS is not set to false then NOCS will be plotted for specific humidity
 # run BC NBC comparison for all or ship only
-tcp.compare_BCNBC('all') # or 'ship'
+tcp.compare_BCNBC('all',AddNOCS = False) # or 'ship' If AddNOCS is not set to false then NOCS will be plotted for specific humidity
 # run BC types comparison for all or ship only
-tcp.compare_BCtype('all') # or 'ship' (ship not set up yet for all different BC types)
+tcp.compare_BCtype('all',AddNOCS = False) # or 'ship' (ship not set up yet for all different BC types) If AddNOCS is not set to false then NOCS will be plotted for specific humidity
 # run ship vs all comparison for dayQC, nightQC, bothQC, dayBC, nightBC, bothBC
-tcp.compare_PTs('NBC') # or 'BClocal' 
+tcp.compare_PTs('NBC',AddNOCS = False, AddERA = False) # or 'BClocal' If AddNOCS or AddERA is not set to false then NOCS nad ERA will be plotted for specific humidity (rh, t and td for ERA too)
+
+or with Python 3
+module load scitools/default-current
+import timeseries_comparison_plots as tcp
 
 
 -----------------------
@@ -54,11 +70,23 @@ OUTPUT
 -----------------------
 Plots to appear in 
 /project/hadobs2/hadisdh/marine/ICOADS.3.0.0/PLOTS_comparison/
-OLD: /project/hadobs2/hadisdh/marine/ICOADS.2.5.1/PLOTS_comparison/
 
 -----------------------
 VERSION/RELEASE NOTES
 -----------------------
+
+Version 5 (15 Apr 2019)
+---------
+ 
+Enhancements
+compare_BCtyps now includes NBC and noQC and has BClocalHGT and BClocalINST in better colours
+compare_PTs now has ERA-Interim added both complete and masked to SHIP (could do all)
+ 
+Changes
+Now python 3 - maybe - involves changing utils too though.
+ 
+Bug fixes
+
 
 Version 4 (21 Jan 2019)
 ---------
@@ -120,6 +148,7 @@ import calendar
 import gc
 import netCDF4 as ncdf
 import copy
+import pdb
 
 import utils
 
@@ -129,13 +158,16 @@ OBS_ORDER = utils.make_MetVars(mdi, multiplier = False)
 n_obs = utils.set_MetVar_attributes("n_obs", "Number of Observations", "Number of Observations", 1, -1, np.dtype("int64"), 0)
 OBS_ORDER += [n_obs]
 
+# For SHIP only versions 'ship' needs to be appended onto these directories
 GRID_LOCATION = {"NBC" : "GRIDSOBSclim2NBC", 
                  "BClocal" : "GRIDSOBSclim2BClocal", 
 		 "QC" : "GRIDSOBSclim2NBC", 
 		 "noQC" : "GRIDSOBSclim2noQC",
 		 "BClocalHGT" : "GRIDSOBSclim2BClocalHGT", 
 		 "BClocalINST" : "GRIDSOBSclim2BClocalINST"}
-PLOT_LOCATION = "/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/PLOTS_comparison/"
+		 
+#PLOT_LOCATION = "/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/PLOTS_comparison/"
+PLOT_LOCATION = "/data/users/hadkw/WORKING_HADISDH/MARINE/IMAGES/"
 # OLD: GRID_LOCATION = {"NBC" : "GRIDS3", "BC" : "GRIDS_BC", "QC" : "GRIDS3", "noQC" : "GRIDS_noQC"}
 # OLD: PLOT_LOCATION = "/project/hadobs2/hadisdh/marine/PLOTS_compare/"
 
@@ -181,15 +213,21 @@ def do_plot(data, title, outname):
         ax2 = ax1.twinx()
 
 
-    texty = 0.95
+    texty = 0.05
+#    texty = 0.95
+#    pdb.set_trace()
     for d in data:
+        print('Plotting: ',d.name)
         if d.label == "":
+            print('Are we plotting monthly?')
             # if no label (e.g. monthly)
 
-            if d.name == "n_obs":
-                ax1.plot(d.t, d.y.data/10000., c = d.c, zorder = d.z, lw = d.lw)
-            else:
-                plt.plot(d.t, d.y.data, c = d.c, zorder = d.z, lw = d.lw)
+# DO YOU WANT MONTHLY?
+#
+#            if d.name == "n_obs":
+#                ax1.plot(d.t, d.y.data/10000., c = d.c, zorder = d.z, lw = d.lw)
+#            else:
+#                plt.plot(d.t, d.y.data, c = d.c, zorder = d.z, lw = d.lw)
 
                
         else:
@@ -205,8 +243,14 @@ def do_plot(data, title, outname):
                 slope_years, slope_values = mpw_plot_points(slope, d.t, d.y.data)
                 plt.plot(slope_years, slope_values, c = d.c, lw = 1)
 
-                plt.text(0.03, texty, "{:6.3f} +/- {:6.4f} {} 10 yr".format(10.*slope, 10.*slope_error, d.y.units)+r'$^{-1}$', transform = ax.transAxes, color = d.c)
-                texty -= 0.05
+#               plt.text(0.03, texty, "{:6.3f} +/- {:6.4f} {} 10 yr".format(10.*slope, 10.*slope_error, d.y.units)+r'$^{-1}$', transform = ax.transAxes, color = d.c)
+# If its RH then plt.text in lower left else go in lower right
+                if (title[0] == 'R'):
+                    plt.text(0.03, texty, "{:6.3f} +/- {:6.4f} {} 10 yr".format(10.*slope, 10.*slope_error, d.y.units)+r'$^{-1}$', transform = ax.transAxes, color = d.c, ha = 'left')
+                else:
+                    plt.text(0.97, texty, "{:6.3f} +/- {:6.4f} {} 10 yr".format(10.*slope, 10.*slope_error, d.y.units)+r'$^{-1}$', transform = ax.transAxes, color = d.c, ha = 'right')
+#                texty -= 0.05
+                texty += 0.05
 
     if d.name != "n_obs":
         plt.ylabel(d.y.units)
@@ -215,7 +259,12 @@ def do_plot(data, title, outname):
         ax2.set_ylabel("Annual/10000")
 
     plt.title(title)
-    plt.legend()
+    
+    # If its RH then plot legend in upper right, else plot in upper left
+    if (title[0] == 'R'):
+        plt.legend(loc = 'upper right')
+    else:
+        plt.legend(loc = 'upper left')
     plt.savefig(PLOT_LOCATION + outname)
 
     return # do_plot
@@ -233,11 +282,18 @@ def get_data(filename,var):
     """
 
     ncdf_file = ncdf.Dataset(filename,'r', format='NETCDF4')
+    
+    # For Python 3 set automatic masking to false as its screwing everything up
+    ncdf_file.set_auto_mask(False)
 
     ydata = ncdf_file.variables[var.name]
     times = ncdf_file.variables["time"] # days since 1973/1/1
     
+    #pdb.set_trace()
     times = ncdf.num2date(times[:], units = times.units, calendar = 'gregorian')
+    # For some reason with Python3 this was falling over when reading in the monthly data
+    # The times[:] in python2.7 is just a list but times[:] in python 3 is a masked array.
+    #pdb.set_trace()
 
     # convert to MetVar from netCDF object
     ydata = utils.set_MetVar_attributes(var.name, ydata.long_name, ydata.standard_name, ydata.units, mdi, np.dtype('float64'), 0, multiplier = False)
@@ -281,6 +337,86 @@ def read_nocs():
     annual = PlotData("", y, t, "NOCS-q", 'darkturquoise', 10, 2) #'DarkGreen', 10, 2)
     
     return monthly, annual  # read_nocs
+
+#***************************************
+def read_era(ERAVar = 'q'):
+    """
+    Read the ERA-Interim datafiles for q, RH, t and Td
+    
+    REMEMBER THAT THIS BEGINS IN 1979 SO NEEDS PADDING OUT BACK TO 1973
+    
+    :ERAVar = str of variable to read in q, rh, t, td
+    
+    :returns: PlotData containing monthly and annual values
+    """
+    
+    # Get the BClocalSHIPboth MASKED \nd unmasked data
+    # Read the monthly data into a numpy array of nMonths rows and year, global, nhem, trop, shem colums.
+    indataMASK = np.genfromtxt("/project/hadobs2/hadisdh/marine/otherdata/"+ERAVar+"2m_5by5_monthly_anoms1981-2010_ERA-Interim_areaTS_19792018_MASK_marine_monthly.dat", dtype = str)
+    indata = np.genfromtxt("/project/hadobs2/hadisdh/marine/otherdata/"+ERAVar+"2m_5by5_monthly_anoms1981-2010_ERA-Interim_areaTS_19792018_marine_monthly.dat", dtype = str)
+
+    # Get the times - these are strings of YYYYMM
+    t = indataMASK[1::, 0]
+    # Get the global average values
+    eraMASK = indataMASK[1::, 1]
+    era = indata[1::, 1]
+    
+    # Convert the data to floats
+    eraMASK = np.array([float(i) for i in eraMASK])
+    era = np.array([float(i) for i in era])
+
+    if (ERAVar == 'q'):
+        y = utils.set_MetVar_attributes("specific_humidity", "Specific humidity", "specific humidity", "g/kg", mdi, np.dtype('float64'), 8, multiplier = False)
+    elif (ERAVar == 'rh'):
+        y = utils.set_MetVar_attributes("relative_humidity", "Relative humidity", "relative humidity", "%rh", mdi, np.dtype('float64'), 8, multiplier = False)
+    elif (ERAVar == 't'):
+        y = utils.set_MetVar_attributes("marine_air_temperature", "Marine air temperature", "marine air temperature", "deg C", mdi, np.dtype('float64'), 8, multiplier = False)
+    elif (ERAVar == 'td'):
+        y = utils.set_MetVar_attributes("dew_point_temperature", "Dew point temperature", "dew point temperature", "deg C", mdi, np.dtype('float64'), 8, multiplier = False)
+    
+    yMASK = copy.copy(y)
+    y.data = era
+    yMASK.data = eraMASK
+
+    # Get datetime objects for each time point assuming middle of the month - so 15th or there abouts
+    t = np.array([dt.datetime.strptime(i+'15', "%Y%m%d") for i in t])
+
+    monthly = PlotData("", y, t, "", 'orchid', 1, 1) #'g', 1, 1)
+    monthlyMASK = PlotData("", yMASK, t, "", 'm', 1, 1) #'g', 1, 1)
+
+    # annual
+    
+#    pdb.set_trace()
+    
+    era = era.reshape(-1, 12)
+    era = np.mean(era, axis = 1)
+    eraMASK = eraMASK.reshape(-1, 12)
+    eraMASK = np.mean(eraMASK, axis = 1)
+
+    if (ERAVar == 'q'):
+        y = utils.set_MetVar_attributes("specific_humidity", "Specific humidity", "specific humidity", "g/kg", mdi, np.dtype('float64'), 8, multiplier = False)
+    elif (ERAVar == 'rh'):
+        y = utils.set_MetVar_attributes("relative_humidity", "Relative humidity", "relative humidity", "%rh", mdi, np.dtype('float64'), 8, multiplier = False)
+    elif (ERAVar == 't'):
+        y = utils.set_MetVar_attributes("marine_air_temperature", "Marine air temperature", "marine air temperature", "deg C", mdi, np.dtype('float64'), 8, multiplier = False)
+    elif (ERAVar == 'td'):
+        y = utils.set_MetVar_attributes("dew_point_temperature", "Dew point temperature", "dew point temperature", "deg C", mdi, np.dtype('float64'), 8, multiplier = False)
+    
+    yMASK = copy.copy(y)
+    y.data = era
+    yMASK.data = eraMASK
+
+    t = t.reshape(-1, 12) 
+    # Set annual times as July?   
+    t = t[:, 6]
+
+    annual = PlotData("", y, t, "ERA-Interim", 'orchid', 10, 2) #'DarkGreen', 10, 2)
+    annualMASK = PlotData("", yMASK, t, "ERA-Interim MASKED", 'm', 10, 2) #'DarkGreen', 10, 2)
+    
+    print('End of ERA read in')
+#    pdb.set_trace()
+    
+    return monthly, monthlyMASK, annual, annualMASK  # read_nocs
 
 #***************************************
 def median_pairwise_slopes(xdata, ydata, mdi, sigma = 1.):
@@ -353,13 +489,14 @@ def mpw_plot_points(slope, years, values):
 #***************************************
 #***************************************
 # Day versus Night
-def compare_timings(Ob_Type = 'all'):
+def compare_timings(Ob_Type = 'all', AddNOCS = True):
     ''' Run the day, night, both comparison plot for NBC and then BClocal'''
     ''' Ob_Type = all, ship - default = all '''
+    ''' AddNOCS = True - default = True so NOCS time series will be added for q '''
 
     version = "_renorm19812010_anomalies"
     # OLD: version = "_anomalies"
-    DATA_LOCATION = "/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/"
+    DATA_LOCATION = "/project/hadobs2/hadisdh/marine/ICOADS.3.0.0"
     # OLD: DATA_LOCATION = "/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/"
     
     correction = "NBC"
@@ -380,20 +517,21 @@ def compare_timings(Ob_Type = 'all'):
 
             for period in ["both", "day", "night"]:
                 if period == "both":
-                    color = "grey" #"lime"
+                    color = "black" #"lime"
                 elif period == "day":
-                    color = "darkorange" #"r"
+                    color = "gold" #"r"
                 elif period == "night":
-                    color = "darkblue" #"c"
+                    color = "mediumslateblue" #"c"
 
                 # KATE ADDED ship bit
-		if Ob_Type == 'all':
-		    filename = "{}/{}/OBSclim2{}_5x5_monthly{}_from_daily_{}_{}_ts_{}.nc".format(DATA_LOCATION, GRID_LOCATION[correction], correction, version, period, suffix, time_res) 
+                if Ob_Type == 'all':
+                    filename = "{}/{}/OBSclim2{}_5x5_monthly{}_from_daily_{}_{}_ts_{}.nc".format(DATA_LOCATION, GRID_LOCATION[correction], correction, version, period, suffix, time_res) 
                 elif Ob_Type == 'ship':
-		    filename = "{}/{}ship/OBSclim2{}_5x5_monthly{}_from_daily_{}_{}_ts_{}.nc".format(DATA_LOCATION, GRID_LOCATION[correction], correction, version, period, suffix, time_res) 
+                    filename = "{}/{}ship/OBSclim2{}_5x5_monthly{}_from_daily_{}_{}_ts_{}.nc".format(DATA_LOCATION, GRID_LOCATION[correction], correction, version, period, suffix, time_res) 
 		
 # OLD:            filename = "{}/{}/ERAclim{}_5x5_monthly{}_from_daily_{}_{}_ts_{}.nc".format(DATA_LOCATION, GRID_LOCATION[correction], correction, version, period, suffix, time_res) 
 
+                print(filename,var)
                 y, t = get_data(filename,var)
 
                 label = "{}".format(period)
@@ -405,14 +543,15 @@ def compare_timings(Ob_Type = 'all'):
                 
         title = "{} - {}".format(" ".join([s.capitalize() for s in var.name.split("_")]), correction)
 
-        if "specific_humidity" in var.name:
+        # Kate add this bit to make inclusion of NOCS optional
+        if (AddNOCS) & ("specific_humidity" in var.name):
             nocs_m, nocs_a = read_nocs()
             to_plot += [nocs_m, nocs_a]
         # KATE ADDED ship bit
         if Ob_Type == 'all':
-	    do_plot(to_plot, title, "{}_{}_day-night-both.png".format(var.name, correction))
+            do_plot(to_plot, title, "{}_{}_day-night-both.png".format(var.name, correction))
         elif Ob_Type == 'ship':
-	    do_plot(to_plot, title, "{}_{}_day-night-both_SHIP.png".format(var.name, correction))
+            do_plot(to_plot, title, "{}_{}_day-night-both_SHIP.png".format(var.name, correction))
 
     correction = "BClocal"
 
@@ -432,17 +571,17 @@ def compare_timings(Ob_Type = 'all'):
 
             for period in ["both", "day", "night"]:
                 if period == "both":
-                    color = "grey" #"lime"
+                    color = "black" #"lime"
                 elif period == "day":
-                    color = "darkorange" #"r"
+                    color = "gold" #"r"
                 elif period == "night":
-                    color = "darkblue" #"c"
+                    color = "mediumslateblue" #"c"
 
                 # KATE ADDED ship bit
-		if Ob_Type == 'all':
-		    filename = "{}/{}/OBSclim2{}_5x5_monthly{}_from_daily_{}_{}_ts_{}.nc".format(DATA_LOCATION, GRID_LOCATION[correction], correction, version, period, suffix, time_res) 
+                if Ob_Type == 'all':
+                    filename = "{}/{}/OBSclim2{}_5x5_monthly{}_from_daily_{}_{}_ts_{}.nc".format(DATA_LOCATION, GRID_LOCATION[correction], correction, version, period, suffix, time_res) 
                 elif Ob_Type == 'ship':
-		    filename = "{}/{}ship/OBSclim2{}_5x5_monthly{}_from_daily_{}_{}_ts_{}.nc".format(DATA_LOCATION, GRID_LOCATION[correction], correction, version, period, suffix, time_res) 
+                    filename = "{}/{}ship/OBSclim2{}_5x5_monthly{}_from_daily_{}_{}_ts_{}.nc".format(DATA_LOCATION, GRID_LOCATION[correction], correction, version, period, suffix, time_res) 
 		
 # OLD:            filename = "{}/{}/ERAclim{}_5x5_monthly{}_from_daily_{}_{}_ts_{}.nc".format(DATA_LOCATION, GRID_LOCATION[correction], correction, version, period, suffix, time_res) 
 
@@ -457,26 +596,28 @@ def compare_timings(Ob_Type = 'all'):
                 
         title = "{} - {}".format(" ".join([s.capitalize() for s in var.name.split("_")]), correction)
 
-        if "specific_humidity" in var.name:
+        # Kate add this bit to make inclusion of NOCS optional
+        if (AddNOCS) & ("specific_humidity" in var.name):
             nocs_m, nocs_a = read_nocs()
             to_plot += [nocs_m, nocs_a]
         # KATE ADDED ship bit
         if Ob_Type == 'all':
-	    do_plot(to_plot, title, "{}_{}_day-night-both.png".format(var.name, correction))
+            do_plot(to_plot, title, "{}_{}_day-night-both.png".format(var.name, correction))
         elif Ob_Type == 'ship':
-	    do_plot(to_plot, title, "{}_{}_day-night-both_SHIP.png".format(var.name, correction))
+            do_plot(to_plot, title, "{}_{}_day-night-both_SHIP.png".format(var.name, correction))
 
 
 #***************************************
 #***************************************
 # QC vs noQC
-def compare_QCraw(Ob_Type = 'all'):
+def compare_QCraw(Ob_Type = 'all',AddNOCS = True):
     ''' Run the QC vs noQC comparison plot '''
     ''' Ob_Type = all, ship - default = all '''
+    ''' AddNOCS = True - default = True so NOCS time series will be added for q '''
 
     version = "_renorm19812010_anomalies"
     # OLD: version = "_anomalies"
-    DATA_LOCATION = "/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/"
+    DATA_LOCATION = "/project/hadobs2/hadisdh/marine/ICOADS.3.0.0"
     # OLD: DATA_LOCATION = "/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/"
     correction = "NBC"
 
@@ -497,9 +638,9 @@ def compare_QCraw(Ob_Type = 'all'):
                 for qc in ["QC", "noQC"]:
 
                     # KATE ADDED ship bit
-		    if Ob_Type == 'all':
+                    if Ob_Type == 'all':
                         filename = "{}/{}/OBSclim2{}_5x5_monthly{}_from_daily_{}_{}_ts_{}.nc".format(DATA_LOCATION, GRID_LOCATION[qc], correction, version, period, suffix, time_res) 
-		    elif Ob_Type == 'ship':
+                    elif Ob_Type == 'ship':
                         filename = "{}/{}ship/OBSclim2{}_5x5_monthly{}_from_daily_{}_{}_ts_{}.nc".format(DATA_LOCATION, GRID_LOCATION[qc], correction, version, period, suffix, time_res) 
 # OLD:                filename = "{}/{}/ERAclim{}_5x5_monthly{}_from_daily_{}_{}_ts_{}.nc".format(DATA_LOCATION, GRID_LOCATION[qc], correction, version, period, suffix, time_res) 
 
@@ -522,7 +663,8 @@ def compare_QCraw(Ob_Type = 'all'):
         
             title = "{} - {} - {}".format(" ".join([s.capitalize() for s in var.name.split("_")]), correction, period)
 
-            if "specific_humidity" in var.name:
+            # Kate add this bit to make inclusion of NOCS optional
+            if (AddNOCS) & ("specific_humidity" in var.name):
                 nocs_m, nocs_a = read_nocs()
                 to_plot += [nocs_m, nocs_a]
             # KATE ADDED ship bit
@@ -534,76 +676,10 @@ def compare_QCraw(Ob_Type = 'all'):
 #***************************************
 #***************************************
 # BC vs NBC
-def compare_BCNBC(Ob_Type = 'all'):
+def compare_BCNBC(Ob_Type = 'all', AddNOCS = True):
     ''' Run the BC vs NBC comparison plot '''
     ''' Ob_Type = all, ship - default = all '''
-
-    version = "_renorm19812010_anomalies"
-    #OLD: version = "_anomalies"
-    DATA_LOCATION = "/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/"
-    # OLD: DATA_LOCATION = "/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/"
-
-    for v, var in enumerate(OBS_ORDER):
-    #    if "anomalies" not in var.name:
-    #        continue
-
-        # separate plots for both/day/night
-        for period in ["both", "day", "night"]:
-            to_plot = []
-
-            for time_res in ["annual", "monthly"]:
-                if time_res == "annual":
-                    zorder = 10
-                    lw = 2
-                else:
-                    zorder = 1
-                    lw = 1
-
-                for correction in ["BClocal", "NBC"]:
-
-                    # KATE ADDED ship bit
-		    if Ob_Type == 'all':
-                        filename = "{}/{}/OBSclim2{}_5x5_monthly{}_from_daily_{}_{}_ts_{}.nc".format(DATA_LOCATION, GRID_LOCATION[correction], correction, version, period, suffix, time_res) 
-		    elif Ob_Type == 'ship':
-                        filename = "{}/{}ship/OBSclim2{}_5x5_monthly{}_from_daily_{}_{}_ts_{}.nc".format(DATA_LOCATION, GRID_LOCATION[correction], correction, version, period, suffix, time_res) 
-# OLD:                filename = "{}/{}/ERAclim{}_5x5_monthly{}_from_daily_{}_{}_ts_{}.nc".format(DATA_LOCATION, GRID_LOCATION[correction], correction, version, period, suffix, time_res) 
-
-                    y, t = get_data(filename,var)
-
-                    label = "{}".format(correction)
-                    if correction == "NBC":
-                        if time_res == "annual":
-                            color = "grey" #"DarkRed"
-                        else:
-                            color = "grey" #"r"
-                    else:
-                        color = "black" #"k"
-                    
-                    if time_res == "annual":
-                        to_plot += [PlotData(var.name, y, t, label, color, zorder, lw)]
-                    else:
-                        to_plot += [PlotData(var.name, y, t, "", color, zorder, lw)]
-
-        
-            title = "{} - {} - {}".format(" ".join([s.capitalize() for s in var.name.split("_")]), period, "QC")
-
-            if "specific_humidity" in var.name:
-                nocs_m, nocs_a = read_nocs()
-                to_plot += [nocs_m, nocs_a]
-
-            # KATE ADDED ship bit
-            if Ob_Type == 'all':
-                do_plot(to_plot, title, "{}_{}_BClocal-NBC.png".format(var.name, period))
-            elif Ob_Type == 'ship':
-                do_plot(to_plot, title, "{}_{}_BClocal-NBC_SHIP.png".format(var.name, period))
-
-#***************************************
-#***************************************
-# KATE ADDED
-# BCtotal vs BChgt vs BCscn
-def compare_BCtype(Ob_Type = 'all'):
-    ''' Run the BC types total, scn and hgt comparison plot '''
-    ''' Ob_Type = 'all'. 'ship' - default = all '''
+    ''' AddNOCS = True - default = True so NOCS time series will be added for q '''
 
     version = "_renorm19812010_anomalies"
     #OLD: version = "_anomalies"
@@ -626,13 +702,84 @@ def compare_BCtype(Ob_Type = 'all'):
                     zorder = 1
                     lw = 1
 
-                for correction in ["NBC", "BClocal", "BClocalHGT", "BClocalINST"]:
+                for correction in ["BClocal", "NBC"]:
+
+                    # KATE ADDED ship bit
+                    if Ob_Type == 'all':
+                        filename = "{}/{}/OBSclim2{}_5x5_monthly{}_from_daily_{}_{}_ts_{}.nc".format(DATA_LOCATION, GRID_LOCATION[correction], correction, version, period, suffix, time_res) 
+	
+                    elif Ob_Type == 'ship':
+                        filename = "{}/{}ship/OBSclim2{}_5x5_monthly{}_from_daily_{}_{}_ts_{}.nc".format(DATA_LOCATION, GRID_LOCATION[correction], correction, version, period, suffix, time_res) 
+# OLD:                filename = "{}/{}/ERAclim{}_5x5_monthly{}_from_daily_{}_{}_ts_{}.nc".format(DATA_LOCATION, GRID_LOCATION[correction], correction, version, period, suffix, time_res) 
+
+                    y, t = get_data(filename,var)
+
+                    label = "{}".format(correction)
+                    if correction == "NBC":
+                        if time_res == "annual":
+                            color = "grey" #"DarkRed"
+                        else:
+                            color = "grey" #"r"
+                    else:
+                        color = "black" #"k"
+                    
+                    if time_res == "annual":
+                        to_plot += [PlotData(var.name, y, t, label, color, zorder, lw)]
+                    else:
+                        to_plot += [PlotData(var.name, y, t, "", color, zorder, lw)]
+
+        
+            title = "{} - {} - {}".format(" ".join([s.capitalize() for s in var.name.split("_")]), period, "QC")
+
+            # Kate add this bit to make inclusion of NOCS optional
+            if (AddNOCS) & ("specific_humidity" in var.name):
+                nocs_m, nocs_a = read_nocs()
+                to_plot += [nocs_m, nocs_a]
+
+            # KATE ADDED ship bit
+            if Ob_Type == 'all':
+                do_plot(to_plot, title, "{}_{}_BClocal-NBC.png".format(var.name, period))
+            elif Ob_Type == 'ship':
+                do_plot(to_plot, title, "{}_{}_BClocal-NBC_SHIP.png".format(var.name, period))
+
+#***************************************
+#***************************************
+# KATE ADDED
+# BCtotal vs BChgt vs BCscn
+def compare_BCtype(Ob_Type = 'all',AddNOCS = True):
+    ''' Run the BC types total, scn and hgt comparison plot  - which now also has NBC and noQC on it'''
+    ''' Ob_Type = 'all'. 'ship' - default = all '''
+    ''' AddNOCS = True - default = True so NOCS time series will be added for q '''
+    
+
+    version = "_renorm19812010_anomalies"
+    #OLD: version = "_anomalies"
+    DATA_LOCATION = "/project/hadobs2/hadisdh/marine/ICOADS.3.0.0"
+    # OLD: DATA_LOCATION = "/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/"
+
+    for v, var in enumerate(OBS_ORDER):
+    #    if "anomalies" not in var.name:
+    #        continue
+
+        # separate plots for both/day/night
+        for period in ["both", "day", "night"]:
+            to_plot = []
+
+            for time_res in ["annual", "monthly"]:
+                if time_res == "annual":
+                    zorder = 10
+                    lw = 2
+                else:
+                    zorder = 1
+                    lw = 1
+
+                for correction in ["noQC", "NBC", "BClocal", "BClocalHGT", "BClocalINST"]:
 		
 		    # Catch for filenames which are either NBC or BClocal, not BClocalHGT or BClocalINST
-		    if correction != "NBC":
-		        ThisCorr = "BClocal"
-		    else:
-		        ThisCorr = correction
+                    if (correction != "NBC") & (correction != "noQC"):
+                        ThisCorr = "BClocal"
+                    else:
+                        ThisCorr = "NBC" #correction
 
                     if Ob_Type == 'all':
                         filename = "{}/{}/OBSclim2{}_5x5_monthly{}_from_daily_{}_{}_ts_{}.nc".format(DATA_LOCATION, GRID_LOCATION[correction], ThisCorr, version, period, suffix, time_res) 
@@ -649,13 +796,13 @@ def compare_BCtype(Ob_Type = 'all'):
                         else:
                             color = "black" #"r"
                     elif correction == "BClocalHGT":
-                        color = "darkorange" #"k"
+                        color = "cornflowerblue" #"k"
                     elif correction == "BClocalINST":
-                        color = "darkblue" #"k"
-                    elif correction == "BClocalHGT":
-                        color = "darkorange" #"k"
+                        color = "b" #"k"
                     elif correction == "NBC":
                         color = "grey" #"k"
+                    elif correction == "noQC":
+                        color = "red" #"k"
                     
                     if time_res == "annual":
                         to_plot += [PlotData(var.name, y, t, label, color, zorder, lw)]
@@ -665,7 +812,8 @@ def compare_BCtype(Ob_Type = 'all'):
         
             title = "{} - {} - {}".format(" ".join([s.capitalize() for s in var.name.split("_")]), period, "QC")
 
-            if "specific_humidity" in var.name:
+            # Kate add this bit to make inclusion of NOCS optional
+            if (AddNOCS) & ("specific_humidity" in var.name):
                 nocs_m, nocs_a = read_nocs()
                 to_plot += [nocs_m, nocs_a]
 
@@ -678,9 +826,11 @@ def compare_BCtype(Ob_Type = 'all'):
 #***************************************
 # KATE ADDED
 # SHIP vs all for day, night, both, NBC, BClocal (could add noQC, BClocalHGT and BClocalINST later)
-def compare_PTs(Plot_Type = 'NBC'):
+def compare_PTs(Plot_Type = 'NBC', AddNOCS = True, AddERA = True):
     ''' Run the platform (ship vs all) comparison plot '''
     ''' Plot_Type = 'NBC'. 'BClocal' - default = NBC  '''
+    ''' AddNOCS = True - default = True so NOCS time series will be added for q '''
+    ''' AddERA = True - default = True so ERA time series will be added for q, rh, t and td '''
 
     version = "_renorm19812010_anomalies"
     #OLD: version = "_anomalies"
@@ -708,10 +858,10 @@ def compare_PTs(Plot_Type = 'NBC'):
                 for Ob_Type in ["ship", "all"]: #, "BClocalHGT", "BClocalINST"]:
 		
 		    # Catch for filenames which are either NBC or BClocal, not BClocalHGT or BClocalINST
-		    if correction != "NBC":
-		        ThisCorr = "BClocal"
-		    else:
-		        ThisCorr = correction
+                    if correction != "NBC":
+                        ThisCorr = "BClocal"
+                    else:
+                        ThisCorr = correction
 
                     if Ob_Type == 'all':
                         filename = "{}/{}/OBSclim2{}_5x5_monthly{}_from_daily_{}_{}_ts_{}.nc".format(DATA_LOCATION, GRID_LOCATION[correction], ThisCorr, version, period, suffix, time_res) 
@@ -723,9 +873,9 @@ def compare_PTs(Plot_Type = 'NBC'):
 
                     label = "{}".format(Ob_Type)
                     if Ob_Type == "ship":
-                        color = "red" #"DarkRed"
+                        color = "black" #"DarkRed"
                     elif Ob_Type == "all":
-                        color = "black" #"k"
+                        color = "mediumseagreen" #"k"
                     
                     if time_res == "annual":
                         to_plot += [PlotData(var.name, y, t, label, color, zorder, lw)]
@@ -735,8 +885,30 @@ def compare_PTs(Plot_Type = 'NBC'):
         
             title = "{} - {} - {}".format(" ".join([s.capitalize() for s in var.name.split("_")]), period, correction)
 
-            if "specific_humidity" in var.name:
+            # Kate add this bit to make inclusion of NOCS optional
+            if (AddNOCS) & ("specific_humidity" in var.name):
                 nocs_m, nocs_a = read_nocs()
                 to_plot += [nocs_m, nocs_a]
 
+            if (AddERA) & ("specific_humidity" in var.name):
+                era_m, era_m_mask, era_a, era_a_mask = read_era('q')
+                to_plot += [era_m, era_a]
+                to_plot += [era_m_mask, era_a_mask]
+
+            if (AddERA) & ("relative_humidity" in var.name):
+                era_m, era_m_mask, era_a, era_a_mask = read_era('rh')
+                to_plot += [era_m, era_a]
+                to_plot += [era_m_mask, era_a_mask]
+
+            if (AddERA) & ("marine_air_temperature" in var.name):
+                era_m, era_m_mask, era_a, era_a_mask = read_era('t')
+                to_plot += [era_m, era_a]
+                to_plot += [era_m_mask, era_a_mask]
+
+            if (AddERA) & ("dew_point_temperature" in var.name):
+                era_m, era_m_mask, era_a, era_a_mask = read_era('td')
+                to_plot += [era_m, era_a]
+                to_plot += [era_m_mask, era_a_mask]
+
+            print("Making plot")
             do_plot(to_plot, title, "{}_{}_{}_ShipAll.png".format(var.name, period,Plot_Type))
