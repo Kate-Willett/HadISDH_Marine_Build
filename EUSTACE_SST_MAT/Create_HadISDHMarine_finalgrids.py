@@ -2,7 +2,7 @@
 # 
 # Author: Kate Willett
 # Created: 25 January 2019
-# Last update: 25 January 2019
+# Last update: 25 February 2019
 # Location: /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/	
 # GitHub: https://github.com/Kate-Willett/HadISDH_Marine_Build					
 # -----------------------
@@ -155,6 +155,8 @@ def Write_Netcdf_Variable_All(outfile, var, vlong, vunit, vaxis, RefPeriod, TheM
     This is basically a tweak of the utils.py version but set up to work here
     and to be consistent with HadISDH netCDF files.
     
+    The lats are the opposite to HadISDH.land so I'm flipping them here.
+    
     Create the netcdf variable
     :param obj outfile: output file object
     :param string var: variable name
@@ -183,7 +185,7 @@ def Write_Netcdf_Variable_All(outfile, var, vlong, vunit, vaxis, RefPeriod, TheM
     # We're not using masked arrays here - hope that's not a problem
     nc_var.valid_min = np.min(data_arr[np.where(data_arr != TheMDI)]) 
     nc_var.valid_max = np.max(data_arr[np.where(data_arr != TheMDI)]) 
-    nc_var[:] = data_arr
+    nc_var[:] = np.flip(data_arr,axis = 1)
         
     return # write_netcdf_variable_all
     
@@ -279,7 +281,8 @@ def Write_NetCDF_All(filename, data_vals, data_counts, clim_vals, clim_counts,
     nc_var.standard_name = "latitude"
     nc_var.point_spacing = "even"
     nc_var.axis = "X"
-    nc_var[:] = lats
+    # The lats are the opposite to HadISDH.land so I'm flipping them here.
+    nc_var[:] = np.flip(lats)
     
     # make longitude variable
     nc_var = outfile.createVariable('longitude', np.dtype('float32'), ('longitude'), zlib = True) # with compression!!!
