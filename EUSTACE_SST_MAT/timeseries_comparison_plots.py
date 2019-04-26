@@ -437,9 +437,9 @@ def read_era(ERAVar = 'q'):
     elif (ERAVar == 'rh'):
         y = utils.set_MetVar_attributes("relative_humidity", "Relative humidity", "relative humidity", "%rh", mdi, np.dtype('float64'), 8, multiplier = False)
     elif (ERAVar == 't'):
-        y = utils.set_MetVar_attributes("marine_air_temperature", "Marine air temperature", "marine air temperature", "deg C", mdi, np.dtype('float64'), 8, multiplier = False)
+        y = utils.set_MetVar_attributes("marine_air_temperature", "Marine air temperature", "marine air temperature", "degrees C", mdi, np.dtype('float64'), 8, multiplier = False)
     elif (ERAVar == 'td'):
-        y = utils.set_MetVar_attributes("dew_point_temperature", "Dew point temperature", "dew point temperature", "deg C", mdi, np.dtype('float64'), 8, multiplier = False)
+        y = utils.set_MetVar_attributes("dew_point_temperature", "Dew point temperature", "dew point temperature", "degrees C", mdi, np.dtype('float64'), 8, multiplier = False)
     
     yMASK = copy.copy(y)
     y.data = era
