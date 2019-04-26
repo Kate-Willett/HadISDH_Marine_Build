@@ -28,7 +28,7 @@ compare_BCNBC
 * compare_BCtype
 # run BC types comparison for all or ship only which includes NBC and noQC
 * compare_PTs
-# run ship vs all comparison for dayQC, nightQC, bothQC, dayBC, nightBC, bothBC - also has ERA-Interim on there
+# run ship vs all comparison for dayQC, nightQC, bothQC, dayBC, nightBC, bothBC - also has ERA-Interim on there and NOCs Trends are computed over common period.
 
 -----------------------
 LIST OF MODULES
@@ -204,7 +204,12 @@ def do_plot(data, title, outname):
     :param MetVar data: PlotData object containing all required inputs
     :param str title: plot title
     :param str outname: output filename
+    
+    If there is NOCS-q as a label then make times for all end in 2015
+    If there is ERA-Interim or ERA-Interim MASKED as a label then make times for all start in 1979
     """    
+    
+#    pdb.set_trace()
     plt.clf()
     ax = plt.axes()
 
@@ -212,7 +217,27 @@ def do_plot(data, title, outname):
         ax1 = ax
         ax2 = ax1.twinx()
 
+    # Create a list of labels
+    ListLabels = [i.label for i in data]
+    ShortTrends = 0 # a switch to tell the code whether to fit shorter trends
+    TimePointers = [0, (data[0].t[-1].year - 1973)+1] # this assumes first data object is annual HadISDH.marine!!!
+    ERATimePointer = (data[0].t[-1].year - 1979)+1 
+     
+    # Find out if NOCS-q is in there and if so then only fit trends to 2015
+    if ('NOCS-q' in ListLabels):
+    
+        ShortTrends = 1
+	# Now create subset pointers to reduced time and data elements to end of 2015 only for the annual
+        TimePointers[1] = 43 # 2015 - 1973 = 42 so + 1 = 43
+        ERATimePointer =  37  # (2015 - 1979) + 1 = 37
+    
+    # Find out if ERA-Interim is in there and if so then only fit trends from 1979 onwards	
+    if ('ERA-Interim' in ListLabels):
 
+        ShortTrends = 1
+	# Now create subset pointers to reduced time and data elements beginning in 1979 only for the annual
+        TimePointers[0] = 6 # 1979 - 1973 = 6
+	
     texty = 0.05
 #    texty = 0.95
 #    pdb.set_trace()
@@ -236,11 +261,23 @@ def do_plot(data, title, outname):
             else:               
                 plt.plot(d.t, d.y.data, label = d.label, c = d.c, zorder = d.z, lw = d.lw)
 
-                # annual - also want MPW slope
-                slope, lower, upper = median_pairwise_slopes(d.t, d.y.data, d.y.mdi, sigma = 1.)
-                slope_error = np.mean([(upper-slope), (slope-lower)])
 
-                slope_years, slope_values = mpw_plot_points(slope, d.t, d.y.data)
+                # if its ERA then only need TimePointer[1] because the series starts in 1979
+                if (d.label == 'ERA-Interim') | (d.label == 'ERA-Interim MASKED'):
+                    # annual - also want MPW slope
+                    slope, lower, upper = median_pairwise_slopes(d.t[0:ERATimePointer], d.y.data[0:ERATimePointer], d.y.mdi, sigma = 1.)
+                    slope_error = np.mean([(upper-slope), (slope-lower)])
+
+                    slope_years, slope_values = mpw_plot_points(slope, d.t[0:ERATimePointer], d.y.data[0:ERATimePointer])
+
+                else:
+                    # annual - also want MPW slope
+                    slope, lower, upper = median_pairwise_slopes(d.t[TimePointers[0]:TimePointers[1]], d.y.data[TimePointers[0]:TimePointers[1]], d.y.mdi, sigma = 1.)
+                    slope_error = np.mean([(upper-slope), (slope-lower)])
+
+                    slope_years, slope_values = mpw_plot_points(slope, d.t[TimePointers[0]:TimePointers[1]], d.y.data[TimePointers[0]:TimePointers[1]])
+
+
                 plt.plot(slope_years, slope_values, c = d.c, lw = 1)
 
 #               plt.text(0.03, texty, "{:6.3f} +/- {:6.4f} {} 10 yr".format(10.*slope, 10.*slope_error, d.y.units)+r'$^{-1}$', transform = ax.transAxes, color = d.c)
@@ -311,9 +348,11 @@ def read_nocs():
     
 
     indata = np.genfromtxt("/project/hadobs2/hadisdh/marine/otherdata/NOCS_q_sotc2015.txt", dtype = str)
+    
+    # NOCS data starts in Jan 1971 so only read in from Jan 1973
 
-    t = indata[:, 0]
-    nocs = indata[:, -1]
+    t = indata[24::, 0]
+    nocs = indata[24::, -1]
     
     nocs = np.array([float(i) for i in nocs])
 
@@ -370,9 +409,9 @@ def read_era(ERAVar = 'q'):
     elif (ERAVar == 'rh'):
         y = utils.set_MetVar_attributes("relative_humidity", "Relative humidity", "relative humidity", "%rh", mdi, np.dtype('float64'), 8, multiplier = False)
     elif (ERAVar == 't'):
-        y = utils.set_MetVar_attributes("marine_air_temperature", "Marine air temperature", "marine air temperature", "deg C", mdi, np.dtype('float64'), 8, multiplier = False)
+        y = utils.set_MetVar_attributes("marine_air_temperature", "Marine air temperature", "marine air temperature", "degrees C", mdi, np.dtype('float64'), 8, multiplier = False)
     elif (ERAVar == 'td'):
-        y = utils.set_MetVar_attributes("dew_point_temperature", "Dew point temperature", "dew point temperature", "deg C", mdi, np.dtype('float64'), 8, multiplier = False)
+        y = utils.set_MetVar_attributes("dew_point_temperature", "Dew point temperature", "dew point temperature", "degrees C", mdi, np.dtype('float64'), 8, multiplier = False)
     
     yMASK = copy.copy(y)
     y.data = era
