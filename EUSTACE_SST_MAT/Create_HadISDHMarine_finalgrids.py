@@ -75,7 +75,7 @@
 # -----------------------
 # HOW TO RUN THE CODE
 # -----------------------
-# module load scitools/experimental-current
+# module load scitools/default-current
 # python Create_HadISDHMarine_finalgrids.py --year1 1973 --year2 2017 --month1 01 --month2 --12  --timing both (day, night) --platform ship (all)
 # 
 # -----------------------
@@ -137,13 +137,13 @@ from ReadNetCDF import GetGrid4
 from GetNiceTimes import MakeDaysSince
 
 # Set up variables
-NowMon = 'FEB'
-NowYear = '2019'
+NowMon = 'JAN'
+NowYear = '2020'
 ClimStart = 1981
 ClimEnd = 2010
 RefPeriod = str(ClimStart)+' to '+str(ClimEnd)
 ClimPeriod = str(ClimStart)[2:4]+str(ClimEnd)[2:4]
-Version = '1.0.0.2018f'
+Version = '1.0.0.2019f'
 
 ################################################################################################################
 # SUBROUTINES #
@@ -280,7 +280,7 @@ def Write_NetCDF_All(filename, data_vals, data_counts, clim_vals, clim_counts,
     nc_var.units = "degrees_north"
     nc_var.standard_name = "latitude"
     nc_var.point_spacing = "even"
-    nc_var.axis = "X"
+    nc_var.axis = "Y"
     # The lats are the opposite to HadISDH.land so I'm flipping them here.
     nc_var[:] = np.flip(lats)
     
