@@ -64,6 +64,14 @@ or with Python 3
 module load scitools/default-current
 import timeseries_comparison_plots as tcp
 
+# For the paper
+# run day, night, both comparison for ship only (BClocal used not NBC)
+tcp.compare_timings('ship',AddNOCS = False) # or 'ship' If AddNOCS is not set to false then NOCS will be plotted for specific humidity
+# run ship vs all comparison for dayBC, nightBC, bothBC
+tcp.compare_PTs('BClocal',AddNOCS = True, AddERA = True) # or 'BClocal' If AddNOCS or AddERA is not set to false then NOCS nad ERA will be plotted for specific humidity (rh, t and td for ERA too)
+# WILL NEED TO CHANGE TO ERA5 IF UPDATING BEYOND 2018
+# run BC types comparison for ship
+tcp.compare_BCtype('ship',AddNOCS = False) # or 'ship' (ship not set up yet for all different BC types) If AddNOCS is not set to false then NOCS will be plotted for specific humidity
 
 -----------------------
 OUTPUT
@@ -74,6 +82,20 @@ Plots to appear in
 -----------------------
 VERSION/RELEASE NOTES
 -----------------------
+
+Version 6 (4 May 2020)
+---------
+ 
+Enhancements
+All trend text on plot now goes top down so is in the same order as the legend
+RH now has trends from 1982 onwards shown as text on the plots in parentheses
+All trends now only to 2 sig figures and st error to 3 sig figures
+ 
+Changes
+Now python 3 - maybe - involves changing utils too though.
+ 
+Bug fixes
+
 
 Version 5 (15 Apr 2019)
 ---------
@@ -222,6 +244,9 @@ def do_plot(data, title, outname):
     ShortTrends = 0 # a switch to tell the code whether to fit shorter trends
     TimePointers = [0, (data[0].t[-1].year - 1973)+1] # this assumes first data object is annual HadISDH.marine!!!
     ERATimePointer = (data[0].t[-1].year - 1979)+1 
+    # Set up pointers for calculating RH trends 1982 to end for printing in parentheses on RH plots
+    Post82RHPointer = [9, (data[0].t[-1].year - 1973)+1] # this assumes start of 1973 and data object is annual HadISDH.marine
+    ERAPost82RHPointer = [3, (data[0].t[-1].year - 1979)+1] # this assumes start of 1973 and data object is annual HadISDH.marine
      
     # Find out if NOCS-q is in there and if so then only fit trends to 2015
     if ('NOCS-q' in ListLabels):
@@ -238,8 +263,8 @@ def do_plot(data, title, outname):
 	# Now create subset pointers to reduced time and data elements beginning in 1979 only for the annual
         TimePointers[0] = 6 # 1979 - 1973 = 6
 	
-    texty = 0.05
-#    texty = 0.95
+#    texty = 0.02 # starting point for plotting text on plot
+    texty = 0.22 # starts at top and works with max of 5 elements
 #    pdb.set_trace()
     for d in data:
         print('Plotting: ',d.name)
@@ -270,6 +295,11 @@ def do_plot(data, title, outname):
 
                     slope_years, slope_values = mpw_plot_points(slope, d.t[0:ERATimePointer], d.y.data[0:ERATimePointer])
 
+# New bit for RH only
+                    if (title[0] == 'R'):
+                        slopeRH, lowerRH, upperRH = median_pairwise_slopes(d.t[ERAPost82RHPointer[0]:ERAPost82RHPointer[1]], d.y.data[ERAPost82RHPointer[0]:ERAPost82RHPointer[1]], d.y.mdi, sigma = 1.)
+                        slope_errorRH = np.mean([(upperRH-slopeRH), (slopeRH-lowerRH)])
+
                 else:
                     # annual - also want MPW slope
                     slope, lower, upper = median_pairwise_slopes(d.t[TimePointers[0]:TimePointers[1]], d.y.data[TimePointers[0]:TimePointers[1]], d.y.mdi, sigma = 1.)
@@ -277,17 +307,27 @@ def do_plot(data, title, outname):
 
                     slope_years, slope_values = mpw_plot_points(slope, d.t[TimePointers[0]:TimePointers[1]], d.y.data[TimePointers[0]:TimePointers[1]])
 
+# New bit for RH only
+                    if (title[0] == 'R'):
+                        slopeRH, lowerRH, upperRH = median_pairwise_slopes(d.t[Post82RHPointer[0]:Post82RHPointer[1]], d.y.data[Post82RHPointer[0]:Post82RHPointer[1]], d.y.mdi, sigma = 1.)
+                        slope_errorRH = np.mean([(upperRH-slopeRH), (slopeRH-lowerRH)])
+
 
                 plt.plot(slope_years, slope_values, c = d.c, lw = 1)
 
 #               plt.text(0.03, texty, "{:6.3f} +/- {:6.4f} {} 10 yr".format(10.*slope, 10.*slope_error, d.y.units)+r'$^{-1}$', transform = ax.transAxes, color = d.c)
 # If its RH then plt.text in lower left else go in lower right
+# Also if its RH then plot the text of the 1982+ trends in parentheses too
                 if (title[0] == 'R'):
-                    plt.text(0.03, texty, "{:6.3f} +/- {:6.4f} {} 10 yr".format(10.*slope, 10.*slope_error, d.y.units)+r'$^{-1}$', transform = ax.transAxes, color = d.c, ha = 'left')
+                    #plt.text(0.03, texty, "{:6.3f} +/- {:6.4f} {} 10 yr".format(10.*slope, 10.*slope_error, d.y.units)+r'$^{-1}$', transform = ax.transAxes, color = d.c, ha = 'left')
+                    # Now has 1982+ trends  and only plots trends to 2 sig figs and st err to 3 sig figs too
+                    plt.text(0.03, texty, "{:6.2f} +/- {:6.3f} ({:6.2f} +/- {:6.3f}) {} 10 yr".format(10.*slope, 10.*slope_error, 10.*slopeRH, 10.*slope_errorRH, d.y.units)+r'$^{-1}$', transform = ax.transAxes, color = d.c, ha = 'left')
                 else:
-                    plt.text(0.97, texty, "{:6.3f} +/- {:6.4f} {} 10 yr".format(10.*slope, 10.*slope_error, d.y.units)+r'$^{-1}$', transform = ax.transAxes, color = d.c, ha = 'right')
-#                texty -= 0.05
-                texty += 0.05
+                    #plt.text(0.97, texty, "{:6.3f} +/- {:6.4f} {} 10 yr".format(10.*slope, 10.*slope_error, d.y.units)+r'$^{-1}$', transform = ax.transAxes, color = d.c, ha = 'right')
+                    # Now plots trends to 2 sig figs and st err to 3 sig figs
+                    plt.text(0.97, texty, "{:6.2f} +/- {:6.3f} {} 10 yr".format(10.*slope, 10.*slope_error, d.y.units)+r'$^{-1}$', transform = ax.transAxes, color = d.c, ha = 'right')
+                texty -= 0.05 # top downwards 
+#                texty += 0.05 # bottom upwards
 
     if d.name != "n_obs":
         plt.ylabel(d.y.units)
