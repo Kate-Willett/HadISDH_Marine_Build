@@ -14,7 +14,7 @@ Location: /project/hadobs2/hadisdh/marine/PROGS/Build
 -----------------------
 CODE PURPOSE AND OUTPUT
 -----------------------
-Create global average timeseries comparison plots 
+Create global average timeseries comparison plots from time series created by global_average_timeseries.py (whole globe NOT 70S to 70N)
 
 For actuals and anomalies
 
@@ -95,6 +95,8 @@ Changes
 Now python 3 - maybe - involves changing utils too though.
  
 Bug fixes
+Fixed the median of pairwise slopes as it had an error and CI was too small
+Now is 1.96*w which is 2.5th to 97.5th percentile slopes (weighted) so 95% confidence intervals
 
 
 Version 5 (15 Apr 2019)
@@ -242,10 +244,12 @@ def do_plot(data, title, outname):
     # Create a list of labels
     ListLabels = [i.label for i in data]
     ShortTrends = 0 # a switch to tell the code whether to fit shorter trends
+    # Only want to plot data to end of 2018!!!!
     TimePointers = [0, (data[0].t[-1].year - 1973)+1] # this assumes first data object is annual HadISDH.marine!!!
+    #TimePointers = [0, (data[0].t[-2].year - 1973)+1] # this assumes first data object is annual HadISDH.marine!!!
     ERATimePointer = (data[0].t[-1].year - 1979)+1 
     # Set up pointers for calculating RH trends 1982 to end for printing in parentheses on RH plots
-    Post82RHPointer = [9, (data[0].t[-1].year - 1973)+1] # this assumes start of 1973 and data object is annual HadISDH.marine
+    Post82RHPointer = [9, (data[0].t[-2].year - 1973)+1] # this assumes start of 1973 and data object is annual HadISDH.marine
     ERAPost82RHPointer = [3, (data[0].t[-1].year - 1979)+1] # this assumes start of 1973 and data object is annual HadISDH.marine
      
     # Find out if NOCS-q is in there and if so then only fit trends to 2015
@@ -527,11 +531,14 @@ def median_pairwise_slopes(xdata, ydata, mdi, sigma = 1.):
     dof=n*(n-1)/2
     w=math.sqrt(n*(n-1)*((2.*n)+5.)/18.)
 
-    percentile_point = scipy.stats.norm.cdf(sigma)
+    # THIS IS WRONG!!! gives 0.84 but should be 1.96
+    # 1.96 pulls out the 2.5th and 97.5th percentiles so gives the 95% confidence interval
+    #percentile_point = scipy.stats.norm.cdf(sigma)
+    percentile_point = 1.96
 
 
     rank_upper=((dof+percentile_point*w)/2.)+1
-    rank_lower=((dof-percentile_point*w)/2.)+1
+    rank_lower=((dof-percentile_point*w)/2.) # +1 I DON'T THINK THIS NEEDS +1 as it shoudl be -1 and the int() floors it anyway!
 
     if rank_upper >= len(slopes): rank_upper=len(slopes)-1
     if rank_upper < 0: rank_upper=0
