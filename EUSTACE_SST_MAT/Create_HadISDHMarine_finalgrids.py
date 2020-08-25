@@ -185,7 +185,12 @@ def Write_Netcdf_Variable_All(outfile, var, vlong, vunit, vaxis, RefPeriod, TheM
     # We're not using masked arrays here - hope that's not a problem
     nc_var.valid_min = np.min(data_arr[np.where(data_arr != TheMDI)]) 
     nc_var.valid_max = np.max(data_arr[np.where(data_arr != TheMDI)]) 
-    nc_var[:] = np.flip(data_arr,axis = 1)
+   
+    # If there is no time dimension
+    if (len(np.shape(data_arr)) == 2):
+        nc_var[:] = np.flip(data_arr,axis = 0)
+    else:
+        nc_var[:] = np.flip(data_arr,axis = 1)
         
     return # write_netcdf_variable_all
     

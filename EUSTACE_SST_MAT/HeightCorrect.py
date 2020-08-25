@@ -153,7 +153,34 @@ Guessing L (start with -50 (SST>AT/UNSTABLE), 5000 (SST=AT/NEUTRAL), 50 (SST<AT/
  - calculate the Monin-Obukhov Length: L (get_MO_length)
  - repeat until L stabilises: Lresolved
  - get the height corrections for resolved L - run_heightcorrect_proxyLz0 with Lfix = Lresolved
- 
+
+NOTES JUNE 2019
+
+I have changed the run_iterate_L to now be a 21 step process.
+
+Previously I incorrectly assumed that the roughness lenght z0 could be calculated the same as the neutral drag coefficient.
+That was just silly.
+
+So now I do the following for steps 7 to 17
+
+7 - calculate Cd_n (neutral drag coefficient) from u10n (neutral wind speed at 10m which in the first iteration is just u)
+8 - estimate the u* (friction velocity) using Cd_n as an approximation for the drag coefficient (CD)
+9 - estimate the roughness length z0 from u*
+10 - estimate the drag coefficient (CD) from z0
+11 - re-estimate the friction velocity u* now using the estimated CD
+12 - calculate the actual neutral wind speed at 10m - needs u*
+13 - recalculate the Cd_n
+14 - re-estimate u* using CDn
+15 - calculate z0 from u*
+16 - calculate CD from z0
+17 - calculate u* from CD
+
+This is different from David Berry's method now I think.  
+
+I've added a function for the neutral drag coefficient Cd_n get_coefficient_drag_neutral()
+I've corrected get_roughness_length to use the Smith 1988 equation.
+
+I've changed the steps in run_iterate_L
     
 '''
 
@@ -647,6 +674,35 @@ def run_iterate_L(sst,at,shu,u,zu,zt,zq,Lmin = -50., Lmax = 50., Lfix = 999):
     z0 = 0.0013 or 0.0012 (or at u 0.0012)
     So - u10n isn't very much lower than actual wind speed and its not that sensitive to u_star.
     So - I think from an esimate of u_star we can estimate u10n and z0
+
+    NOTES JUNE 2019
+
+    I have changed the run_iterate_L to now be a 21 step process.
+
+    Previously I incorrectly assumed that the roughness lenght z0 could be calculated the same as the neutral drag coefficient.
+    That was just silly.
+
+    So now I do the following for steps 7 to 17
+
+    7 - calculate Cd_n (neutral drag coefficient) from u10n (neutral wind speed at 10m which in the first iteration is just u)
+    8 - estimate the u* (friction velocity) using Cd_n as an approximation for the drag coefficient (CD)
+    9 - estimate the roughness length z0 from u*
+    10 - estimate the drag coefficient (CD) from z0
+    11 - re-estimate the friction velocity u* now using the estimated CD
+    12 - calculate the actual neutral wind speed at 10m - needs u*
+    13 - recalculate the Cd_n
+    14 - re-estimate u* using CDn
+    15 - calculate z0 from u*
+    16 - calculate CD from z0
+    17 - calculate u* from CD
+
+    This is different from David Berry's method now I think.  
+
+    I've added a function for the neutral drag coefficient Cd_n get_coefficient_drag_neutral()
+    I've corrected get_roughness_length to use the Smith 1988 equation.
+
+    I've changed the steps in run_iterate_L
+
     	
     '''
 
@@ -704,84 +760,120 @@ def run_iterate_L(sst,at,shu,u,zu,zt,zq,Lmin = -50., Lmax = 50., Lfix = 999):
         u0, t0, q0 = get_surface_values(sst)
 #        print("Surface u, t, q: ",u0," ",t0," ",q0)
 	
+        # Step 1. Calculate the stability parameter for f(zx/L) using the estimated or 
+        # provided heights z of the measurements for x=T, x=q and x=u 
         # Calculate the stability parameter little_zetau
 	# also calculate the zt/L (little_zetat) and zq/L (littlezetaq)
         little_zetau,little_zetat,little_zetaq = get_little_zeta(zu,zt,zq,L)
 #        print("little_zeta: ",little_zetau," ",little_zetat," ",little_zetaq)
         
+        # Step 2. Calculate the dimensionless profiles for f(zx/L) for x=T, x=q and x=u
         # Calculate the PHIs for zx/L
         PHIm, PHIt, PHIq = get_phis(little_zetau,little_zetat,little_zetaq)
 #        print("PHIm, PHIt, PHIq: ",PHIm," ",PHIt," ",PHIq)
         
+        # Step 3. Calculate the stability corrections for f(zx/L) for x=T, x=q and x=u
         # Calculate the PSIs - we need Ym and Yt(same as Yq anyway) for zx/L
         Ym, Yt, Yq = get_psis(little_zetau,little_zetat,little_zetaq,PHIm,PHIt,PHIq)
 #        print("Ym, Yt, Yq: ",Ym," ",Yt," ",Yq)
 
-        # Calculate the PHIs for 10/L
+        # Step 4. Calculate the 10m reference height stability parameter for f(10/L)
 	little_zeta10 = little_zetau*(10/zu)
+
+        # Step 5. Calculate the 10m reference height dimensionless profiles for f(10/L) for x=T, x=q and x=u
+        # Calculate the PHIs for 10/L
         PHIm10, PHIt10, PHIq10 = get_phis(little_zeta10,little_zeta10,little_zeta10)
 #        print("PHIm10, PHIt10, PHIq10: ",PHIm10," ",PHIt10," ",PHIq10)
         
-        # Calculate the PSIs - we need Ym and Yt(same as Yq anyway) for zx/L
+       # Step 6. Calculate the 10m reference height stability corrections for f(zx/L) for x=T, x=q and x=u
+         # Calculate the PSIs - we need Ym and Yt(same as Yq anyway) for zx/L
         Ym10, Yt10, Yq10 = get_psis(little_zeta10,little_zeta10,little_zeta10,PHIm10,PHIt10,PHIq10)
 #        print("Ym10, Yt10, Yq10: ",Ym10," ",Yt10," ",Yq10)
 
-        # Estimate the roughness length z0_est from u in first instance
-        # Very little difference between u and u10n it seems
-        z0_est = get_roughness_length(u10n)
+        # Step 7. Calculate the neutral drag coefficient (Smith 1980):
+        # where u is used in lieu of u10n for a first round of iteration. 
+        # Note there appears to be little difference between u and u10n for most cases.
+        u10n = copy.copy(u)
+        Cd_n = get_coefficient_drag_neutral(u10n)
 
+        # Step 8. Estimate the friction velocity using the neutral drag coefficient CDn in lieu of the coefficient of drag CD
+        # Estimate friction velocity u* from Cd_n and u
+        u_star_est = get_bretherton_u_star(Cd_n,u)
+
+        # Step 9. Estimate the roughness length (Smith 1988) using the estimated friction velocity:
+        # where the Charnock parameter ac is 0.011, acceleration due to gravity g is set at 9.81 m s-1 s-1, 
+        # and the kinematic viscosity of air v is set at 1.48x10-5 m2 s-1. The approximation for v assumes 
+        # a temperature of 15  deg C and standard atmospheric pressure which is sufficient given that variations 
+        # in v are very small ranging between ~1.0x10-5 and 1.7x10-5 m2 s-1 between temperatures of -40 to 
+        # 40 deg C.  the Note there appears to be little difference between u and u10n for most cases
+        # Estimate the roughness length z0_est from u_star_est in first instance
+        z0_est = get_roughness_length(u_star_est)
+
+        # Step 10. Estimate the coefficient of drag using the estimated roughness length z0        
         # Estimate the Coefficient of drag Cd using z0_est
         k = 0.41 # von Karman constant
         Cd_est = get_coefficient_drag(k,zu,z0_est,Ym,L)
         
+        # Step 11. Re-estimate the friction velocity using Step 8. and the estimated coefficient of drag Cd_est
         # Estimate friction velocity u* from Cd_est and u
         u_star_est = get_bretherton_u_star(Cd_est,u)
 
+        # Step 12. Calculate neutral wind speed at 10m u10n where PSIu and PSIu10 are set to 0
         # Calculate neutral wind speed at 10m based on u_star_est
         # Assumes neutral conditions so Ym = 0 and L can be anything because it is multiplied by Ym which is 0!
         # u_star doesn't make very much difference to u10n which isn't very different to u
         u10n = get_heightcorrected(u,u_star_est,k,zu,0,1000.,0)
 #        print("u10n: ",u10n)
+
+        # Step 13. Recalculate the neutral drag coefficient CDn using step 7 and the real (ha!) u10n
+        Cd_n = get_coefficient_drag_neutral(u10n)
         
-        # Calculate the roughness length z0 from u10n 
-        # Very little difference between u and u10n it seems
-        z0 = get_roughness_length(u10n)
+        # Step 14. Recalculate the friction velocity u* using step 8 and the neutral drag coefficient CDn
+        # Estimate friction velocity u* from Cd_n and u
+        u_star_est = get_bretherton_u_star(Cd_n,u)
+	
+        # Step 15. Calculate the roughness length z0 using step 9
+        # Calculate the roughness length z0 from the latest u_star_est
+        z0 = get_roughness_length(u_star_est)
 #        print("z0_est: ",z0_est," z0: ",z0)
 
+        # Step 16. Calculate the coefficient of drag Cd using step 10 
         # Calculate the Coefficient of drag Cd
         Cd = get_coefficient_drag(k,zu,z0,Ym,L)
 #        print("Cd_est: ",Cd_est," Cd: ",Cd,)
 
+        # Step 17. Recalculate the friction velocity u* using step 8 and the coefficient of drag CD
         # Calculate friction velocity u* from Cd and u
         u_star = get_bretherton_u_star(Cd,u)
         other_u_star = get_value_star(k,zu,z0,Ym,u,u0)
 #        print("u_star_est: ",u_star_est," u_star: ",u_star," other_u_star: ",other_u_star) # Ooooh - u_star == other_u_star !!! to at least 8 sig figures!
 
+        # Step 18. Calculate the coefficient of heat transfer
         # Calculate the Coefficient of heat Ch
         zt0 = 0.001 # I think the zt in this equation is the zt0 equivalent of z0 - neutral stability heat transfer coeffieient Smith 1988 
         Ch = get_coefficient_heat(k,zu,z0,Ym,L,zt,zt0,Yt) # could use zt or zq here as both should be the same
 #        print("Ch: ",Ch)
         
+        # Step 19. Calculate the virtual temperature at observing height and at the surface
         # Calculate the virtual temperature and print
         vt = get_vt(at,shu)
-        
         # Calculate the virtual potential temperature and print
         vpt = get_vpt(at,shu,zt)
 
         # Calculate the virtual temperature at surface and print
-        vt0 = get_vt_surf(t0,q0)
-        
+        vt0 = get_vt_surf(t0,q0)        
         # Calculate the virtual potential temperature at surface and print
         # Not setting z0t = 0.001 # neutral stability heat transfer coeffieient Smith 1988
-        vpt0 = get_vpt_surf(t0,q0,0.)
-        
+        vpt0 = get_vpt_surf(t0,q0,0.)        
 #        print("vt, vt0, vpt, vpt0: ",vt," ",vt0," ",vpt," ",vpt0)
         
+        # Step 20. Calculate the surface buoyancy flux
         # Calculate the surface buoyancy flux B0
         #B0 = get_buoyancy_flux(Ch,u,vpt0, vpt)  
         B0 = get_buoyancy_flux(Ch,u,vt0,vt)  
 #        print("B0: ",B0)
         
+        # Step 21. Calculate the Monin-Obukov length
         # Calculate the Monin-Obukov length
         #Lres = get_MO_length(u_star,k,B0,vpt)    
         Lres = get_MO_length(u_star,k,B0,vt)    
@@ -948,8 +1040,9 @@ def run_heightcorrect_proxyLz0(sst,at,shu,u,zu,zt,zq,Lmin = -50, Lmax = 50, Lfix
     Ym, Yt, Yq = get_psis(little_zetau,little_zetat,little_zetaq,PHIm,PHIt,PHIq)
     print("Ym, Yt, Yq: ",Ym," ",Yt," ",Yq)
 
-    # Calculate the PHIs for 10/L
     little_zeta10 = little_zetau*(10/zu)
+
+    # Calculate the PHIs for 10/L
     PHIm10, PHIt10, PHIq10 = get_phis(little_zeta10,little_zeta10,little_zeta10)
     print("PHIm10, PHIt10, PHIq10: ",PHIm10," ",PHIt10," ",PHIq10)
     
@@ -960,7 +1053,6 @@ def run_heightcorrect_proxyLz0(sst,at,shu,u,zu,zt,zq,Lmin = -50, Lmax = 50, Lfix
     # Iterate to get a reasonable value for z0 rather than just assume - it makes a BIG difference! u_star also affects L quite a lot
     # Estimate the roughness length z0_est from u in first instance
     # Very little difference between u and u10n it seems
-    u10n = copy.copy(u)
     z0_est = get_roughness_length(u10n)
 
     # Estimate the Coefficient of drag Cd using z0_est
@@ -1289,6 +1381,38 @@ def get_coefficient_drag(k,zu,z0,Ym,L):
     return Cd
 
 #********************************************************************************
+def get_coefficient_drag_neutral(u10n):
+    '''
+    Works out the neutral drag coefficient Smith 1980
+    
+    Reads in: 
+      u10n = neutral wind speed at 10m (m/s)
+      
+    Returns  
+      Cd_n - neutral drag coefficient
+    
+    Cd_n = get_coefficient_drag_neutral(4.915)
+    
+    TESTED!!!
+
+    For u10n=4.915
+    Cd_n = 0.0009
+    
+    NOTES: 
+    u10n = 0.915 or 0.155 
+    Cd_n = 0.0007 or 0.0006 (or at u=1. 0.0007)	
+    u10n = 4.915 or 4.155 
+    Cd_n = 0.0009 or 0.0009 (or at u=5. 0.0009)	
+    u10n = 9.915 or 9.155  	
+    Cd_n = 0.0013 or 0.0012 (or at u=10. 0.0012)
+
+    '''    
+    
+    Cd_n = (0.61 + (0.063 * u10n)) / 1000.
+        
+    return Cd_n
+
+#********************************************************************************
 def get_coefficient_heat(k,zu,z0,Ym,L,zt,zt0,Yt):
     '''
     Works out the coefficient of heat
@@ -1556,34 +1680,52 @@ def get_bretherton_u_star(Cd,u):
     return u_star
 
 #********************************************************************************
-def get_roughness_length(u10n):
+def get_roughness_length(u_star):
     '''
-    Works out the roughness length Smith 1980
+    Works out the roughness length Smith 1988 using the Charnock parameter as 0.011
     
     Reads in: 
-      u10n = neutral wind speed at 10m (m/s)
+      u_star = friction velocity (m/s)
       
     Returns  
       z0 - roughness length
     
-    z0 = get_roughness_length(4.915)
+    z0 = get_roughness_length(0.1)
+    z0 = get_roughness_length(5)
     
     TESTED!!!
 
-    For u10n=4.915
-    z0 = 0.0009
+    For u_star=0.1
+    z0 = 0.0001
+    For u_star=1
+    z0 = 0.0112
+    For u_star=10
+    z0 = 1.1213
     
     NOTES: 
-    u10n = 0.915 or 0.155 
-    z0 = 0.0007 or 0.0006 (or at u=1. 0.0007)	
-    u10n = 4.915 or 4.155 
-    z0 = 0.0009 or 0.0009 (or at u=5. 0.0009)	
-    u10n = 9.915 or 9.155  	
-    z0 = 0.0013 or 0.0012 (or at u=10. 0.0012)
+    ac is the Charnock parameter for which we use 0.011 as in Smith 1988
+    v is the kinematic viscosity of air which at 15 deg C and standard atmospheric pressure is 1.48 x 10** -5 m**2 s-1
+        v ranges approximately linearly (see engineering tool box) with temperature from ~1.0 to 1.7 x 10** -5 between -40 to 40 deg C
+	we use 1.48 x 10** -5 here as the variation is so small
+    g is the acceleration due to gravity which is 9.81 m s-1 s-1   
+
+    Just to be sure - if v ranges from 1.0 to 1.7x10**-5 then:
+    For u_star=0.1
+    z0 = 0.00012 to 0.00013
+    For u_star=1
+    z0 = 0.01121 to 0.01121
+    For u_star=10
+    z0 = 1.12130 to 1.12130
+    so using v at 15 deg is fine
+    
+    
 
     '''    
+    ac = 0.011
+    v = 1.48*(10**(-5))
+    g = 9.81
     
-    z0 = (0.61 + (0.063 * u10n)) / 1000.
+    z0 = ((ac*(u_star**2)) / g)  + ((0.11*v)/u_star)  
         
     return z0
 

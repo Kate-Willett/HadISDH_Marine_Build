@@ -136,7 +136,7 @@ import matplotlib.colors as mc
 import matplotlib.cm as mpl_cm
 import numpy as np
 from matplotlib.dates import date2num,num2date
-from mpl_toolkits.basemap import Basemap
+#from mpl_toolkits.basemap import Basemap
 from datetime import datetime
 import sys, os
 import sys, getopt
@@ -152,7 +152,7 @@ from netCDF4 import stringtoarr # for putting strings in as netCDF variables
 import pdb # pdb.set_trace() or c 
 
 # Editables:
-version =  'beta1'
+version =  '1.0.0.2018f' #'beta1'
 StClim =   1981
 EdClim =   2010
 nMonths =  12
@@ -1402,24 +1402,32 @@ def main(argv):
             try:
                 doWHAT = arg
             except:
-                sys.exit("Failed: typee not a string")
+                sys.exit("Failed: doWHAT not a string")
         if opt == "--varee":
             try:
                 varee = arg
             except:
-                sys.exit("Failed: typee not a string")
+                sys.exit("Failed: varee not a string")
 
     if (doWHAT == 'it1'):
-        typee = 'ERAclimNBC'
+        typee1 = 'ERAclimNBC'
+        typee2 = 'ERAclimNBC'
     elif (doWHAT == 'it2'):
-        typee = 'OBSclim1NBC'
+        typee1 = 'OBSclim1NBC'
+        typee2 = 'OBSclim1NBC'
     elif (doWHAT == 'it3'):
-        typee = 'OBSclim2NBC'
+        typee1 = 'OBSclim2NBC'
+        typee2 = 'OBSclim2NBC'
     elif (doWHAT == 'BC'):
-        typee = 'OBSclim2BC'
+        typee1 = 'OBSclim2BClocal'
+        typee2 = 'OBSclim2BClocal'
+    elif (doWHAT == 'BCship'):
+        typee1 = 'OBSclim2BClocalship'
+        typee2 = 'OBSclim2BClocal'
     if (doWHAT == 'noQC'):
-        typee = 'OBSclim2noQC'
-    print(doWHAT, varee,typee)    
+        typee1 = 'OBSclim2noQC'
+        typee2 = 'OBSclim2noQC'
+    print(doWHAT, varee,typee1,typee2)    
     #pdb.set_trace()
     			
     mdi=-1e30    
@@ -1462,15 +1470,15 @@ def main(argv):
     					   
 #    INDIR = '/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/'
     INDIR = '/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/'
-    InOBSclim = 'GRIDS'+typee+'/'+typee+'_5x5_monthly_climatology_from_daily_both_relax.nc'
-    InOBSsd = 'GRIDS'+typee+'/'+typee+'_5x5_monthly_stdev_from_daily_both_relax.nc'
+    InOBSclim = 'GRIDS'+typee1+'/'+typee2+'_5x5_monthly_climatology_from_daily_both_relax.nc'
+    InOBSsd = 'GRIDS'+typee1+'/'+typee2+'_5x5_monthly_stdev_from_daily_both_relax.nc'
 #    InOBSclim = 'GRIDS_noQC/ERAclimNBC_5x5_monthly_climatology_from_daily_both_relax.nc'
 #    InOBSsd = 'GRIDS_noQC/ERAclimNBC_5x5_monthly_stdev_from_daily_both_relax.nc'
     
 #    OUTDIR = '/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/'
     OUTDIR = '/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/'
-    OutOBS1 = 'GRIDS'+typee+'/'+VarDict[varee]['short_name']+'_'+typee+'_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
-    OutOBS5 = 'GRIDS'+typee+'/'+VarDict[varee]['short_name']+'_'+typee+'_5x5_monthly_climatology_stdev_from_daily_both_relax_INFILLED.nc'
+    OutOBS1 = 'GRIDS'+typee1+'/'+VarDict[varee]['short_name']+'_'+typee2+'_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
+    OutOBS5 = 'GRIDS'+typee1+'/'+VarDict[varee]['short_name']+'_'+typee2+'_5x5_monthly_climatology_stdev_from_daily_both_relax_INFILLED.nc'
 #    OutOBS1 = 'GRIDS_noQC/'+VarDict[varee]['short_name']+'_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
 #    OutOBS5 = 'GRIDS_noQC/'+VarDict[varee]['short_name']+'_ERAclimNBC_5x5_monthly_climatology_stdev_from_daily_both_relax_INFILLED.nc'
 

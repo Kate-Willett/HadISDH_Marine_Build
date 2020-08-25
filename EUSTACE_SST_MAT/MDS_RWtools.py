@@ -89,6 +89,19 @@
 # -----------------------
 # VERSION/RELEASE NOTES
 # -----------------------
+#
+# Version 2 (25 June 2019)
+# ---------
+#  
+# Enhancements
+#  
+# Changes
+#  
+# Bug fixes
+# For some reason this stopped working now I'm running on RHEL7 even though its stil python2.7
+# This appears to be the 'comments=False' argument in np.genfromtxt(). NO idea why this suddenly causes issues but I've got rid
+# of it and it works!
+#  
 # 
 # Version 1 (7 April 2016)
 # ---------
@@ -114,16 +127,28 @@ import pdb # pdb.set_trace() or c
 
 # first element is 9 characters lon with a space - so delimiters = 10.
 TheTypesStd=("|S9","|S8","int","int","int","int","int","int",
-          "int","int","int","int","int",
-          "int","int","int","int","int","int","int","int","int","int","int","int",
-          "int","int","int","int","int","|S8",
-          "int","int","int","int","int","int","int","int","int","int","int",
-          "int","|S3","|S4","|S4","|S3","|S2","|S3","int","int","int","int","int","int",
-          "int","int","int","int","int","int","int","int","int",
-          "int","int","int","int","int","int","int","int","int",
-          "int","int","int","int","int","int","int","int","int",
-          "int","int","int","int","int","int","int","int","int",
-          "int","int","int","int","int","int","int","int")
+	  "int","int","int","int","int",
+	  "int","int","int","int","int","int","int","int","int","int","int","int",
+	  "int","int","int","int","int","|S8",
+	  "int","int","int","int","int","int","int","int","int","int","int",
+	  "int","|S3","|S4","|S4","|S3","|S2","|S3","int","int","int","int","int","int",
+	  "int","int","int","int","int","int","int","int","int",
+	  "int","int","int","int","int","int","int","int","int",
+	  "int","int","int","int","int","int","int","int","int",
+	  "int","int","int","int","int","int","int","int","int",
+	  "int","int","int","int","int","int","int","int")
+
+#TheTypesStd=("str","str","int","int","int","int","int","int",
+#          "int","int","int","int","int",
+#          "int","int","int","int","int","int","int","int","int","int","int","int",
+#          "int","int","int","int","int","str",
+#          "int","int","int","int","int","int","int","int","int","int","int",
+#          "int","str","str","str","str","str","str","int","int","int","int","int","int",
+#          "int","int","int","int","int","int","int","int","int",
+#          "int","int","int","int","int","int","int","int","int",
+#          "int","int","int","int","int","int","int","int","int",
+#          "int","int","int","int","int","int","int","int","int",
+#          "int","int","int","int","int","int","int","int")
 
 TheDelimitersStd=(10,8,8,8,8,8,8,8, 		# 8 8 ID, Location and time metadata 
                8,8,8,8,8,			# 5 Temperature and pressure OBS values AT, SST and SLP
@@ -692,8 +717,8 @@ def ReadData(FileName,typee,delimee):
     ''' Use numpy genfromtxt reading to read in all rows from a complex array '''
     ''' Need to specify format as it is complex '''
     ''' outputs an array of tuples that in turn need to be subscripted by their names defaults f0...f8 '''
-
-    return np.genfromtxt(FileName, dtype=typee,delimiter=delimee,comments=False) # ReadData
+    #pdb.set_trace()
+    return np.genfromtxt(FileName, dtype=typee,delimiter=delimee, comments=None) #,comments=False) # ReadData
 
 #************************************************************************
 # WriteMDSstandard

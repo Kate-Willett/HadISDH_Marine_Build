@@ -1,17 +1,16 @@
 #!/usr/local/sci/bin/python
-# PYTHON2.7
+# PYTHON3
 # 
 # Author: Kate Willett
 # Created: 4 April 2016
-# Last update: 4 April 2016
+# Last update: 5 April 2019
 # Location: /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/
 # GitHub: https://github.com/Kate-Willett/HadISDH_Marine_Build/					
 # -----------------------
 # CODE PURPOSE AND OUTPUT
 # -----------------------
-# This code reads the ERA 1x1 pentad clims and the OBS 1x1 pentad clims
+# This code reads 1x1 pentad clims from two runs (e.g. ERA then ERAclimNBC
 # It assesses the difference for each obs gridbox and plots some diagnostics
-# It tries to characterise any bias, bias adjust ERA and resave as ERAOBS clims
 #
 # These can then be used to climatology check the marine data
 #  
@@ -52,7 +51,12 @@
 # -----------------------
 # make sure the file paths are ok - are we always using ERAclimNBC?
 #
-# python2.7 CompareERAOBSclims_APR2016.py --typee ERAclimNBC
+## python2.7 CompareERAOBSclims_APR2016.py --typee1 ERA-Interim --typee2 OBSclim2NBC
+#
+# module load scitools/default-current
+# python CompareERAOBSclims_APR2016.py --typee1 ERA-Interim --typee2 OBSclim2NBC
+#
+# typee1 and typee2 can be: ERA-Interim, ERAclimNBC, OBSclim1NBC, OBSclim2NBC, OBSclim2BClocal, OBSclim2BClocalship 
 #
 # This runs the code, outputs the plots and stops mid-process so you can then interact with the
 # data and then carries on.
@@ -62,14 +66,26 @@
 # -----------------------
 # some plots - 
 # differences by latitude for 6 pentads 1, 13, 25, 37, 49, 61:
-# /data/local/hadkw/HADCRUH2/MARINE/IMAGES/ERAOBSclimdiffs_latdiffs_ERAclimNBC_APR2016.py
+# /data/users/hadkw/WORKING_HADISDH/MARINE/IMAGES/ERAOBSclimdiffs_latdiffs_ERAclimNBC_APR2016.py
 # difference maps for 6 pentads 1, 13, 25, 37, 49, 61:
-# /data/local/hadkw/HADCRUH2/MARINE/IMAGES/ERAOBSclimdiffs_mapdiffs_ERAclimNBC_APR2016.py
+# /data/users/hadkw/WORKING_HADISDH/MARINE/IMAGES/ERAOBSclimdiffs_mapdiffs_ERAclimNBC_APR2016.py
 # 
 # -----------------------
 # VERSION/RELEASE NOTES
 # -----------------------
-# 
+#
+# Version 2 (5 April 2019)
+# ---------
+#  
+# Enhancements
+# This can now compare any two climatologies at 1x1 pentad - might later add capacity to compare 5x5 monthly
+#  
+# Changes
+# This is now based on functions rather than straight code - clearer
+# This now uses python 3
+#  
+# Bug fixes 
+#
 # Version 1 (4 April 2016)
 # ---------
 #  
@@ -95,7 +111,9 @@ import matplotlib.colors as mc
 import matplotlib.cm as mpl_cm
 import numpy as np
 from matplotlib.dates import date2num,num2date
-from mpl_toolkits.basemap import Basemap
+#from mpl_toolkits.basemap import Basemap
+import cartopy.crs as ccrs
+import cartopy.feature as cpf
 import sys, os
 import sys, getopt
 from scipy.optimize import curve_fit,fsolve,leastsq
@@ -108,12 +126,8 @@ from netCDF4 import Dataset
 import pdb # pdb.set_trace() or c 
 
 # What date stamp?
-nowmon = 'OCT'
-nowyear = '2016'
-
-# What are we differencing?
-innee1 = 'OBS1' # 'ERA', 'OBS', 'OBS1'
-innee2 = 'OBS2' # 'OBS', 'OBS1', 'OBS2'
+nowmon = 'MAR'
+nowyear = '2019'
 
 # What threshold for clim/buddy?
 thresh = '55' # '35', '45', '55'
@@ -122,1336 +136,414 @@ thresh = '55' # '35', '45', '55'
 source = 'I300' # 'I251' or 'I300'	    					   
 
 #************************************************************************
+# SUBROUTINES #
+#************************************************************************
+# PlotLatDistDiffs
+def PlotLatDistDiffs(TheFile,BminA,latgrid,lats,mdi,ptsplt,typee1,typee2,Unit):
+
+    # plot diffs by latitude = this is a 3 row by 2 column plot
+
+    xpos = [0.1, 0.6,0.1,0.6,0.1,0.6]
+    ypos = [0.7,0.7,0.37,0.37,0.04,0.04]
+    xfat = [0.37,0.37,0.37,0.37,0.37,0.37]
+    ytall = [0.28,0.28,0.28,0.28,0.28,0.28]
+
+    lettees = ['a)','b)','c)','d)','e)','f)']
+
+    plt.clf()
+    f,axarr=plt.subplots(6,figsize=(10,12),sharex=False)	    #6,18
+
+    for pp in range(6):
+        axarr[pp].set_position([xpos[pp],ypos[pp],xfat[pp],ytall[pp]])
+        #axarr[pp].set_xlim(0,60)
+        axarr[pp].set_ylim(-91,91)
+        axarr[pp].set_xlabel('Difference ('+typee2+'-'+typee1+') '+Unit)
+        axarr[pp].set_ylabel('Latitude')
+        pltdiff = BminA[ptsplt[pp],:,:] # assuming time, lat, lon
+#        pdb.set_trace()
+        axarr[pp].scatter(np.reshape(pltdiff[np.where(pltdiff > mdi)],len(pltdiff[np.where(pltdiff > mdi)])),
+                          np.reshape(latgrid[np.where(pltdiff > mdi)],len(latgrid[np.where(pltdiff > mdi)])),c='grey',marker='o',linewidth=0.,s=1)
+        axarr[pp].plot(np.zeros(180),lats,c='black')
+        axarr[pp].annotate(lettees[pp]+' Pentad: '+str((pp*12)+1),xy=(0.03,0.92),xycoords='axes fraction',size=12)
+        # for each degree of latitude, plot a line for the median estimate
+        # we may want to use some kind of polynomial?
+        mediandiff = np.empty_like(lats)
+        mediandiff.fill(mdi)
+        diff25 = np.empty_like(lats)
+        diff25.fill(mdi)
+        diff75 = np.empty_like(lats)
+        diff75.fill(mdi)
+        for ltt in range(180):
+            if (len(pltdiff[np.where(pltdiff[:,ltt] > mdi)[0],ltt]) > 0):
+                if (ltt == 0):
+                    ltts = [ltt,ltt+1]
+                if ((ltt > 0) & (ltt < 179)):
+                    ltts = [ltt-1,ltt,ltt+1]
+                if (ltt == 179):
+                    ltts = [ltt-1,ltt]
+                diffmini = pltdiff[:,ltts]    
+                mediandiff[ltt] = np.median(diffmini[np.where(diffmini > mdi)])
+                diff25[ltt],diff75[ltt] = np.percentile(diffmini[np.where(diffmini > mdi)],[25,75])
+        axarr[pp].plot(mediandiff[np.where(mediandiff > mdi)[0]],lats[np.where(mediandiff > mdi)[0]],c='red')
+        axarr[pp].plot(diff25[np.where(diff25 > mdi)[0]],lats[np.where(diff25 > mdi)[0]],c='red',linestyle='dashed')
+        axarr[pp].plot(diff75[np.where(diff75 > mdi)[0]],lats[np.where(diff75 > mdi)[0]],c='red',linestyle='dashed')
+    
+     # save plots as eps and png
+#    plt.savefig(TheFile+".eps")
+    plt.savefig(TheFile+".png")
+
+    return
+    
+#************************************************************************
+# PlotClimMapDiffs
+def PlotClimMapDiffs(TheFile,BminA,longrid,latgrid,mdi,ptsplt,VarColour,ColourDir,typee1,typee2,Unit):
+
+    lettees = ['a)','b)','c)','d)','e)','f)']
+
+    # set up colour scheme red blue
+    cmap=plt.get_cmap(VarColour) # PiYG
+        
+    cmaplist=[cmap(i) for i in range(cmap.N)]
+    for loo in range(int((cmap.N/2)-30),int((cmap.N/2)+30)):
+        cmaplist.remove(cmaplist[int((cmap.N/2)-30)]) # remove the very pale colours in the middle
+    #cmaplist.remove(cmaplist[(cmap.N/2)-10:(cmap.N/2)+10]) # remove the very pale colours in the middle
+
+# remove the darkest and lightest (white and black) - and reverse
+#    for loo in range(40):
+#        cmaplist.remove(cmaplist[loo])
+    if (ColourDir == 'Reverse'):
+        cmaplist.reverse()
+#    for loo in range(10):
+#        cmaplist.remove(cmaplist[loo])
+#    cmaplist.reverse()
+
+    cmap=cmap.from_list('this_cmap',cmaplist,cmap.N)
+    
+    bounds=np.array([-15,-10,-5,-2,0,2,5,10,15])
+    strbounds=["%3d" % i for i in bounds]
+    norm=mpl_cm.colors.BoundaryNorm(bounds,cmap.N)
+
+    # plot diff maps
+    
+    xpos = [0.1, 0.6,0.1,0.6,0.1,0.6]
+    ypos = [0.74,0.74,0.45,0.45,0.16,0.16]
+    xfat = [0.37,0.37,0.37,0.37,0.37,0.37]
+    ytall = [0.24,0.24,0.24,0.24,0.24,0.24]
+
+    plt.clf()
+    plt.close()
+    
+    f,axarr=plt.subplots(6,figsize=(10,12),sharex=False)	    #6,18
+
+    for pp in range(6):
+        axarr[pp].set_position([xpos[pp],ypos[pp],xfat[pp],ytall[pp]])
+        axarr[pp].set_ylim(-91,90)
+        axarr[pp].set_xlim(-180,180)
+        axarr[pp].set_ylabel('Latitude')
+        axarr[pp].set_xlabel('Longitude')
+        pltdiff = BminA[ptsplt[pp],:,:] # assuming time, long, lat
+        plottee=axarr[pp].scatter(longrid[np.where(pltdiff > mdi)],latgrid[np.where(pltdiff > mdi)],c=pltdiff[np.where(pltdiff > mdi)],cmap=cmap,norm=norm,marker='o',linewidth=0.,s=4)
+        axarr[pp].annotate(lettees[pp]+' Pentad: '+str((pp*12)+1),xy=(0.03,0.92),xycoords='axes fraction',size=12)
+
+    cbax=f.add_axes([0.1,0.06,0.8,0.02])
+    cb=plt.colorbar(plottee,cax=cbax,orientation='horizontal',ticks=bounds) #, extend=extend
+    cb.ax.tick_params(labelsize=12) 
+    cb.ax.set_xticklabels(strbounds)
+    plt.figtext(0.5,0.02,typee2+'-'+typee1+' difference ('+Unit+')',size=14,ha='center')    
+    
+     # save plots as eps and png
+#    plt.savefig(TheFile+".eps")
+    plt.savefig(TheFile+".png")
+
+    return
+
+#************************************************************************
 # Main
 #************************************************************************
-
 def main(argv):
     # INPUT PARAMETERS AS STRINGS!!!!
-    typee = 'ERAclimNBC'
+    typee1 = 'ERA-Interim'
+    typee2 = 'ERAclimNBC'
     ptsplt= [0,12,24,36,48,60]
 
     try:
         opts, args = getopt.getopt(argv, "hi:",
-	                           ["typee="])
+	                           ["typee1=", "typee2="])
     except getopt.GetoptError:
-        print 'Usage (as strings) CompareERAOBSclims_APR2016.py --typee <ERAclimNBC>'
-	sys.exit(2)
+        print('Usage (as strings) CompareERAOBSclims_APR2016.py --typee1 <ERA-Interim> --typee2 <OBSclim2NBC>')
+        sys.exit(2)
 
     for opt, arg in opts:
-        if opt == "--typee":
+        if opt == "--typee1":
             try:
-                typee = arg
+                typee1 = arg 
             except:
-                sys.exit("Failed: typee not a string")
+                sys.exit("Failed: typee1 not a string")
 
-    print(typee)
+        if opt == "--typee2":
+            try:
+                typee2 = arg 
+            except:
+                sys.exit("Failed: typee2 not a string")
+
+    print(typee1,typee2)
 #    pdb.set_trace()
     			
     mdi=-1e30
 		
     INDIR = '/project/hadobs2/hadisdh/marine/'
-    if (innee1 == 'ERA'):
-        InERAclimAT = 'otherdata/t2m_pentad_1by1marine_ERA-Interim_data_19792015.nc'
-        InERAclimDPT = 'otherdata/td2m_pentad_1by1marine_ERA-Interim_data_19792015.nc'
-        InERAclimSHU = 'otherdata/q2m_pentad_1by1marine_ERA-Interim_data_19792015.nc'
-        InERAclimVAP = 'otherdata/e2m_pentad_1by1marine_ERA-Interim_data_19792015.nc'
-        InERAclimCRH = 'otherdata/rh2m_pentad_1by1marine_ERA-Interim_data_19792015.nc'
-        InERAclimCWB = 'otherdata/tw2m_pentad_1by1marine_ERA-Interim_data_19792015.nc'
-        InERAclimDPD = 'otherdata/dpd2m_pentad_1by1marine_ERA-Interim_data_19792015.nc'
-    elif (innee1 == 'OBS'):
-        InERAclimAT = 'otherdata/t2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
-        InERAclimDPT = 'otherdata/td2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
-        InERAclimSHU = 'otherdata/q2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
-        InERAclimVAP = 'otherdata/e2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
-        InERAclimCRH = 'otherdata/rh2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
-        InERAclimCWB = 'otherdata/tw2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
-        InERAclimDPD = 'otherdata/dpd2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
-    elif (innee1 == 'OBS1'):
-        InERAclimAT = 'otherdata/t2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
-        InERAclimDPT = 'otherdata/td2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
-        InERAclimSHU = 'otherdata/q2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
-        InERAclimVAP = 'otherdata/e2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
-        InERAclimCRH = 'otherdata/rh2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
-        InERAclimCWB = 'otherdata/tw2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
-        InERAclimDPD = 'otherdata/dpd2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
+    if (typee1 == 'ERA-Interim'):
+        MiddleBit = 'pentad_1by1marine_ERA-Interim_data_19792015.nc'
+    if (typee1 == 'ERAclimNBC'):
+        MiddleBit = 'ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
+    if (typee1 == 'OBSclim1NBC'):
+        MiddleBit = 'OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
+    if (typee1 == 'OBSclim2NBC'):
+        MiddleBit = 'OBSclim2NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
+    if (typee1 == 'OBSclim2BClocal'):
+        MiddleBit = 'OBSclim2BClocal_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
+    if (typee1 == 'OBSclim2BClocalship'): # When I copied these files to /otherdata I added 'ship' to be clear
+        MiddleBit = 'OBSclim2BClocalship_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
+
+    InAclimAT = 'otherdata/t2m_'+MiddleBit
+    InAclimDPT = 'otherdata/td2m_'+MiddleBit
+    InAclimSHU = 'otherdata/q2m_'+MiddleBit
+    InAclimVAP = 'otherdata/e2m_'+MiddleBit
+    InAclimCRH = 'otherdata/rh2m_'+MiddleBit
+    InAclimCWB = 'otherdata/tw2m_'+MiddleBit
+    InAclimDPD = 'otherdata/dpd2m_'+MiddleBit
+
+    if (typee2 == 'ERA-Interim'):
+        MiddleBit = 'pentad_1by1marine_ERA-Interim_data_19792015.nc'
+    if (typee2 == 'ERAclimNBC'):
+        MiddleBit = 'ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
+    if (typee2 == 'OBSclim1NBC'):
+        MiddleBit = 'OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
+    if (typee2 == 'OBSclim2NBC'):
+        MiddleBit = 'OBSclim2NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
+    if (typee2 == 'OBSclim2BClocal'):
+        MiddleBit = 'OBSclim2BClocal_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
+    if (typee2 == 'OBSclim2BClocalship'): # When I copied these files to /otherdata I added 'ship' to be clear
+        MiddleBit = 'OBSclim2BClocalship_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
     
-    InOBSclimAT = 'otherdata/t2m_'+typee+'_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
-    InOBSclimDPT = 'otherdata/td2m_'+typee+'_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
-    InOBSclimSHU = 'otherdata/q2m_'+typee+'_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
-    InOBSclimVAP = 'otherdata/e2m_'+typee+'_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
-    InOBSclimCRH = 'otherdata/rh2m_'+typee+'_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
-    InOBSclimCWB = 'otherdata/tw2m_'+typee+'_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
-    InOBSclimDPD = 'otherdata/dpd2m_'+typee+'_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc'
+    InBclimAT = 'otherdata/t2m_'+MiddleBit
+    InBclimDPT = 'otherdata/td2m_'+MiddleBit
+    InBclimSHU = 'otherdata/q2m_'+MiddleBit
+    InBclimVAP = 'otherdata/e2m_'+MiddleBit
+    InBclimCRH = 'otherdata/rh2m_'+MiddleBit
+    InBclimCWB = 'otherdata/tw2m_'+MiddleBit
+    InBclimDPD = 'otherdata/dpd2m_'+MiddleBit
     
-    OUTDIR = '/data/local/hadkw/HADCRUH2/MARINE/'
-    if ((innee1 == 'ERA') & (innee2 == 'OBS')):
-        OutLatsFilAT = 'IMAGES/ERAOBSclimdiffs_'+source+'_'+thresh+'_latdiffs_AT_'+typee+'_'+nowmon+nowyear
-        OutMapsFilAT = 'IMAGES/ERAOBSclimdiffs_'+source+'_'+thresh+'_mapdiffs_AT_'+typee+'_'+nowmon+nowyear
-        OutLatsFilDPT = 'IMAGES/ERAOBSclimdiffs_'+source+'_'+thresh+'_latdiffs_DPT_'+typee+'_'+nowmon+nowyear
-        OutMapsFilDPT = 'IMAGES/ERAOBSclimdiffs_'+source+'_'+thresh+'_mapdiffs_DPT_'+typee+'_'+nowmon+nowyear
-        OutLatsFilSHU = 'IMAGES/ERAOBSclimdiffs_'+source+'_'+thresh+'_latdiffs_SHU_'+typee+'_'+nowmon+nowyear
-        OutMapsFilSHU = 'IMAGES/ERAOBSclimdiffs_'+source+'_'+thresh+'_mapdiffs_SHU_'+typee+'_'+nowmon+nowyear
-        OutLatsFilVAP = 'IMAGES/ERAOBSclimdiffs_'+source+'_'+thresh+'_latdiffs_VAP_'+typee+'_'+nowmon+nowyear
-        OutMapsFilVAP = 'IMAGES/ERAOBSclimdiffs_'+source+'_'+thresh+'_mapdiffs_VAP_'+typee+'_'+nowmon+nowyear
-        OutLatsFilCRH = 'IMAGES/ERAOBSclimdiffs_'+source+'_'+thresh+'_latdiffs_CRH_'+typee+'_'+nowmon+nowyear
-        OutMapsFilCRH = 'IMAGES/ERAOBSclimdiffs_'+source+'_'+thresh+'_mapdiffs_CRH_'+typee+'_'+nowmon+nowyear
-        OutLatsFilCWB = 'IMAGES/ERAOBSclimdiffs_'+source+'_'+thresh+'_latdiffs_CWB_'+typee+'_'+nowmon+nowyear
-        OutMapsFilCWB = 'IMAGES/ERAOBSclimdiffs_'+source+'_'+thresh+'_mapdiffs_CWB_'+typee+'_'+nowmon+nowyear
-        OutLatsFilDPD = 'IMAGES/ERAOBSclimdiffs_'+source+'_'+thresh+'_latdiffs_DPD_'+typee+'_'+nowmon+nowyear
-        OutMapsFilDPD = 'IMAGES/ERAOBSclimdiffs_'+source+'_'+thresh+'_mapdiffs_DPD_'+typee+'_'+nowmon+nowyear
+    OUTDIR = '/data/users/hadkw/WORKING_HADISDH/MARINE/IMAGES/CLIMDIFFS/'+typee1+typee2
+    OutLatsFilAT = 'climdiffs_'+source+'_'+thresh+'_latdiffs_AT_'+nowmon+nowyear
+    OutMapsFilAT = 'climdiffs_'+source+'_'+thresh+'_mapdiffs_AT_'+nowmon+nowyear
+    OutLatsFilDPT = 'climdiffs_'+source+'_'+thresh+'_latdiffs_DPT_'+nowmon+nowyear
+    OutMapsFilDPT = 'climdiffs_'+source+'_'+thresh+'_mapdiffs_DPT_'+nowmon+nowyear
+    OutLatsFilSHU = 'climdiffs_'+source+'_'+thresh+'_latdiffs_SHU_'+nowmon+nowyear
+    OutMapsFilSHU = 'climdiffs_'+source+'_'+thresh+'_mapdiffs_SHU_'+nowmon+nowyear
+    OutLatsFilVAP = 'climdiffs_'+source+'_'+thresh+'_latdiffs_VAP_'+nowmon+nowyear
+    OutMapsFilVAP = 'climdiffs_'+source+'_'+thresh+'_mapdiffs_VAP_'+nowmon+nowyear
+    OutLatsFilCRH = 'climdiffs_'+source+'_'+thresh+'_latdiffs_CRH_'+nowmon+nowyear
+    OutMapsFilCRH = 'climdiffs_'+source+'_'+thresh+'_mapdiffs_CRH_'+nowmon+nowyear
+    OutLatsFilCWB = 'climdiffs_'+source+'_'+thresh+'_latdiffs_CWB_'+nowmon+nowyear
+    OutMapsFilCWB = 'climdiffs_'+source+'_'+thresh+'_mapdiffs_CWB_'+nowmon+nowyear
+    OutLatsFilDPD = 'climdiffs_'+source+'_'+thresh+'_latdiffs_DPD_'+nowmon+nowyear
+    OutMapsFilDPD = 'climdiffs_'+source+'_'+thresh+'_mapdiffs_DPD_'+nowmon+nowyear
 
-        OutSDLatsFilAT = 'IMAGES/ERAOBSclimSDdiffs_'+source+'_'+thresh+'_latdiffs_AT_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilAT = 'IMAGES/ERAOBSclimSDdiffs_'+source+'_'+thresh+'_mapdiffs_AT_'+typee+'_'+nowmon+nowyear
-        OutSDLatsFilDPT = 'IMAGES/ERAOBSclimSDdiffs_'+source+'_'+thresh+'_latdiffs_DPT_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilDPT = 'IMAGES/ERAOBSclimSDdiffs_'+source+'_'+thresh+'_mapdiffs_DPT_'+typee+'_'+nowmon+nowyear
-        OutSDLatsFilSHU = 'IMAGES/ERAOBSclimSDdiffs_'+source+'_'+thresh+'_latdiffs_SHU_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilSHU = 'IMAGES/ERAOBSclimSDdiffs_'+source+'_'+thresh+'_mapdiffs_SHU_'+typee+'_'+nowmon+nowyear
-        OutSDLatsFilVAP = 'IMAGES/ERAOBSclimSDdiffs_'+source+'_'+thresh+'_latdiffs_VAP_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilVAP = 'IMAGES/ERAOBSclimSDdiffs_'+source+'_'+thresh+'_mapdiffs_VAP_'+typee+'_'+nowmon+nowyear
-        OutSDLatsFilCRH = 'IMAGES/ERAOBSclimSDdiffs_'+source+'_'+thresh+'_latdiffs_CRH_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilCRH = 'IMAGES/ERAOBSclimSDdiffs_'+source+'_'+thresh+'_mapdiffs_CRH_'+typee+'_'+nowmon+nowyear
-        OutSDLatsFilCWB = 'IMAGES/ERAOBSclimSDdiffs_'+source+'_'+thresh+'_latdiffs_CWB_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilCWB = 'IMAGES/ERAOBSclimSDdiffs_'+source+'_'+thresh+'_mapdiffs_CWB_'+typee+'_'+nowmon+nowyear
-        OutSDLatsFilDPD = 'IMAGES/ERAOBSclimSDdiffs_'+source+'_'+thresh+'_latdiffs_DPD_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilDPD = 'IMAGES/ERAOBSclimSDdiffs_'+source+'_'+thresh+'_mapdiffs_DPD_'+typee+'_'+nowmon+nowyear
-    elif ((innee1 == 'OBS') & (innee2 == 'OBS1')):
-        OutLatsFilAT = 'IMAGES/OBSOBS1climdiffs_'+source+'_'+thresh+'_latdiffs_AT_'+typee+'_'+nowmon+nowyear
-        OutMapsFilAT = 'IMAGES/OBSOBS1climdiffs_'+source+'_'+thresh+'_mapdiffs_AT_'+typee+'_'+nowmon+nowyear
-        OutLatsFilDPT = 'IMAGES/OBSOBS1climdiffs_'+source+'_'+thresh+'_latdiffs_DPT_'+typee+'_'+nowmon+nowyear
-        OutMapsFilDPT = 'IMAGES/OBSOBS1climdiffs_'+source+'_'+thresh+'_mapdiffs_DPT_'+typee+'_'+nowmon+nowyear
-        OutLatsFilSHU = 'IMAGES/OBSOBS1climdiffs_'+source+'_'+thresh+'_latdiffs_SHU_'+typee+'_'+nowmon+nowyear
-        OutMapsFilSHU = 'IMAGES/OBSOBS1climdiffs_'+source+'_'+thresh+'_mapdiffs_SHU_'+typee+'_'+nowmon+nowyear
-        OutLatsFilVAP = 'IMAGES/OBSOBS1climdiffs_'+source+'_'+thresh+'_latdiffs_VAP_'+typee+'_'+nowmon+nowyear
-        OutMapsFilVAP = 'IMAGES/OBSOBS1climdiffs_'+source+'_'+thresh+'_mapdiffs_VAP_'+typee+'_'+nowmon+nowyear
-        OutLatsFilCRH = 'IMAGES/OBSOBS1climdiffs_'+source+'_'+thresh+'_latdiffs_CRH_'+typee+'_'+nowmon+nowyear
-        OutMapsFilCRH = 'IMAGES/OBSOBS1climdiffs_'+source+'_'+thresh+'_mapdiffs_CRH_'+typee+'_'+nowmon+nowyear
-        OutLatsFilCWB = 'IMAGES/OBSOBS1climdiffs_'+source+'_'+thresh+'_latdiffs_CWB_'+typee+'_'+nowmon+nowyear
-        OutMapsFilCWB = 'IMAGES/OBSOBS1climdiffs_'+source+'_'+thresh+'_mapdiffs_CWB_'+typee+'_'+nowmon+nowyear
-        OutLatsFilDPD = 'IMAGES/OBSOBS1climdiffs_'+source+'_'+thresh+'_latdiffs_DPD_'+typee+'_'+nowmon+nowyear
-        OutMapsFilDPD = 'IMAGES/OBSOBS1climdiffs_'+source+'_'+thresh+'_mapdiffs_DPD_'+typee+'_'+nowmon+nowyear
-
-        OutSDLatsFilAT = 'IMAGES/OBSOBS1climSDdiffs_'+source+'_'+thresh+'_latdiffs_AT_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilAT = 'IMAGES/OBSOBS1climSDdiffs_'+source+'_'+thresh+'_mapdiffs_AT_'+typee+'_'+nowmon+nowyear
-        OutSDLatsFilDPT = 'IMAGES/OBSOBS1climSDdiffs_'+source+'_'+thresh+'_latdiffs_DPT_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilDPT = 'IMAGES/OBSOBS1climSDdiffs_'+source+'_'+thresh+'_mapdiffs_DPT_'+typee+'_'+nowmon+nowyear
-        OutSDLatsFilSHU = 'IMAGES/OBSOBS1climSDdiffs_'+source+'_'+thresh+'_latdiffs_SHU_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilSHU = 'IMAGES/OBSOBS1climSDdiffs_'+source+'_'+thresh+'_mapdiffs_SHU_'+typee+'_'+nowmon+nowyear
-        OutSDLatsFilVAP = 'IMAGES/OBSOBS1climSDdiffs_'+source+'_'+thresh+'_latdiffs_VAP_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilVAP = 'IMAGES/OBSOBS1climSDdiffs_'+source+'_'+thresh+'_mapdiffs_VAP_'+typee+'_'+nowmon+nowyear
-        OutSDLatsFilCRH = 'IMAGES/OBSOBS1climSDdiffs_'+source+'_'+thresh+'_latdiffs_CRH_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilCRH = 'IMAGES/OBSOBS1climSDdiffs_'+source+'_'+thresh+'_mapdiffs_CRH_'+typee+'_'+nowmon+nowyear
-        OutSDLatsFilCWB = 'IMAGES/OBSOBS1climSDdiffs_'+source+'_'+thresh+'_latdiffs_CWB_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilCWB = 'IMAGES/OBSOBS1climSDdiffs_'+source+'_'+thresh+'_mapdiffs_CWB_'+typee+'_'+nowmon+nowyear
-        OutSDLatsFilDPD = 'IMAGES/OBSOBS1climSDdiffs_'+source+'_'+thresh+'_latdiffs_DPD_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilDPD = 'IMAGES/OBSOBS1climSDdiffs_'+source+'_'+thresh+'_mapdiffs_DPD_'+typee+'_'+nowmon+nowyear
-    elif ((innee1 == 'OBS1') & (innee2 == 'OBS2')):
-        OutLatsFilAT = 'IMAGES/OBS1OBS2climdiffs_'+source+'_'+thresh+'_latdiffs_AT_'+typee+'_'+nowmon+nowyear
-        OutMapsFilAT = 'IMAGES/OBS1OBS2climdiffs_'+source+'_'+thresh+'_mapdiffs_AT_'+typee+'_'+nowmon+nowyear
-        OutLatsFilDPT = 'IMAGES/OBS1OBS2climdiffs_'+source+'_'+thresh+'_latdiffs_DPT_'+typee+'_'+nowmon+nowyear
-        OutMapsFilDPT = 'IMAGES/OBS1OBS2climdiffs_'+source+'_'+thresh+'_mapdiffs_DPT_'+typee+'_'+nowmon+nowyear
-        OutLatsFilSHU = 'IMAGES/OBS1OBS2climdiffs_'+source+'_'+thresh+'_latdiffs_SHU_'+typee+'_'+nowmon+nowyear
-        OutMapsFilSHU = 'IMAGES/OBS1OBS2climdiffs_'+source+'_'+thresh+'_mapdiffs_SHU_'+typee+'_'+nowmon+nowyear
-        OutLatsFilVAP = 'IMAGES/OBS1OBS2climdiffs_'+source+'_'+thresh+'_latdiffs_VAP_'+typee+'_'+nowmon+nowyear
-        OutMapsFilVAP = 'IMAGES/OBS1OBS2climdiffs_'+source+'_'+thresh+'_mapdiffs_VAP_'+typee+'_'+nowmon+nowyear
-        OutLatsFilCRH = 'IMAGES/OBS1OBS2climdiffs_'+source+'_'+thresh+'_latdiffs_CRH_'+typee+'_'+nowmon+nowyear
-        OutMapsFilCRH = 'IMAGES/OBS1OBS2climdiffs_'+source+'_'+thresh+'_mapdiffs_CRH_'+typee+'_'+nowmon+nowyear
-        OutLatsFilCWB = 'IMAGES/OBS1OBS2climdiffs_'+source+'_'+thresh+'_latdiffs_CWB_'+typee+'_'+nowmon+nowyear
-        OutMapsFilCWB = 'IMAGES/OBS1OBS2climdiffs_'+source+'_'+thresh+'_mapdiffs_CWB_'+typee+'_'+nowmon+nowyear
-        OutLatsFilDPD = 'IMAGES/OBS1OBS2climdiffs_'+source+'_'+thresh+'_latdiffs_DPD_'+typee+'_'+nowmon+nowyear
-        OutMapsFilDPD = 'IMAGES/OBS1OBS2climdiffs_'+source+'_'+thresh+'_mapdiffs_DPD_'+typee+'_'+nowmon+nowyear
-
-        OutSDLatsFilAT = 'IMAGES/OBS1OBS2climSDdiffs_'+source+'_'+thresh+'_latdiffs_AT_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilAT = 'IMAGES/OBS1OBS2climSDdiffs_'+source+'_'+thresh+'_mapdiffs_AT_'+typee+'_'+nowmon+nowyear
-        OutSDLatsFilDPT = 'IMAGES/OBS1OBS2climSDdiffs_'+source+'_'+thresh+'_latdiffs_DPT_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilDPT = 'IMAGES/OBS1OBS2climSDdiffs_'+source+'_'+thresh+'_mapdiffs_DPT_'+typee+'_'+nowmon+nowyear
-        OutSDLatsFilSHU = 'IMAGES/OBS1OBS2climSDdiffs_'+source+'_'+thresh+'_latdiffs_SHU_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilSHU = 'IMAGES/OBS1OBS2climSDdiffs_'+source+'_'+thresh+'_mapdiffs_SHU_'+typee+'_'+nowmon+nowyear
-        OutSDLatsFilVAP = 'IMAGES/OBS1OBS2climSDdiffs_'+source+'_'+thresh+'_latdiffs_VAP_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilVAP = 'IMAGES/OBS1OBS2climSDdiffs_'+source+'_'+thresh+'_mapdiffs_VAP_'+typee+'_'+nowmon+nowyear
-        OutSDLatsFilCRH = 'IMAGES/OBS1OBS2climSDdiffs_'+source+'_'+thresh+'_latdiffs_CRH_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilCRH = 'IMAGES/OBS1OBS2climSDdiffs_'+source+'_'+thresh+'_mapdiffs_CRH_'+typee+'_'+nowmon+nowyear
-        OutSDLatsFilCWB = 'IMAGES/OBS1OBS2climSDdiffs_'+source+'_'+thresh+'_latdiffs_CWB_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilCWB = 'IMAGES/OBS1OBS2climSDdiffs_'+source+'_'+thresh+'_mapdiffs_CWB_'+typee+'_'+nowmon+nowyear
-        OutSDLatsFilDPD = 'IMAGES/OBS1OBS2climSDdiffs_'+source+'_'+thresh+'_latdiffs_DPD_'+typee+'_'+nowmon+nowyear
-        OutSDMapsFilDPD = 'IMAGES/OBS1OBS2climSDdiffs_'+source+'_'+thresh+'_mapdiffs_DPD_'+typee+'_'+nowmon+nowyear
+    OutSDLatsFilAT = 'climSDdiffs_'+source+'_'+thresh+'_latdiffs_AT_'+nowmon+nowyear
+    OutSDMapsFilAT = 'climSDdiffs_'+source+'_'+thresh+'_mapdiffs_AT_'+nowmon+nowyear
+    OutSDLatsFilDPT = 'climSDdiffs_'+source+'_'+thresh+'_latdiffs_DPT_'+nowmon+nowyear
+    OutSDMapsFilDPT = 'climSDdiffs_'+source+'_'+thresh+'_mapdiffs_DPT_'+nowmon+nowyear
+    OutSDLatsFilSHU = 'climSDdiffs_'+source+'_'+thresh+'_latdiffs_SHU_'+nowmon+nowyear
+    OutSDMapsFilSHU = 'climSDdiffs_'+source+'_'+thresh+'_mapdiffs_SHU_'+nowmon+nowyear
+    OutSDLatsFilVAP = 'climSDdiffs_'+source+'_'+thresh+'_latdiffs_VAP_'+nowmon+nowyear
+    OutSDMapsFilVAP = 'climSDdiffs_'+source+'_'+thresh+'_mapdiffs_VAP_'+nowmon+nowyear
+    OutSDLatsFilCRH = 'climSDdiffs_'+source+'_'+thresh+'_latdiffs_CRH_'+nowmon+nowyear
+    OutSDMapsFilCRH = 'climSDdiffs_'+source+'_'+thresh+'_mapdiffs_CRH_'+nowmon+nowyear
+    OutSDLatsFilCWB = 'climSDdiffs_'+source+'_'+thresh+'_latdiffs_CWB_'+nowmon+nowyear
+    OutSDMapsFilCWB = 'climSDdiffs_'+source+'_'+thresh+'_mapdiffs_CWB_'+nowmon+nowyear
+    OutSDLatsFilDPD = 'climSDdiffs_'+source+'_'+thresh+'_latdiffs_DPD_'+nowmon+nowyear
+    OutSDMapsFilDPD = 'climSDdiffs_'+source+'_'+thresh+'_mapdiffs_DPD_'+nowmon+nowyear
     
     # create empty arrays for lats
     lats = np.arange(180,0,-1)-90.5
     lons = np.arange(0,360,1)-179.5
     longrid,latgrid = np.meshgrid(lons,lats) # latgrid should have latitudes repeated along each row of longitude
     
-    # read in ERA ncs - these files have their lats from 90 to -90
-    clim = Dataset(INDIR+InERAclimAT)
-    ERAAT = np.array(clim.variables['t2m_clims'][:])
-    ERAATsd = np.array(clim.variables['t2m_stdevs'][:])
-    clim = Dataset(INDIR+InERAclimDPT)
-    ERADPT = np.array(clim.variables['td2m_clims'][:])
-    ERADPTsd = np.array(clim.variables['td2m_stdevs'][:])
-    clim = Dataset(INDIR+InERAclimSHU)
-    ERASHU = np.array(clim.variables['q2m_clims'][:])
-    ERASHUsd = np.array(clim.variables['q2m_stdevs'][:])
-    clim = Dataset(INDIR+InERAclimVAP)
-    ERAVAP = np.array(clim.variables['e2m_clims'][:])
-    ERAVAPsd = np.array(clim.variables['e2m_stdevs'][:])
-    clim = Dataset(INDIR+InERAclimCRH)
-    ERACRH = np.array(clim.variables['rh2m_clims'][:])
-    ERACRHsd = np.array(clim.variables['rh2m_stdevs'][:])
-    clim = Dataset(INDIR+InERAclimCWB)
-    ERACWB = np.array(clim.variables['tw2m_clims'][:])
-    ERACWBsd = np.array(clim.variables['tw2m_stdevs'][:])
-    clim = Dataset(INDIR+InERAclimDPD)
-    ERADPD = np.array(clim.variables['dpd2m_clims'][:])
-    ERADPDsd = np.array(clim.variables['dpd2m_stdevs'][:])
+    # read in A ncs - these files have their lats from 90 to -90
+    clim = Dataset(INDIR+InAclimAT)
+    AAT = np.array(clim.variables['t2m_clims'][:])
+    AATsd = np.array(clim.variables['t2m_stdevs'][:])
+    clim = Dataset(INDIR+InAclimDPT)
+    ADPT = np.array(clim.variables['td2m_clims'][:])
+    ADPTsd = np.array(clim.variables['td2m_stdevs'][:])
+    clim = Dataset(INDIR+InAclimSHU)
+    ASHU = np.array(clim.variables['q2m_clims'][:])
+    ASHUsd = np.array(clim.variables['q2m_stdevs'][:])
+    clim = Dataset(INDIR+InAclimVAP)
+    AVAP = np.array(clim.variables['e2m_clims'][:])
+    AVAPsd = np.array(clim.variables['e2m_stdevs'][:])
+    clim = Dataset(INDIR+InAclimCRH)
+    ACRH = np.array(clim.variables['rh2m_clims'][:])
+    ACRHsd = np.array(clim.variables['rh2m_stdevs'][:])
+    clim = Dataset(INDIR+InAclimCWB)
+    ACWB = np.array(clim.variables['tw2m_clims'][:])
+    ACWBsd = np.array(clim.variables['tw2m_stdevs'][:])
+    clim = Dataset(INDIR+InAclimDPD)
+    ADPD = np.array(clim.variables['dpd2m_clims'][:])
+    ADPDsd = np.array(clim.variables['dpd2m_stdevs'][:])
     
-    # read in OBS ncs - these files have their lats from 90 to -90
-    clim = Dataset(INDIR+InOBSclimAT)
-    OBSAT = np.array(clim.variables['t2m_clims'][:])
-    OBSATsd = np.array(clim.variables['t2m_stdevs'][:])
-    clim = Dataset(INDIR+InOBSclimDPT)
-    OBSDPT = np.array(clim.variables['td2m_clims'][:])
-    OBSDPTsd = np.array(clim.variables['td2m_stdevs'][:])
-    clim = Dataset(INDIR+InOBSclimSHU)
-    OBSSHU = np.array(clim.variables['q2m_clims'][:])
-    OBSSHUsd = np.array(clim.variables['q2m_stdevs'][:])
-    clim = Dataset(INDIR+InOBSclimVAP)
-    OBSVAP = np.array(clim.variables['e2m_clims'][:])
-    OBSVAPsd = np.array(clim.variables['e2m_stdevs'][:])
-    clim = Dataset(INDIR+InOBSclimCRH)
-    OBSCRH = np.array(clim.variables['rh2m_clims'][:])
-    OBSCRHsd = np.array(clim.variables['rh2m_stdevs'][:])
-    clim = Dataset(INDIR+InOBSclimCWB)
-    OBSCWB = np.array(clim.variables['tw2m_clims'][:])
-    OBSCWBsd = np.array(clim.variables['tw2m_stdevs'][:])
-    clim = Dataset(INDIR+InOBSclimDPD)
-    OBSDPD = np.array(clim.variables['dpd2m_clims'][:])
-    OBSDPDsd = np.array(clim.variables['dpd2m_stdevs'][:])
+    # read in B ncs - these files have their lats from 90 to -90
+    clim = Dataset(INDIR+InBclimAT)
+    BAT = np.array(clim.variables['t2m_clims'][:])
+    BATsd = np.array(clim.variables['t2m_stdevs'][:])
+    clim = Dataset(INDIR+InBclimDPT)
+    BDPT = np.array(clim.variables['td2m_clims'][:])
+    BDPTsd = np.array(clim.variables['td2m_stdevs'][:])
+    clim = Dataset(INDIR+InBclimSHU)
+    BSHU = np.array(clim.variables['q2m_clims'][:])
+    BSHUsd = np.array(clim.variables['q2m_stdevs'][:])
+    clim = Dataset(INDIR+InBclimVAP)
+    BVAP = np.array(clim.variables['e2m_clims'][:])
+    BVAPsd = np.array(clim.variables['e2m_stdevs'][:])
+    clim = Dataset(INDIR+InBclimCRH)
+    BCRH = np.array(clim.variables['rh2m_clims'][:])
+    BCRHsd = np.array(clim.variables['rh2m_stdevs'][:])
+    clim = Dataset(INDIR+InBclimCWB)
+    BCWB = np.array(clim.variables['tw2m_clims'][:])
+    BCWBsd = np.array(clim.variables['tw2m_stdevs'][:])
+    clim = Dataset(INDIR+InBclimDPD)
+    BDPD = np.array(clim.variables['dpd2m_clims'][:])
+    BDPDsd = np.array(clim.variables['dpd2m_stdevs'][:])
     
     del clim
     
+    # Create CLIMATOLOGY difference fields where there are non-missing data
     # create ATdiffs
-    OBSminERAAT = np.empty_like(ERAAT)
-    OBSminERAAT.fill(mdi)
+    BminAAT = np.empty_like(AAT)
+    BminAAT.fill(mdi)
 
-    OBSminERAAT[np.where(OBSAT > mdi)] = OBSAT[np.where(OBSAT > mdi)] - ERAAT[np.where(OBSAT > mdi)]
+    BminAAT[np.where((BAT > mdi) & (AAT > mdi))] = BAT[np.where((BAT > mdi) & (AAT > mdi))] - AAT[np.where((BAT > mdi) & (AAT > mdi))]
+#    print('Check the differencing')
+#    pdb.set_trace()
             
     # create DPTdiffs
-    OBSminERADPT = np.empty_like(ERAAT)
-    OBSminERADPT.fill(mdi)
+    BminADPT = np.empty_like(AAT)
+    BminADPT.fill(mdi)
     
-    OBSminERADPT[np.where(OBSDPT > mdi)] = OBSDPT[np.where(OBSDPT > mdi)] - ERADPT[np.where(OBSDPT > mdi)]
+    BminADPT[np.where((BDPT > mdi) & (ADPT > mdi))] = BDPT[np.where((BDPT > mdi) & (ADPT > mdi))] - ADPT[np.where((BDPT > mdi) & (ADPT > mdi))]
 
     # create SHUdiffs
-    OBSminERASHU = np.empty_like(ERAAT)
-    OBSminERASHU.fill(mdi)
+    BminASHU = np.empty_like(AAT)
+    BminASHU.fill(mdi)
     
-    OBSminERASHU[np.where(OBSSHU > mdi)] = OBSSHU[np.where(OBSSHU > mdi)] - ERASHU[np.where(OBSSHU > mdi)]
+    BminASHU[np.where((BSHU > mdi) & (ASHU > mdi))] = BSHU[np.where((BSHU > mdi) & (ASHU > mdi))] - ASHU[np.where((BSHU > mdi) & (ASHU > mdi))]
 
     # create VAPdiffs
-    OBSminERAVAP = np.empty_like(ERAAT)
-    OBSminERAVAP.fill(mdi)
+    BminAVAP = np.empty_like(AAT)
+    BminAVAP.fill(mdi)
     
-    OBSminERAVAP[np.where(OBSVAP > mdi)] = OBSVAP[np.where(OBSVAP > mdi)] - ERAVAP[np.where(OBSVAP > mdi)]
+    BminAVAP[np.where((BVAP > mdi) & (AVAP > mdi))] = BVAP[np.where((BVAP > mdi) & (AVAP > mdi))] - AVAP[np.where((BVAP > mdi) & (AVAP > mdi))]
 
     # create CRHdiffs
-    OBSminERACRH = np.empty_like(ERAAT)
-    OBSminERACRH.fill(mdi)
+    BminACRH = np.empty_like(AAT)
+    BminACRH.fill(mdi)
     
-    OBSminERACRH[np.where(OBSCRH > mdi)] = OBSCRH[np.where(OBSCRH > mdi)] - ERACRH[np.where(OBSCRH > mdi)]
+    BminACRH[np.where((BCRH > mdi) & (ACRH > mdi))] = BCRH[np.where((BCRH > mdi) & (ACRH > mdi))] - ACRH[np.where((BCRH > mdi) & (ACRH > mdi))]
 
     # create CWBdiffs
-    OBSminERACWB = np.empty_like(ERAAT)
-    OBSminERACWB.fill(mdi)
+    BminACWB = np.empty_like(AAT)
+    BminACWB.fill(mdi)
     
-    OBSminERACWB[np.where(OBSCWB > mdi)] = OBSCWB[np.where(OBSCWB > mdi)] - ERACWB[np.where(OBSCWB > mdi)]
+    BminACWB[np.where((BCWB > mdi) & (ACWB > mdi))] = BCWB[np.where((BCWB > mdi) & (ACWB > mdi))] - ACWB[np.where((BCWB > mdi) & (ACWB > mdi))]
 
     # create DPDdiffs
-    OBSminERADPD = np.empty_like(ERAAT)
-    OBSminERADPD.fill(mdi)
+    BminADPD = np.empty_like(AAT)
+    BminADPD.fill(mdi)
     
-    OBSminERADPD[np.where(OBSDPD > mdi)] = OBSDPD[np.where(OBSDPD > mdi)] - ERADPD[np.where(OBSDPD > mdi)]
+    BminADPD[np.where((BDPD > mdi) & (ADPD > mdi))] = BDPD[np.where((BDPD > mdi) & (ADPD > mdi))] - ADPD[np.where((BDPD > mdi) & (ADPD > mdi))]
     
-    # plot diffs by latitude = this is a 3 row by 2 column plot
-    
-    xpos = [0.1, 0.6,0.1,0.6,0.1,0.6]
-    ypos = [0.7,0.7,0.37,0.37,0.04,0.04]
-    xfat = [0.37,0.37,0.37,0.37,0.37,0.37]
-    ytall = [0.28,0.28,0.28,0.28,0.28,0.28]
+    # plot diffs by latitude for each variable = this is a 3 row by 2 column plot
+    PlotLatDistDiffs(OUTDIR+OutLatsFilAT,BminAAT,latgrid,lats,mdi,ptsplt,typee1,typee2,'deg C')  
+    PlotLatDistDiffs(OUTDIR+OutLatsFilDPT,BminADPT,latgrid,lats,mdi,ptsplt,typee1,typee2,'deg C')  
+    PlotLatDistDiffs(OUTDIR+OutLatsFilSHU,BminASHU,latgrid,lats,mdi,ptsplt,typee1,typee2,'g/kg')  
+    PlotLatDistDiffs(OUTDIR+OutLatsFilVAP,BminAVAP,latgrid,lats,mdi,ptsplt,typee1,typee2,'hPa')  
+    PlotLatDistDiffs(OUTDIR+OutLatsFilCRH,BminACRH,latgrid,lats,mdi,ptsplt,typee1,typee2,'%rh')  
+    PlotLatDistDiffs(OUTDIR+OutLatsFilCWB,BminACWB,latgrid,lats,mdi,ptsplt,typee1,typee2,'deg C')  
+    PlotLatDistDiffs(OUTDIR+OutLatsFilDPD,BminADPD,latgrid,lats,mdi,ptsplt,typee1,typee2,'deg C')  
 
-    lettees = ['a)','b)','c)','d)','e)','f)']
+    # plot diff maps for each variables
+    PlotClimMapDiffs(OUTDIR+OutMapsFilAT,BminAAT,longrid,latgrid,mdi,ptsplt,'RdYlBu','Reverse',typee1,typee2,'deg C')
+    PlotClimMapDiffs(OUTDIR+OutMapsFilDPT,BminADPT,longrid,latgrid,mdi,ptsplt,'BrBG','Normal',typee1,typee2,'deg C')
+    PlotClimMapDiffs(OUTDIR+OutMapsFilSHU,BminASHU,longrid,latgrid,mdi,ptsplt,'BrBG','Normal',typee1,typee2,'g/kg')
+    PlotClimMapDiffs(OUTDIR+OutMapsFilVAP,BminAVAP,longrid,latgrid,mdi,ptsplt,'BrBG','Normal',typee1,typee2,'hPa')
+    PlotClimMapDiffs(OUTDIR+OutMapsFilCRH,BminACRH,longrid,latgrid,mdi,ptsplt,'BrBG','Normal',typee1,typee2,'%rh')
+    PlotClimMapDiffs(OUTDIR+OutMapsFilCWB,BminACWB,longrid,latgrid,mdi,ptsplt,'BrBG','Normal',typee1,typee2,'deg C')
+    PlotClimMapDiffs(OUTDIR+OutMapsFilDPD,BminADPD,longrid,latgrid,mdi,ptsplt,'BrBG','Reverse',typee1,typee2,'deg C')
 
-    plt.clf()
-    f,axarr=plt.subplots(6,figsize=(10,12),sharex=False)	    #6,18
-
-    for pp in range(6):
-        axarr[pp].set_position([xpos[pp],ypos[pp],xfat[pp],ytall[pp]])
-        #axarr[pp].set_xlim(0,60)
-        axarr[pp].set_ylim(-91,91)
-        axarr[pp].set_xlabel('Difference ('+innee2+'-'+innee1+') degrees C')
-        axarr[pp].set_ylabel('Latitude')
-        pltdiff = OBSminERAAT[ptsplt[pp],:,:] # assuming time, lat, lon
-#        pdb.set_trace()
-	axarr[pp].scatter(np.reshape(pltdiff[np.where(pltdiff > mdi)],len(pltdiff[np.where(pltdiff > mdi)])),
-	                  np.reshape(latgrid[np.where(pltdiff > mdi)],len(latgrid[np.where(pltdiff > mdi)])),c='grey',marker='o',linewidth=0.,s=1)
-        axarr[pp].plot(np.zeros(180),lats,c='black')
-	axarr[pp].annotate(lettees[pp]+' Pentad: '+str((pp*12)+1),xy=(0.03,0.92),xycoords='axes fraction',size=12)
-        # for each degree of latitude, plot a line for the median estimate
-        # we may want to use some kind of polynomial?
-        mediandiff = np.empty_like(lats)
-        mediandiff.fill(mdi)
-        diff25 = np.empty_like(lats)
-        diff25.fill(mdi)
-        diff75 = np.empty_like(lats)
-        diff75.fill(mdi)
-        for ltt in range(180):
-            if (len(pltdiff[np.where(pltdiff[:,ltt] > mdi)[0],ltt]) > 0):
-	        if (ltt == 0):
-		    ltts = [ltt,ltt+1]
-	        if ((ltt > 0) & (ltt < 179)):
-		    ltts = [ltt-1,ltt,ltt+1]
-	        if (ltt == 179):
-		    ltts = [ltt-1,ltt]
-		diffmini = pltdiff[:,ltts]    
-	        mediandiff[ltt] = np.median(diffmini[np.where(diffmini > mdi)])
-	        diff25[ltt],diff75[ltt] = np.percentile(diffmini[np.where(diffmini > mdi)],[25,75])
-        axarr[pp].plot(mediandiff[np.where(mediandiff > mdi)[0]],lats[np.where(mediandiff > mdi)[0]],c='red')
-        axarr[pp].plot(diff25[np.where(diff25 > mdi)[0]],lats[np.where(diff25 > mdi)[0]],c='red',linestyle='dashed')
-        axarr[pp].plot(diff75[np.where(diff75 > mdi)[0]],lats[np.where(diff75 > mdi)[0]],c='red',linestyle='dashed')
-    
-     # save plots as eps and png
-#    plt.savefig(OUTDIR+OutLatsFilAT+".eps")
-    plt.savefig(OUTDIR+OutLatsFilAT+".png")
-
-    plt.clf()
-    plt.close()
-    
-    f,axarr=plt.subplots(6,figsize=(10,12),sharex=False)	    #6,18
-
-    for pp in range(6):
-        axarr[pp].set_position([xpos[pp],ypos[pp],xfat[pp],ytall[pp]])
-        #axarr[pp].set_xlim(0,60)
-        axarr[pp].set_ylim(-91,91)
-        axarr[pp].set_xlabel('Difference ('+innee2+'-'+innee1+') degrees C')
-        axarr[pp].set_ylabel('Latitude')
-        pltdiff = OBSminERADPT[ptsplt[pp],:,:] # assuming time, long, lat
-        axarr[pp].scatter(np.reshape(pltdiff[np.where(pltdiff > mdi)],len(pltdiff[np.where(pltdiff > mdi)])),np.reshape(latgrid[np.where(pltdiff > mdi)],len(latgrid[np.where(pltdiff > mdi)])),c='grey',marker='o',linewidth=0.,s=1)
-        axarr[pp].plot(np.zeros(180),lats,c='black')
-        axarr[pp].annotate(lettees[pp]+' Pentad: '+str((pp*12)+1),xy=(0.03,0.92),xycoords='axes fraction',size=12)
-        # for each degree of latitude, plot a line for the median estimate
-        # we may want to use some kind of polynomial?
-        mediandiff = np.empty_like(lats)
-        mediandiff.fill(mdi)
-        sddiff = np.empty_like(lats)
-        sddiff.fill(mdi)
-        for ltt in range(180):
-            if (len(pltdiff[np.where(pltdiff[:,ltt] > mdi)[0],ltt]) > 0):
-	        if (ltt == 0):
-		    ltts = [ltt,ltt+1]
-	        if ((ltt > 0) & (ltt < 179)):
-		    ltts = [ltt-1,ltt,ltt+1]
-	        if (ltt == 179):
-		    ltts = [ltt-1,ltt]
-		diffmini = pltdiff[:,ltts]    
-	        mediandiff[ltt] = np.median(diffmini[np.where(diffmini > mdi)])   # np.median(pltdiff[np.where(pltdiff[:,ltts] > mdi)[0],ltts])
-	        diff25[ltt],diff75[ltt] = np.percentile(diffmini[np.where(diffmini > mdi)],[25,75])
-        axarr[pp].plot(mediandiff[np.where(mediandiff > mdi)[0]],lats[np.where(mediandiff > mdi)[0]],c='red')
-        axarr[pp].plot(diff25[np.where(diff25 > mdi)[0]],lats[np.where(diff25 > mdi)[0]],c='red',linestyle='dashed')
-        axarr[pp].plot(diff75[np.where(diff75 > mdi)[0]],lats[np.where(diff75 > mdi)[0]],c='red',linestyle='dashed')
-    
-     # save plots as eps and png
-#    plt.savefig(OUTDIR+OutLatsFilDPT+".eps")
-    plt.savefig(OUTDIR+OutLatsFilDPT+".png")
-
-    plt.clf()
-    plt.close()
-    
-    f,axarr=plt.subplots(6,figsize=(10,12),sharex=False)	    #6,18
-
-    for pp in range(6):
-        axarr[pp].set_position([xpos[pp],ypos[pp],xfat[pp],ytall[pp]])
-        #axarr[pp].set_xlim(0,60)
-        axarr[pp].set_ylim(-91,91)
-        axarr[pp].set_xlabel('Difference ('+innee2+'-'+innee1+') g/kg')
-        axarr[pp].set_ylabel('Latitude')
-        pltdiff = OBSminERASHU[ptsplt[pp],:,:] # assuming time, long, lat
-        axarr[pp].scatter(np.reshape(pltdiff[np.where(pltdiff > mdi)],len(pltdiff[np.where(pltdiff > mdi)])),np.reshape(latgrid[np.where(pltdiff > mdi)],len(latgrid[np.where(pltdiff > mdi)])),c='grey',marker='o',linewidth=0.,s=1)
-        axarr[pp].plot(np.zeros(180),lats,c='black')
-        axarr[pp].annotate(lettees[pp]+' Pentad: '+str((pp*12)+1),xy=(0.03,0.92),xycoords='axes fraction',size=12)
-        # for each degree of latitude, plot a line for the median estimate
-        # we may want to use some kind of polynomial?
-        mediandiff = np.empty_like(lats)
-        mediandiff.fill(mdi)
-        sddiff = np.empty_like(lats)
-        sddiff.fill(mdi)
-        for ltt in range(180):
-            if (len(pltdiff[np.where(pltdiff[:,ltt] > mdi)[0],ltt]) > 0):
-	        if (ltt == 0):
-		    ltts = [ltt,ltt+1]
-	        if ((ltt > 0) & (ltt < 179)):
-		    ltts = [ltt-1,ltt,ltt+1]
-	        if (ltt == 179):
-		    ltts = [ltt-1,ltt]
-		diffmini = pltdiff[:,ltts]    
-	        mediandiff[ltt] = np.median(diffmini[np.where(diffmini > mdi)])   # np.median(pltdiff[np.where(pltdiff[:,ltts] > mdi)[0],ltts])
-	        diff25[ltt],diff75[ltt] = np.percentile(diffmini[np.where(diffmini > mdi)],[25,75])
-        axarr[pp].plot(mediandiff[np.where(mediandiff > mdi)[0]],lats[np.where(mediandiff > mdi)[0]],c='red')
-        axarr[pp].plot(diff25[np.where(diff25 > mdi)[0]],lats[np.where(diff25 > mdi)[0]],c='red',linestyle='dashed')
-        axarr[pp].plot(diff75[np.where(diff75 > mdi)[0]],lats[np.where(diff75 > mdi)[0]],c='red',linestyle='dashed')
-    
-     # save plots as eps and png
-#    plt.savefig(OUTDIR+OutLatsFilSHU+".eps")
-    plt.savefig(OUTDIR+OutLatsFilSHU+".png")
-
-    plt.clf()
-    plt.close()
-    
-    f,axarr=plt.subplots(6,figsize=(10,12),sharex=False)	    #6,18
-
-    for pp in range(6):
-        axarr[pp].set_position([xpos[pp],ypos[pp],xfat[pp],ytall[pp]])
-        #axarr[pp].set_xlim(0,60)
-        axarr[pp].set_ylim(-91,91)
-        axarr[pp].set_xlabel('Difference ('+innee2+'-'+innee1+') hPa')
-        axarr[pp].set_ylabel('Latitude')
-        pltdiff = OBSminERAVAP[ptsplt[pp],:,:] # assuming time, long, lat
-        axarr[pp].scatter(np.reshape(pltdiff[np.where(pltdiff > mdi)],len(pltdiff[np.where(pltdiff > mdi)])),np.reshape(latgrid[np.where(pltdiff > mdi)],len(latgrid[np.where(pltdiff > mdi)])),c='grey',marker='o',linewidth=0.,s=1)
-        axarr[pp].plot(np.zeros(180),lats,c='black')
-        axarr[pp].annotate(lettees[pp]+' Pentad: '+str((pp*12)+1),xy=(0.03,0.92),xycoords='axes fraction',size=12)
-        # for each degree of latitude, plot a line for the median estimate
-        # we may want to use some kind of polynomial?
-        mediandiff = np.empty_like(lats)
-        mediandiff.fill(mdi)
-        sddiff = np.empty_like(lats)
-        sddiff.fill(mdi)
-        for ltt in range(180):
-            if (len(pltdiff[np.where(pltdiff[:,ltt] > mdi)[0],ltt]) > 0):
-	        if (ltt == 0):
-		    ltts = [ltt,ltt+1]
-	        if ((ltt > 0) & (ltt < 179)):
-		    ltts = [ltt-1,ltt,ltt+1]
-	        if (ltt == 179):
-		    ltts = [ltt-1,ltt]
-		diffmini = pltdiff[:,ltts]    
-	        mediandiff[ltt] = np.median(diffmini[np.where(diffmini > mdi)])   # np.median(pltdiff[np.where(pltdiff[:,ltts] > mdi)[0],ltts])
-	        diff25[ltt],diff75[ltt] = np.percentile(diffmini[np.where(diffmini > mdi)],[25,75])
-        axarr[pp].plot(mediandiff[np.where(mediandiff > mdi)[0]],lats[np.where(mediandiff > mdi)[0]],c='red')
-        axarr[pp].plot(diff25[np.where(diff25 > mdi)[0]],lats[np.where(diff25 > mdi)[0]],c='red',linestyle='dashed')
-        axarr[pp].plot(diff75[np.where(diff75 > mdi)[0]],lats[np.where(diff75 > mdi)[0]],c='red',linestyle='dashed')
-    
-     # save plots as eps and png
-#    plt.savefig(OUTDIR+OutLatsFilVAP+".eps")
-    plt.savefig(OUTDIR+OutLatsFilVAP+".png")
-
-    plt.clf()
-    plt.close()
-    
-    f,axarr=plt.subplots(6,figsize=(10,12),sharex=False)	    #6,18
-
-    for pp in range(6):
-        axarr[pp].set_position([xpos[pp],ypos[pp],xfat[pp],ytall[pp]])
-        #axarr[pp].set_xlim(0,60)
-        axarr[pp].set_ylim(-91,91)
-        axarr[pp].set_xlabel('Difference ('+innee2+'-'+innee1+') %rh')
-        axarr[pp].set_ylabel('Latitude')
-        pltdiff = OBSminERACRH[ptsplt[pp],:,:] # assuming time, long, lat
-        axarr[pp].scatter(np.reshape(pltdiff[np.where(pltdiff > mdi)],len(pltdiff[np.where(pltdiff > mdi)])),np.reshape(latgrid[np.where(pltdiff > mdi)],len(latgrid[np.where(pltdiff > mdi)])),c='grey',marker='o',linewidth=0.,s=1)
-        axarr[pp].plot(np.zeros(180),lats,c='black')
-        axarr[pp].annotate(lettees[pp]+' Pentad: '+str((pp*12)+1),xy=(0.03,0.92),xycoords='axes fraction',size=12)
-        # for each degree of latitude, plot a line for the median estimate
-        # we may want to use some kind of polynomial?
-        mediandiff = np.empty_like(lats)
-        mediandiff.fill(mdi)
-        sddiff = np.empty_like(lats)
-        sddiff.fill(mdi)
-        for ltt in range(180):
-            if (len(pltdiff[np.where(pltdiff[:,ltt] > mdi)[0],ltt]) > 0):
-	        if (ltt == 0):
-		    ltts = [ltt,ltt+1]
-	        if ((ltt > 0) & (ltt < 179)):
-		    ltts = [ltt-1,ltt,ltt+1]
-	        if (ltt == 179):
-		    ltts = [ltt-1,ltt]
-		diffmini = pltdiff[:,ltts]    
-	        mediandiff[ltt] = np.median(diffmini[np.where(diffmini > mdi)])   # np.median(pltdiff[np.where(pltdiff[:,ltts] > mdi)[0],ltts])
-	        diff25[ltt],diff75[ltt] = np.percentile(diffmini[np.where(diffmini > mdi)],[25,75])
-        axarr[pp].plot(mediandiff[np.where(mediandiff > mdi)[0]],lats[np.where(mediandiff > mdi)[0]],c='red')
-        axarr[pp].plot(diff25[np.where(diff25 > mdi)[0]],lats[np.where(diff25 > mdi)[0]],c='red',linestyle='dashed')
-        axarr[pp].plot(diff75[np.where(diff75 > mdi)[0]],lats[np.where(diff75 > mdi)[0]],c='red',linestyle='dashed')
-    
-     # save plots as eps and png
-#    plt.savefig(OUTDIR+OutLatsFilCRH+".eps")
-    plt.savefig(OUTDIR+OutLatsFilCRH+".png")
-
-    plt.clf()
-    plt.close()
-    
-    f,axarr=plt.subplots(6,figsize=(10,12),sharex=False)	    #6,18
-
-    for pp in range(6):
-        axarr[pp].set_position([xpos[pp],ypos[pp],xfat[pp],ytall[pp]])
-        #axarr[pp].set_xlim(0,60)
-        axarr[pp].set_ylim(-91,91)
-        axarr[pp].set_xlabel('Difference ('+innee2+'-'+innee1+') degrees C')
-        axarr[pp].set_ylabel('Latitude')
-        pltdiff = OBSminERACWB[ptsplt[pp],:,:] # assuming time, long, lat
-        axarr[pp].scatter(np.reshape(pltdiff[np.where(pltdiff > mdi)],len(pltdiff[np.where(pltdiff > mdi)])),np.reshape(latgrid[np.where(pltdiff > mdi)],len(latgrid[np.where(pltdiff > mdi)])),c='grey',marker='o',linewidth=0.,s=1)
-        axarr[pp].plot(np.zeros(180),lats,c='black')
-        axarr[pp].annotate(lettees[pp]+' Pentad: '+str((pp*12)+1),xy=(0.03,0.92),xycoords='axes fraction',size=12)
-        # for each degree of latitude, plot a line for the median estimate
-        # we may want to use some kind of polynomial?
-        mediandiff = np.empty_like(lats)
-        mediandiff.fill(mdi)
-        sddiff = np.empty_like(lats)
-        sddiff.fill(mdi)
-        for ltt in range(180):
-            if (len(pltdiff[np.where(pltdiff[:,ltt] > mdi)[0],ltt]) > 0):
-	        if (ltt == 0):
-		    ltts = [ltt,ltt+1]
-	        if ((ltt > 0) & (ltt < 179)):
-		    ltts = [ltt-1,ltt,ltt+1]
-	        if (ltt == 179):
-		    ltts = [ltt-1,ltt]
-		diffmini = pltdiff[:,ltts]    
-	        mediandiff[ltt] = np.median(diffmini[np.where(diffmini > mdi)])   # np.median(pltdiff[np.where(pltdiff[:,ltts] > mdi)[0],ltts])
-	        diff25[ltt],diff75[ltt] = np.percentile(diffmini[np.where(diffmini > mdi)],[25,75])
-        axarr[pp].plot(mediandiff[np.where(mediandiff > mdi)[0]],lats[np.where(mediandiff > mdi)[0]],c='red')
-        axarr[pp].plot(diff25[np.where(diff25 > mdi)[0]],lats[np.where(diff25 > mdi)[0]],c='red',linestyle='dashed')
-        axarr[pp].plot(diff75[np.where(diff75 > mdi)[0]],lats[np.where(diff75 > mdi)[0]],c='red',linestyle='dashed')
-    
-     # save plots as eps and png
-#    plt.savefig(OUTDIR+OutLatsFilCWB+".eps")
-    plt.savefig(OUTDIR+OutLatsFilCWB+".png")
-
-    plt.clf()
-    plt.close()
-    
-    f,axarr=plt.subplots(6,figsize=(10,12),sharex=False)	    #6,18
-
-    for pp in range(6):
-        axarr[pp].set_position([xpos[pp],ypos[pp],xfat[pp],ytall[pp]])
-        #axarr[pp].set_xlim(0,60)
-        axarr[pp].set_ylim(-91,91)
-        axarr[pp].set_xlabel('Difference ('+innee2+'-'+innee1+') degrees C')
-        axarr[pp].set_ylabel('Latitude')
-        pltdiff = OBSminERADPD[ptsplt[pp],:,:] # assuming time, long, lat
-        axarr[pp].scatter(np.reshape(pltdiff[np.where(pltdiff > mdi)],len(pltdiff[np.where(pltdiff > mdi)])),np.reshape(latgrid[np.where(pltdiff > mdi)],len(latgrid[np.where(pltdiff > mdi)])),c='grey',marker='o',linewidth=0.,s=1)
-        axarr[pp].plot(np.zeros(180),lats,c='black')
-        axarr[pp].annotate(lettees[pp]+' Pentad: '+str((pp*12)+1),xy=(0.03,0.92),xycoords='axes fraction',size=12)
-        # for each degree of latitude, plot a line for the median estimate
-        # we may want to use some kind of polynomial?
-        mediandiff = np.empty_like(lats)
-        mediandiff.fill(mdi)
-        sddiff = np.empty_like(lats)
-        sddiff.fill(mdi)
-        for ltt in range(180):
-            if (len(pltdiff[np.where(pltdiff[:,ltt] > mdi)[0],ltt]) > 0):
-	        if (ltt == 0):
-		    ltts = [ltt,ltt+1]
-	        if ((ltt > 0) & (ltt < 179)):
-		    ltts = [ltt-1,ltt,ltt+1]
-	        if (ltt == 179):
-		    ltts = [ltt-1,ltt]
-		diffmini = pltdiff[:,ltts]    
-	        mediandiff[ltt] = np.median(diffmini[np.where(diffmini > mdi)])   # np.median(pltdiff[np.where(pltdiff[:,ltts] > mdi)[0],ltts])
-	        diff25[ltt],diff75[ltt] = np.percentile(diffmini[np.where(diffmini > mdi)],[25,75])
-        axarr[pp].plot(mediandiff[np.where(mediandiff > mdi)[0]],lats[np.where(mediandiff > mdi)[0]],c='red')
-        axarr[pp].plot(diff25[np.where(diff25 > mdi)[0]],lats[np.where(diff25 > mdi)[0]],c='red',linestyle='dashed')
-        axarr[pp].plot(diff75[np.where(diff75 > mdi)[0]],lats[np.where(diff75 > mdi)[0]],c='red',linestyle='dashed')
-    
-     # save plots as eps and png
-#    plt.savefig(OUTDIR+OutLatsFilDPD+".eps")
-    plt.savefig(OUTDIR+OutLatsFilDPD+".png")
-
-
-    # set up colour scheme red blue
-    cmap=plt.get_cmap('RdYlBu') # PiYG
-        
-    cmaplist=[cmap(i) for i in range(cmap.N)]
-    for loo in range((cmap.N/2)-30,(cmap.N/2)+30):
-        cmaplist.remove(cmaplist[(cmap.N/2)-30]) # remove the very pale colours in the middle
-    #cmaplist.remove(cmaplist[(cmap.N/2)-10:(cmap.N/2)+10]) # remove the very pale colours in the middle
-
-# remove the darkest and lightest (white and black) - and reverse
-#    for loo in range(40):
-#        cmaplist.remove(cmaplist[loo])
-    cmaplist.reverse()
-#    for loo in range(10):
-#        cmaplist.remove(cmaplist[loo])
-#    cmaplist.reverse()
-
-    cmap=cmap.from_list('this_cmap',cmaplist,cmap.N)
-    
-    bounds=np.array([-15,-10,-5,-2,0,2,5,10,15])
-    strbounds=["%3d" % i for i in bounds]
-    norm=mpl_cm.colors.BoundaryNorm(bounds,cmap.N)
-
-    # plot diff maps
-    
-    xpos = [0.1, 0.6,0.1,0.6,0.1,0.6]
-    ypos = [0.74,0.74,0.45,0.45,0.16,0.16]
-    xfat = [0.37,0.37,0.37,0.37,0.37,0.37]
-    ytall = [0.24,0.24,0.24,0.24,0.24,0.24]
-
-    plt.clf()
-    plt.close()
-    
-    f,axarr=plt.subplots(6,figsize=(10,12),sharex=False)	    #6,18
-
-    for pp in range(6):
-        axarr[pp].set_position([xpos[pp],ypos[pp],xfat[pp],ytall[pp]])
-        axarr[pp].set_ylim(-91,90)
-        axarr[pp].set_xlim(-180,180)
-        axarr[pp].set_ylabel('Latitude')
-        axarr[pp].set_xlabel('Longitude')
-        pltdiff = OBSminERAAT[ptsplt[pp],:,:] # assuming time, long, lat
-	plottee=axarr[pp].scatter(longrid[np.where(pltdiff > mdi)],latgrid[np.where(pltdiff > mdi)],c=pltdiff[np.where(pltdiff > mdi)],cmap=cmap,norm=norm,marker='o',linewidth=0.,s=4)
-        axarr[pp].annotate(lettees[pp]+' Pentad: '+str((pp*12)+1),xy=(0.03,0.92),xycoords='axes fraction',size=12)
-
-    cbax=f.add_axes([0.1,0.06,0.8,0.02])
-    cb=plt.colorbar(plottee,cax=cbax,orientation='horizontal',ticks=bounds) #, extend=extend
-    cb.ax.tick_params(labelsize=12) 
-    cb.ax.set_xticklabels(strbounds)
-    plt.figtext(0.5,0.02,innee2+'-'+innee1+' difference (deg C)',size=14,ha='center')    
-    
-     # save plots as eps and png
-#    plt.savefig(OUTDIR+OutMapsFilAT+".eps")
-    plt.savefig(OUTDIR+OutMapsFilAT+".png")
-
-    # set up colour scheme red blue
-    cmap=plt.get_cmap('BrBG') # PiYG
-        
-    cmaplist=[cmap(i) for i in range(cmap.N)]
-    for loo in range((cmap.N/2)-30,(cmap.N/2)+30):
-        cmaplist.remove(cmaplist[(cmap.N/2)-30]) # remove the very pale colours in the middle
-    #cmaplist.remove(cmaplist[(cmap.N/2)-10:(cmap.N/2)+10]) # remove the very pale colours in the middle
-
-# remove the darkest and lightest (white and black) - and reverse
-#    for loo in range(40):
-#        cmaplist.remove(cmaplist[loo])
-#    cmaplist.reverse()
-#    for loo in range(10):
-#        cmaplist.remove(cmaplist[loo])
-#    cmaplist.reverse()
-
-    cmap=cmap.from_list('this_cmap',cmaplist,cmap.N)
-
-    plt.clf()
-    plt.close()
-    
-    f,axarr=plt.subplots(6,figsize=(10,12),sharex=False)	    #6,18
-
-    for pp in range(6):
-        axarr[pp].set_position([xpos[pp],ypos[pp],xfat[pp],ytall[pp]])
-        axarr[pp].set_ylim(-91,90)
-        axarr[pp].set_xlim(-180,180)
-        axarr[pp].set_ylabel('Latitude')
-        axarr[pp].set_xlabel('Longitude')
-        pltdiff = OBSminERADPT[ptsplt[pp],:,:] # assuming time, long, lat
-	plottee=axarr[pp].scatter(longrid[np.where(pltdiff > mdi)],latgrid[np.where(pltdiff > mdi)],c=pltdiff[np.where(pltdiff > mdi)],cmap=cmap,norm=norm,marker='o',linewidth=0.,s=4)
-        axarr[pp].annotate(lettees[pp]+' Pentad: '+str((pp*12)+1),xy=(0.03,0.92),xycoords='axes fraction',size=12)
-
-    cbax=f.add_axes([0.1,0.06,0.8,0.02])
-    cb=plt.colorbar(plottee,cax=cbax,orientation='horizontal',ticks=bounds) #, extend=extend
-    cb.ax.tick_params(labelsize=12) 
-    cb.ax.set_xticklabels(strbounds)
-    plt.figtext(0.5,0.02,innee2+'-'+innee1+' difference (deg C)',size=14,ha='center')    
-    
-     # save plots as eps and png
-#    plt.savefig(OUTDIR+OutMapsFilDPT+".eps")
-    plt.savefig(OUTDIR+OutMapsFilDPT+".png")
-
-
-    plt.clf()
-    plt.close()
-    
-    f,axarr=plt.subplots(6,figsize=(10,12),sharex=False)	    #6,18
-
-    for pp in range(6):
-        axarr[pp].set_position([xpos[pp],ypos[pp],xfat[pp],ytall[pp]])
-        axarr[pp].set_ylim(-91,90)
-        axarr[pp].set_xlim(-180,180)
-        axarr[pp].set_ylabel('Latitude')
-        axarr[pp].set_xlabel('Longitude')
-        pltdiff = OBSminERASHU[ptsplt[pp],:,:] # assuming time, long, lat
-	plottee=axarr[pp].scatter(longrid[np.where(pltdiff > mdi)],latgrid[np.where(pltdiff > mdi)],c=pltdiff[np.where(pltdiff > mdi)],cmap=cmap,norm=norm,marker='o',linewidth=0.,s=4)
-        axarr[pp].annotate(lettees[pp]+' Pentad: '+str((pp*12)+1),xy=(0.03,0.92),xycoords='axes fraction',size=12)
-
-    cbax=f.add_axes([0.1,0.06,0.8,0.02])
-    cb=plt.colorbar(plottee,cax=cbax,orientation='horizontal',ticks=bounds) #, extend=extend
-    cb.ax.tick_params(labelsize=12) 
-    cb.ax.set_xticklabels(strbounds)
-    plt.figtext(0.5,0.02,innee2+'-'+innee1+' difference (g/kg)',size=14,ha='center')    
-    
-     # save plots as eps and png
-#    plt.savefig(OUTDIR+OutMapsFilSHU+".eps")
-    plt.savefig(OUTDIR+OutMapsFilSHU+".png")
-
-    plt.clf()
-    plt.close()
-    
-    f,axarr=plt.subplots(6,figsize=(10,12),sharex=False)	    #6,18
-
-    for pp in range(6):
-        axarr[pp].set_position([xpos[pp],ypos[pp],xfat[pp],ytall[pp]])
-        axarr[pp].set_ylim(-91,90)
-        axarr[pp].set_xlim(-180,180)
-        axarr[pp].set_ylabel('Latitude')
-        axarr[pp].set_xlabel('Longitude')
-        pltdiff = OBSminERAVAP[ptsplt[pp],:,:] # assuming time, long, lat
-	plottee=axarr[pp].scatter(longrid[np.where(pltdiff > mdi)],latgrid[np.where(pltdiff > mdi)],c=pltdiff[np.where(pltdiff > mdi)],cmap=cmap,norm=norm,marker='o',linewidth=0.,s=4)
-        axarr[pp].annotate(lettees[pp]+' Pentad: '+str((pp*12)+1),xy=(0.03,0.92),xycoords='axes fraction',size=12)
-
-    cbax=f.add_axes([0.1,0.06,0.8,0.02])
-    cb=plt.colorbar(plottee,cax=cbax,orientation='horizontal',ticks=bounds) #, extend=extend
-    cb.ax.tick_params(labelsize=12) 
-    cb.ax.set_xticklabels(strbounds)
-    plt.figtext(0.5,0.02,innee2+'-'+innee1+' difference (hPa)',size=14,ha='center')    
-    
-     # save plots as eps and png
-#    plt.savefig(OUTDIR+OutMapsFilVAP+".eps")
-    plt.savefig(OUTDIR+OutMapsFilVAP+".png")
-
-    plt.clf()
-    plt.close()
-    
-    f,axarr=plt.subplots(6,figsize=(10,12),sharex=False)	    #6,18
-
-    for pp in range(6):
-        axarr[pp].set_position([xpos[pp],ypos[pp],xfat[pp],ytall[pp]])
-        axarr[pp].set_ylim(-91,90)
-        axarr[pp].set_xlim(-180,180)
-        axarr[pp].set_ylabel('Latitude')
-        axarr[pp].set_xlabel('Longitude')
-        pltdiff = OBSminERACRH[ptsplt[pp],:,:] # assuming time, long, lat
-	plottee=axarr[pp].scatter(longrid[np.where(pltdiff > mdi)],latgrid[np.where(pltdiff > mdi)],c=pltdiff[np.where(pltdiff > mdi)],cmap=cmap,norm=norm,marker='o',linewidth=0.,s=4)
-        axarr[pp].annotate(lettees[pp]+' Pentad: '+str((pp*12)+1),xy=(0.03,0.92),xycoords='axes fraction',size=12)
-
-    cbax=f.add_axes([0.1,0.06,0.8,0.02])
-    cb=plt.colorbar(plottee,cax=cbax,orientation='horizontal',ticks=bounds) #, extend=extend
-    cb.ax.tick_params(labelsize=12) 
-    cb.ax.set_xticklabels(strbounds)
-    plt.figtext(0.5,0.02,innee2+'-'+innee1+' difference (%rh)',size=14,ha='center')    
-    
-     # save plots as eps and png
-#    plt.savefig(OUTDIR+OutMapsFilCRH+".eps")
-    plt.savefig(OUTDIR+OutMapsFilCRH+".png")
-
-    plt.clf()
-    plt.close()
-    
-    f,axarr=plt.subplots(6,figsize=(10,12),sharex=False)	    #6,18
-
-    for pp in range(6):
-        axarr[pp].set_position([xpos[pp],ypos[pp],xfat[pp],ytall[pp]])
-        axarr[pp].set_ylim(-91,90)
-        axarr[pp].set_xlim(-180,180)
-        axarr[pp].set_ylabel('Latitude')
-        axarr[pp].set_xlabel('Longitude')
-        pltdiff = OBSminERACWB[ptsplt[pp],:,:] # assuming time, long, lat
-	plottee=axarr[pp].scatter(longrid[np.where(pltdiff > mdi)],latgrid[np.where(pltdiff > mdi)],c=pltdiff[np.where(pltdiff > mdi)],cmap=cmap,norm=norm,marker='o',linewidth=0.,s=4)
-        axarr[pp].annotate(lettees[pp]+' Pentad: '+str((pp*12)+1),xy=(0.03,0.92),xycoords='axes fraction',size=12)
-
-    cbax=f.add_axes([0.1,0.06,0.8,0.02])
-    cb=plt.colorbar(plottee,cax=cbax,orientation='horizontal',ticks=bounds) #, extend=extend
-    cb.ax.tick_params(labelsize=12) 
-    cb.ax.set_xticklabels(strbounds)
-    plt.figtext(0.5,0.02,innee2+'-'+innee1+' difference (deg C)',size=14,ha='center')    
-    
-     # save plots as eps and png
-#    plt.savefig(OUTDIR+OutMapsFilCWB+".eps")
-    plt.savefig(OUTDIR+OutMapsFilCWB+".png")
-
-    plt.clf()
-    plt.close()
-
-    # set up colour scheme red blue
-    cmap=plt.get_cmap('BrBG') # PiYG
-        
-    cmaplist=[cmap(i) for i in range(cmap.N)]
-    for loo in range((cmap.N/2)-30,(cmap.N/2)+30):
-        cmaplist.remove(cmaplist[(cmap.N/2)-30]) # remove the very pale colours in the middle
-    #cmaplist.remove(cmaplist[(cmap.N/2)-10:(cmap.N/2)+10]) # remove the very pale colours in the middle
-
-# remove the darkest and lightest (white and black) - and reverse
-#    for loo in range(40):
-#        cmaplist.remove(cmaplist[loo])
-    cmaplist.reverse()
-#    for loo in range(10):
-#        cmaplist.remove(cmaplist[loo])
-#    cmaplist.reverse()
-
-    cmap=cmap.from_list('this_cmap',cmaplist,cmap.N)
-    
-    f,axarr=plt.subplots(6,figsize=(10,12),sharex=False)	    #6,18
-
-    for pp in range(6):
-        axarr[pp].set_position([xpos[pp],ypos[pp],xfat[pp],ytall[pp]])
-        axarr[pp].set_ylim(-91,90)
-        axarr[pp].set_xlim(-180,180)
-        axarr[pp].set_ylabel('Latitude')
-        axarr[pp].set_xlabel('Longitude')
-        pltdiff = OBSminERADPD[ptsplt[pp],:,:] # assuming time, long, lat
-	plottee=axarr[pp].scatter(longrid[np.where(pltdiff > mdi)],latgrid[np.where(pltdiff > mdi)],c=pltdiff[np.where(pltdiff > mdi)],cmap=cmap,norm=norm,marker='o',linewidth=0.,s=4)
-        axarr[pp].annotate(lettees[pp]+' Pentad: '+str((pp*12)+1),xy=(0.03,0.92),xycoords='axes fraction',size=12)
-
-    cbax=f.add_axes([0.1,0.06,0.8,0.02])
-    cb=plt.colorbar(plottee,cax=cbax,orientation='horizontal',ticks=bounds) #, extend=extend
-    cb.ax.tick_params(labelsize=12) 
-    cb.ax.set_xticklabels(strbounds)
-    plt.figtext(0.5,0.02,innee2+'-'+innee1+' difference (deg C)',size=14,ha='center')    
-    
-     # save plots as eps and png
-#    plt.savefig(OUTDIR+OutMapsFilDPD+".eps")
-    plt.savefig(OUTDIR+OutMapsFilDPD+".png")
-
-
+    # Create CLIMATOLOGY difference fields where there are non-missing data
     # create ATdiffs
-    OBSminERAAT = np.empty_like(ERAAT)
-    OBSminERAAT.fill(mdi)
+    BminAAT = np.empty_like(AAT)
+    BminAAT.fill(mdi)
 
-    OBSminERAAT[np.where(OBSATsd > mdi)] = OBSATsd[np.where(OBSATsd > mdi)] - ERAATsd[np.where(OBSATsd > mdi)]
+    BminAAT[np.where((BATsd > mdi) & (AATsd > mdi))] = BATsd[np.where((BATsd > mdi) & (AATsd > mdi))] - AATsd[np.where((BATsd > mdi) & (AATsd > mdi))]
+#    print('Check differencing')
+#    pdb.set_trace()
             
     # create DPTdiffs
-    OBSminERADPT = np.empty_like(ERAAT)
-    OBSminERADPT.fill(mdi)
+    BminADPT = np.empty_like(AAT)
+    BminADPT.fill(mdi)
     
-    OBSminERADPT[np.where(OBSDPTsd > mdi)] = OBSDPTsd[np.where(OBSDPTsd > mdi)] - ERADPTsd[np.where(OBSDPTsd > mdi)]
+    BminADPT[np.where((BDPTsd > mdi) & (ADPTsd > mdi))] = BDPTsd[np.where((BDPTsd > mdi) & (ADPTsd > mdi))] - ADPTsd[np.where((BDPTsd > mdi) & (ADPTsd > mdi))]
 
     # create SHUdiffs
-    OBSminERASHU = np.empty_like(ERAAT)
-    OBSminERASHU.fill(mdi)
+    BminASHU = np.empty_like(AAT)
+    BminASHU.fill(mdi)
     
-    OBSminERASHU[np.where(OBSSHUsd > mdi)] = OBSSHUsd[np.where(OBSSHUsd > mdi)] - ERASHUsd[np.where(OBSSHUsd > mdi)]
+    BminASHU[np.where((BSHUsd > mdi) & (ASHUsd > mdi))] = BSHUsd[np.where((BSHUsd > mdi) & (ASHUsd > mdi))] - ASHUsd[np.where((BSHUsd > mdi) & (ASHUsd > mdi))]
 
     # create VAPdiffs
-    OBSminERAVAP = np.empty_like(ERAAT)
-    OBSminERAVAP.fill(mdi)
+    BminAVAP = np.empty_like(AAT)
+    BminAVAP.fill(mdi)
     
-    OBSminERAVAP[np.where(OBSVAPsd > mdi)] = OBSVAPsd[np.where(OBSVAPsd > mdi)] - ERAVAPsd[np.where(OBSVAPsd > mdi)]
+    BminAVAP[np.where((BVAPsd > mdi) & (AVAPsd > mdi))] = BVAPsd[np.where((BVAPsd > mdi) & (AVAPsd > mdi))] - AVAPsd[np.where((BVAPsd > mdi) & (AVAPsd > mdi))]
 
     # create CRHdiffs
-    OBSminERACRH = np.empty_like(ERAAT)
-    OBSminERACRH.fill(mdi)
+    BminACRH = np.empty_like(AAT)
+    BminACRH.fill(mdi)
     
-    OBSminERACRH[np.where(OBSCRHsd > mdi)] = OBSCRHsd[np.where(OBSCRHsd > mdi)] - ERACRHsd[np.where(OBSCRHsd > mdi)]
+    BminACRH[np.where((BCRHsd > mdi) & (ACRHsd > mdi))] = BCRHsd[np.where((BCRHsd > mdi) & (ACRHsd > mdi))] - ACRHsd[np.where((BCRHsd > mdi) & (ACRHsd > mdi))]
 
     # create CWBdiffs
-    OBSminERACWB = np.empty_like(ERAAT)
-    OBSminERACWB.fill(mdi)
+    BminACWB = np.empty_like(AAT)
+    BminACWB.fill(mdi)
     
-    OBSminERACWB[np.where(OBSCWBsd > mdi)] = OBSCWBsd[np.where(OBSCWBsd > mdi)] - ERACWBsd[np.where(OBSCWBsd > mdi)]
+    BminACWB[np.where((BCWBsd > mdi) & (ACWBsd > mdi))] = BCWBsd[np.where((BCWBsd > mdi) & (ACWBsd > mdi))] - ACWBsd[np.where((BCWBsd > mdi) & (ACWBsd > mdi))]
 
     # create DPDdiffs
-    OBSminERADPD = np.empty_like(ERAAT)
-    OBSminERADPD.fill(mdi)
+    BminADPD = np.empty_like(AAT)
+    BminADPD.fill(mdi)
     
-    OBSminERADPD[np.where(OBSDPDsd > mdi)] = OBSDPDsd[np.where(OBSDPDsd > mdi)] - ERADPDsd[np.where(OBSDPDsd > mdi)]
+    BminADPD[np.where((BDPDsd > mdi) & (ADPDsd > mdi))] = BDPDsd[np.where((BDPDsd > mdi) & (ADPDsd > mdi))] - ADPDsd[np.where((BDPDsd > mdi) & (ADPDsd > mdi))]
     
-    # plot diffs by latitude = this is a 3 row by 2 column plot
+    # plot diffs by latitude for each variable = this is a 3 row by 2 column plot
+    PlotLatDistDiffs(OUTDIR+OutSDLatsFilAT,BminAAT,latgrid,lats,mdi,ptsplt,typee1,typee2,'deg C')  
+    PlotLatDistDiffs(OUTDIR+OutSDLatsFilDPT,BminADPT,latgrid,lats,mdi,ptsplt,typee1,typee2,'deg C')  
+    PlotLatDistDiffs(OUTDIR+OutSDLatsFilSHU,BminASHU,latgrid,lats,mdi,ptsplt,typee1,typee2,'g/kg')  
+    PlotLatDistDiffs(OUTDIR+OutSDLatsFilVAP,BminAVAP,latgrid,lats,mdi,ptsplt,typee1,typee2,'hPa')  
+    PlotLatDistDiffs(OUTDIR+OutSDLatsFilCRH,BminACRH,latgrid,lats,mdi,ptsplt,typee1,typee2,'%rh')  
+    PlotLatDistDiffs(OUTDIR+OutSDLatsFilCWB,BminACWB,latgrid,lats,mdi,ptsplt,typee1,typee2,'deg C')  
+    PlotLatDistDiffs(OUTDIR+OutSDLatsFilDPD,BminADPD,latgrid,lats,mdi,ptsplt,typee1,typee2,'deg C')  
+
+    # plot diff maps for each variables
+    PlotClimMapDiffs(OUTDIR+OutSDMapsFilAT,BminAAT,longrid,latgrid,mdi,ptsplt,'RdYlBu','Reverse',typee1,typee2,'deg C')
+    PlotClimMapDiffs(OUTDIR+OutSDMapsFilDPT,BminADPT,longrid,latgrid,mdi,ptsplt,'BrBG','Normal',typee1,typee2,'deg C')
+    PlotClimMapDiffs(OUTDIR+OutSDMapsFilSHU,BminASHU,longrid,latgrid,mdi,ptsplt,'BrBG','Normal',typee1,typee2,'g/kg')
+    PlotClimMapDiffs(OUTDIR+OutSDMapsFilVAP,BminAVAP,longrid,latgrid,mdi,ptsplt,'BrBG','Normal',typee1,typee2,'hPa')
+    PlotClimMapDiffs(OUTDIR+OutSDMapsFilCRH,BminACRH,longrid,latgrid,mdi,ptsplt,'BrBG','Normal',typee1,typee2,'%rh')
+    PlotClimMapDiffs(OUTDIR+OutSDMapsFilCWB,BminACWB,longrid,latgrid,mdi,ptsplt,'BrBG','Normal',typee1,typee2,'deg C')
+    PlotClimMapDiffs(OUTDIR+OutSDMapsFilDPD,BminADPD,longrid,latgrid,mdi,ptsplt,'BrBG','Reverse',typee1,typee2,'deg C')
     
-    xpos = [0.1, 0.6,0.1,0.6,0.1,0.6]
-    ypos = [0.7,0.7,0.37,0.37,0.04,0.04]
-    xfat = [0.37,0.37,0.37,0.37,0.37,0.37]
-    ytall = [0.28,0.28,0.28,0.28,0.28,0.28]
-
-    lettees = ['a)','b)','c)','d)','e)','f)']
-
-    plt.clf()
-    f,axarr=plt.subplots(6,figsize=(10,12),sharex=False)	    #6,18
-
-    for pp in range(6):
-        axarr[pp].set_position([xpos[pp],ypos[pp],xfat[pp],ytall[pp]])
-        #axarr[pp].set_xlim(0,60)
-        axarr[pp].set_ylim(-91,91)
-        axarr[pp].set_xlabel('Difference '+innee2+'-'+innee1+' degrees C')
-        axarr[pp].set_ylabel('Latitude')
-        pltdiff = OBSminERAAT[ptsplt[pp],:,:] # assuming time, lat, lon
-#        pdb.set_trace()
-	axarr[pp].scatter(np.reshape(pltdiff[np.where(pltdiff > mdi)],len(pltdiff[np.where(pltdiff > mdi)])),
-	                  np.reshape(latgrid[np.where(pltdiff > mdi)],len(latgrid[np.where(pltdiff > mdi)])),c='grey',marker='o',linewidth=0.,s=1)
-        axarr[pp].plot(np.zeros(180),lats,c='black')
-	axarr[pp].annotate(lettees[pp]+' Pentad: '+str((pp*12)+1),xy=(0.03,0.92),xycoords='axes fraction',size=12)
-        # for each degree of latitude, plot a line for the median estimate
-        # we may want to use some kind of polynomial?
-        mediandiff = np.empty_like(lats)
-        mediandiff.fill(mdi)
-        diff25 = np.empty_like(lats)
-        diff25.fill(mdi)
-        diff75 = np.empty_like(lats)
-        diff75.fill(mdi)
-        for ltt in range(180):
-            if (len(pltdiff[np.where(pltdiff[:,ltt] > mdi)[0],ltt]) > 0):
-	        if (ltt == 0):
-		    ltts = [ltt,ltt+1]
-	        if ((ltt > 0) & (ltt < 179)):
-		    ltts = [ltt-1,ltt,ltt+1]
-	        if (ltt == 179):
-		    ltts = [ltt-1,ltt]
-		diffmini = pltdiff[:,ltts]    
-	        mediandiff[ltt] = np.median(diffmini[np.where(diffmini > mdi)])
-	        diff25[ltt],diff75[ltt] = np.percentile(diffmini[np.where(diffmini > mdi)],[25,75])
-        axarr[pp].plot(mediandiff[np.where(mediandiff > mdi)[0]],lats[np.where(mediandiff > mdi)[0]],c='red')
-        axarr[pp].plot(diff25[np.where(diff25 > mdi)[0]],lats[np.where(diff25 > mdi)[0]],c='red',linestyle='dashed')
-        axarr[pp].plot(diff75[np.where(diff75 > mdi)[0]],lats[np.where(diff75 > mdi)[0]],c='red',linestyle='dashed')
-    
-     # save plots as eps and png
-#    plt.savefig(OUTDIR+OutSDLatsFilAT+".eps")
-    plt.savefig(OUTDIR+OutSDLatsFilAT+".png")
-
-    plt.clf()
-    f,axarr=plt.subplots(6,figsize=(10,12),sharex=False)	    #6,18
-
-    for pp in range(6):
-        axarr[pp].set_position([xpos[pp],ypos[pp],xfat[pp],ytall[pp]])
-        #axarr[pp].set_xlim(0,60)
-        axarr[pp].set_ylim(-91,91)
-        axarr[pp].set_xlabel('Difference '+innee2+'-'+innee1+' degrees C')
-        axarr[pp].set_ylabel('Latitude')
-        pltdiff = OBSminERADPT[ptsplt[pp],:,:] # assuming time, long, lat
-        axarr[pp].scatter(np.reshape(pltdiff[np.where(pltdiff > mdi)],len(pltdiff[np.where(pltdiff > mdi)])),np.reshape(latgrid[np.where(pltdiff > mdi)],len(latgrid[np.where(pltdiff > mdi)])),c='grey',marker='o',linewidth=0.,s=1)
-        axarr[pp].plot(np.zeros(180),lats,c='black')
-        axarr[pp].annotate(lettees[pp]+' Pentad: '+str((pp*12)+1),xy=(0.03,0.92),xycoords='axes fraction',size=12)
-        # for each degree of latitude, plot a line for the median estimate
-        # we may want to use some kind of polynomial?
-        mediandiff = np.empty_like(lats)
-        mediandiff.fill(mdi)
-        sddiff = np.empty_like(lats)
-        sddiff.fill(mdi)
-        for ltt in range(180):
-            if (len(pltdiff[np.where(pltdiff[:,ltt] > mdi)[0],ltt]) > 0):
-	        if (ltt == 0):
-		    ltts = [ltt,ltt+1]
-	        if ((ltt > 0) & (ltt < 179)):
-		    ltts = [ltt-1,ltt,ltt+1]
-	        if (ltt == 179):
-		    ltts = [ltt-1,ltt]
-		diffmini = pltdiff[:,ltts]    
-	        mediandiff[ltt] = np.median(diffmini[np.where(diffmini > mdi)])   # np.median(pltdiff[np.where(pltdiff[:,ltts] > mdi)[0],ltts])
-	        diff25[ltt],diff75[ltt] = np.percentile(diffmini[np.where(diffmini > mdi)],[25,75])
-        axarr[pp].plot(mediandiff[np.where(mediandiff > mdi)[0]],lats[np.where(mediandiff > mdi)[0]],c='red')
-        axarr[pp].plot(diff25[np.where(diff25 > mdi)[0]],lats[np.where(diff25 > mdi)[0]],c='red',linestyle='dashed')
-        axarr[pp].plot(diff75[np.where(diff75 > mdi)[0]],lats[np.where(diff75 > mdi)[0]],c='red',linestyle='dashed')
-    
-     # save plots as eps and png
-#    plt.savefig(OUTDIR+OutSDLatsFilDPT+".eps")
-    plt.savefig(OUTDIR+OutSDLatsFilDPT+".png")
-
-    plt.clf()
-    f,axarr=plt.subplots(6,figsize=(10,12),sharex=False)	    #6,18
-
-    for pp in range(6):
-        axarr[pp].set_position([xpos[pp],ypos[pp],xfat[pp],ytall[pp]])
-        #axarr[pp].set_xlim(0,60)
-        axarr[pp].set_ylim(-91,91)
-        axarr[pp].set_xlabel('Difference '+innee2+'-'+innee1+' g/kg')
-        axarr[pp].set_ylabel('Latitude')
-        pltdiff = OBSminERASHU[ptsplt[pp],:,:] # assuming time, long, lat
-        axarr[pp].scatter(np.reshape(pltdiff[np.where(pltdiff > mdi)],len(pltdiff[np.where(pltdiff > mdi)])),np.reshape(latgrid[np.where(pltdiff > mdi)],len(latgrid[np.where(pltdiff > mdi)])),c='grey',marker='o',linewidth=0.,s=1)
-        axarr[pp].plot(np.zeros(180),lats,c='black')
-        axarr[pp].annotate(lettees[pp]+' Pentad: '+str((pp*12)+1),xy=(0.03,0.92),xycoords='axes fraction',size=12)
-        # for each degree of latitude, plot a line for the median estimate
-        # we may want to use some kind of polynomial?
-        mediandiff = np.empty_like(lats)
-        mediandiff.fill(mdi)
-        sddiff = np.empty_like(lats)
-        sddiff.fill(mdi)
-        for ltt in range(180):
-            if (len(pltdiff[np.where(pltdiff[:,ltt] > mdi)[0],ltt]) > 0):
-	        if (ltt == 0):
-		    ltts = [ltt,ltt+1]
-	        if ((ltt > 0) & (ltt < 179)):
-		    ltts = [ltt-1,ltt,ltt+1]
-	        if (ltt == 179):
-		    ltts = [ltt-1,ltt]
-		diffmini = pltdiff[:,ltts]    
-	        mediandiff[ltt] = np.median(diffmini[np.where(diffmini > mdi)])   # np.median(pltdiff[np.where(pltdiff[:,ltts] > mdi)[0],ltts])
-	        diff25[ltt],diff75[ltt] = np.percentile(diffmini[np.where(diffmini > mdi)],[25,75])
-        axarr[pp].plot(mediandiff[np.where(mediandiff > mdi)[0]],lats[np.where(mediandiff > mdi)[0]],c='red')
-        axarr[pp].plot(diff25[np.where(diff25 > mdi)[0]],lats[np.where(diff25 > mdi)[0]],c='red',linestyle='dashed')
-        axarr[pp].plot(diff75[np.where(diff75 > mdi)[0]],lats[np.where(diff75 > mdi)[0]],c='red',linestyle='dashed')
-    
-     # save plots as eps and png
-#    plt.savefig(OUTDIR+OutSDLatsFilSHU+".eps")
-    plt.savefig(OUTDIR+OutSDLatsFilSHU+".png")
-
-    plt.clf()
-    f,axarr=plt.subplots(6,figsize=(10,12),sharex=False)	    #6,18
-
-    for pp in range(6):
-        axarr[pp].set_position([xpos[pp],ypos[pp],xfat[pp],ytall[pp]])
-        #axarr[pp].set_xlim(0,60)
-        axarr[pp].set_ylim(-91,91)
-        axarr[pp].set_xlabel('Difference '+innee2+'-'+innee1+' hPa')
-        axarr[pp].set_ylabel('Latitude')
-        pltdiff = OBSminERAVAP[ptsplt[pp],:,:] # assuming time, long, lat
-        axarr[pp].scatter(np.reshape(pltdiff[np.where(pltdiff > mdi)],len(pltdiff[np.where(pltdiff > mdi)])),np.reshape(latgrid[np.where(pltdiff > mdi)],len(latgrid[np.where(pltdiff > mdi)])),c='grey',marker='o',linewidth=0.,s=1)
-        axarr[pp].plot(np.zeros(180),lats,c='black')
-        axarr[pp].annotate(lettees[pp]+' Pentad: '+str((pp*12)+1),xy=(0.03,0.92),xycoords='axes fraction',size=12)
-        # for each degree of latitude, plot a line for the median estimate
-        # we may want to use some kind of polynomial?
-        mediandiff = np.empty_like(lats)
-        mediandiff.fill(mdi)
-        sddiff = np.empty_like(lats)
-        sddiff.fill(mdi)
-        for ltt in range(180):
-            if (len(pltdiff[np.where(pltdiff[:,ltt] > mdi)[0],ltt]) > 0):
-	        if (ltt == 0):
-		    ltts = [ltt,ltt+1]
-	        if ((ltt > 0) & (ltt < 179)):
-		    ltts = [ltt-1,ltt,ltt+1]
-	        if (ltt == 179):
-		    ltts = [ltt-1,ltt]
-		diffmini = pltdiff[:,ltts]    
-	        mediandiff[ltt] = np.median(diffmini[np.where(diffmini > mdi)])   # np.median(pltdiff[np.where(pltdiff[:,ltts] > mdi)[0],ltts])
-	        diff25[ltt],diff75[ltt] = np.percentile(diffmini[np.where(diffmini > mdi)],[25,75])
-        axarr[pp].plot(mediandiff[np.where(mediandiff > mdi)[0]],lats[np.where(mediandiff > mdi)[0]],c='red')
-        axarr[pp].plot(diff25[np.where(diff25 > mdi)[0]],lats[np.where(diff25 > mdi)[0]],c='red',linestyle='dashed')
-        axarr[pp].plot(diff75[np.where(diff75 > mdi)[0]],lats[np.where(diff75 > mdi)[0]],c='red',linestyle='dashed')
-    
-     # save plots as eps and png
-#    plt.savefig(OUTDIR+OutSDLatsFilVAP+".eps")
-    plt.savefig(OUTDIR+OutSDLatsFilVAP+".png")
-
-    plt.clf()
-    f,axarr=plt.subplots(6,figsize=(10,12),sharex=False)	    #6,18
-
-    for pp in range(6):
-        axarr[pp].set_position([xpos[pp],ypos[pp],xfat[pp],ytall[pp]])
-        #axarr[pp].set_xlim(0,60)
-        axarr[pp].set_ylim(-91,91)
-        axarr[pp].set_xlabel('Difference '+innee2+'-'+innee1+' %rh')
-        axarr[pp].set_ylabel('Latitude')
-        pltdiff = OBSminERACRH[ptsplt[pp],:,:] # assuming time, long, lat
-        axarr[pp].scatter(np.reshape(pltdiff[np.where(pltdiff > mdi)],len(pltdiff[np.where(pltdiff > mdi)])),np.reshape(latgrid[np.where(pltdiff > mdi)],len(latgrid[np.where(pltdiff > mdi)])),c='grey',marker='o',linewidth=0.,s=1)
-        axarr[pp].plot(np.zeros(180),lats,c='black')
-        axarr[pp].annotate(lettees[pp]+' Pentad: '+str((pp*12)+1),xy=(0.03,0.92),xycoords='axes fraction',size=12)
-        # for each degree of latitude, plot a line for the median estimate
-        # we may want to use some kind of polynomial?
-        mediandiff = np.empty_like(lats)
-        mediandiff.fill(mdi)
-        sddiff = np.empty_like(lats)
-        sddiff.fill(mdi)
-        for ltt in range(180):
-            if (len(pltdiff[np.where(pltdiff[:,ltt] > mdi)[0],ltt]) > 0):
-	        if (ltt == 0):
-		    ltts = [ltt,ltt+1]
-	        if ((ltt > 0) & (ltt < 179)):
-		    ltts = [ltt-1,ltt,ltt+1]
-	        if (ltt == 179):
-		    ltts = [ltt-1,ltt]
-		diffmini = pltdiff[:,ltts]    
-	        mediandiff[ltt] = np.median(diffmini[np.where(diffmini > mdi)])   # np.median(pltdiff[np.where(pltdiff[:,ltts] > mdi)[0],ltts])
-	        diff25[ltt],diff75[ltt] = np.percentile(diffmini[np.where(diffmini > mdi)],[25,75])
-        axarr[pp].plot(mediandiff[np.where(mediandiff > mdi)[0]],lats[np.where(mediandiff > mdi)[0]],c='red')
-        axarr[pp].plot(diff25[np.where(diff25 > mdi)[0]],lats[np.where(diff25 > mdi)[0]],c='red',linestyle='dashed')
-        axarr[pp].plot(diff75[np.where(diff75 > mdi)[0]],lats[np.where(diff75 > mdi)[0]],c='red',linestyle='dashed')
-    
-     # save plots as eps and png
-#    plt.savefig(OUTDIR+OutSDLatsFilCRH+".eps")
-    plt.savefig(OUTDIR+OutSDLatsFilCRH+".png")
-
-    plt.clf()
-    f,axarr=plt.subplots(6,figsize=(10,12),sharex=False)	    #6,18
-
-    for pp in range(6):
-        axarr[pp].set_position([xpos[pp],ypos[pp],xfat[pp],ytall[pp]])
-        #axarr[pp].set_xlim(0,60)
-        axarr[pp].set_ylim(-91,91)
-        axarr[pp].set_xlabel('Difference '+innee2+'-'+innee1+' degrees C')
-        axarr[pp].set_ylabel('Latitude')
-        pltdiff = OBSminERACWB[ptsplt[pp],:,:] # assuming time, long, lat
-        axarr[pp].scatter(np.reshape(pltdiff[np.where(pltdiff > mdi)],len(pltdiff[np.where(pltdiff > mdi)])),np.reshape(latgrid[np.where(pltdiff > mdi)],len(latgrid[np.where(pltdiff > mdi)])),c='grey',marker='o',linewidth=0.,s=1)
-        axarr[pp].plot(np.zeros(180),lats,c='black')
-        axarr[pp].annotate(lettees[pp]+' Pentad: '+str((pp*12)+1),xy=(0.03,0.92),xycoords='axes fraction',size=12)
-        # for each degree of latitude, plot a line for the median estimate
-        # we may want to use some kind of polynomial?
-        mediandiff = np.empty_like(lats)
-        mediandiff.fill(mdi)
-        sddiff = np.empty_like(lats)
-        sddiff.fill(mdi)
-        for ltt in range(180):
-            if (len(pltdiff[np.where(pltdiff[:,ltt] > mdi)[0],ltt]) > 0):
-	        if (ltt == 0):
-		    ltts = [ltt,ltt+1]
-	        if ((ltt > 0) & (ltt < 179)):
-		    ltts = [ltt-1,ltt,ltt+1]
-	        if (ltt == 179):
-		    ltts = [ltt-1,ltt]
-		diffmini = pltdiff[:,ltts]    
-	        mediandiff[ltt] = np.median(diffmini[np.where(diffmini > mdi)])   # np.median(pltdiff[np.where(pltdiff[:,ltts] > mdi)[0],ltts])
-	        diff25[ltt],diff75[ltt] = np.percentile(diffmini[np.where(diffmini > mdi)],[25,75])
-        axarr[pp].plot(mediandiff[np.where(mediandiff > mdi)[0]],lats[np.where(mediandiff > mdi)[0]],c='red')
-        axarr[pp].plot(diff25[np.where(diff25 > mdi)[0]],lats[np.where(diff25 > mdi)[0]],c='red',linestyle='dashed')
-        axarr[pp].plot(diff75[np.where(diff75 > mdi)[0]],lats[np.where(diff75 > mdi)[0]],c='red',linestyle='dashed')
-    
-     # save plots as eps and png
-#    plt.savefig(OUTDIR+OutSDLatsFilCWB+".eps")
-    plt.savefig(OUTDIR+OutSDLatsFilCWB+".png")
-
-    plt.clf()
-    f,axarr=plt.subplots(6,figsize=(10,12),sharex=False)	    #6,18
-
-    for pp in range(6):
-        axarr[pp].set_position([xpos[pp],ypos[pp],xfat[pp],ytall[pp]])
-        #axarr[pp].set_xlim(0,60)
-        axarr[pp].set_ylim(-91,91)
-        axarr[pp].set_xlabel('Difference '+innee2+'-'+innee1+' degrees C')
-        axarr[pp].set_ylabel('Latitude')
-        pltdiff = OBSminERADPD[ptsplt[pp],:,:] # assuming time, long, lat
-        axarr[pp].scatter(np.reshape(pltdiff[np.where(pltdiff > mdi)],len(pltdiff[np.where(pltdiff > mdi)])),np.reshape(latgrid[np.where(pltdiff > mdi)],len(latgrid[np.where(pltdiff > mdi)])),c='grey',marker='o',linewidth=0.,s=1)
-        axarr[pp].plot(np.zeros(180),lats,c='black')
-        axarr[pp].annotate(lettees[pp]+' Pentad: '+str((pp*12)+1),xy=(0.03,0.92),xycoords='axes fraction',size=12)
-        # for each degree of latitude, plot a line for the median estimate
-        # we may want to use some kind of polynomial?
-        mediandiff = np.empty_like(lats)
-        mediandiff.fill(mdi)
-        sddiff = np.empty_like(lats)
-        sddiff.fill(mdi)
-        for ltt in range(180):
-            if (len(pltdiff[np.where(pltdiff[:,ltt] > mdi)[0],ltt]) > 0):
-	        if (ltt == 0):
-		    ltts = [ltt,ltt+1]
-	        if ((ltt > 0) & (ltt < 179)):
-		    ltts = [ltt-1,ltt,ltt+1]
-	        if (ltt == 179):
-		    ltts = [ltt-1,ltt]
-		diffmini = pltdiff[:,ltts]    
-	        mediandiff[ltt] = np.median(diffmini[np.where(diffmini > mdi)])   # np.median(pltdiff[np.where(pltdiff[:,ltts] > mdi)[0],ltts])
-	        diff25[ltt],diff75[ltt] = np.percentile(diffmini[np.where(diffmini > mdi)],[25,75])
-        axarr[pp].plot(mediandiff[np.where(mediandiff > mdi)[0]],lats[np.where(mediandiff > mdi)[0]],c='red')
-        axarr[pp].plot(diff25[np.where(diff25 > mdi)[0]],lats[np.where(diff25 > mdi)[0]],c='red',linestyle='dashed')
-        axarr[pp].plot(diff75[np.where(diff75 > mdi)[0]],lats[np.where(diff75 > mdi)[0]],c='red',linestyle='dashed')
-    
-     # save plots as eps and png
-#    plt.savefig(OUTDIR+OutSDLatsFilDPD+".eps")
-    plt.savefig(OUTDIR+OutSDLatsFilDPD+".png")
-
-
-    # set up colour scheme
-    cmap=plt.get_cmap('RdYlBu') # PiYG
-        
-    cmaplist=[cmap(i) for i in range(cmap.N)]
-    for loo in range((cmap.N/2)-30,(cmap.N/2)+30):
-        cmaplist.remove(cmaplist[(cmap.N/2)-30]) # remove the very pale colours in the middle
-    #cmaplist.remove(cmaplist[(cmap.N/2)-10:(cmap.N/2)+10]) # remove the very pale colours in the middle
-
-# remove the darkest and lightest (white and black) - and reverse
-#    for loo in range(40):
-#        cmaplist.remove(cmaplist[loo])
-    cmaplist.reverse()
-#    for loo in range(10):
-#        cmaplist.remove(cmaplist[loo])
-#    cmaplist.reverse()
-
-    cmap=cmap.from_list('this_cmap',cmaplist,cmap.N)
-    
-    bounds=np.array([-15,-10,-5,-2,0,2,5,10,15])
-    strbounds=["%3d" % i for i in bounds]
-    norm=mpl_cm.colors.BoundaryNorm(bounds,cmap.N)
-
-    # plot diff maps
-    
-    xpos = [0.1, 0.6,0.1,0.6,0.1,0.6]
-    ypos = [0.74,0.74,0.45,0.45,0.16,0.16]
-    xfat = [0.37,0.37,0.37,0.37,0.37,0.37]
-    ytall = [0.24,0.24,0.24,0.24,0.24,0.24]
-
-    plt.clf()
-    f,axarr=plt.subplots(6,figsize=(10,12),sharex=False)	    #6,18
-
-    for pp in range(6):
-        axarr[pp].set_position([xpos[pp],ypos[pp],xfat[pp],ytall[pp]])
-        axarr[pp].set_ylim(-91,90)
-        axarr[pp].set_xlim(-180,180)
-        axarr[pp].set_ylabel('Latitude')
-        axarr[pp].set_xlabel('Longitude')
-        pltdiff = OBSminERAAT[ptsplt[pp],:,:] # assuming time, long, lat
-	plottee=axarr[pp].scatter(longrid[np.where(pltdiff > mdi)],latgrid[np.where(pltdiff > mdi)],c=pltdiff[np.where(pltdiff > mdi)],cmap=cmap,norm=norm,marker='o',linewidth=0.,s=4)
-        axarr[pp].annotate(lettees[pp]+' Pentad: '+str((pp*12)+1),xy=(0.03,0.92),xycoords='axes fraction',size=12)
-
-    cbax=f.add_axes([0.1,0.06,0.8,0.02])
-    cb=plt.colorbar(plottee,cax=cbax,orientation='horizontal',ticks=bounds) #, extend=extend
-    cb.ax.tick_params(labelsize=12) 
-    cb.ax.set_xticklabels(strbounds)
-    plt.figtext(0.5,0.02,innee2+'-'+innee1+' difference (deg C)',size=14,ha='center')    
-    
-     # save plots as eps and png
-#    plt.savefig(OUTDIR+OutSDMapsFilAT+".eps")
-    plt.savefig(OUTDIR+OutSDMapsFilAT+".png")
-
-    # set up colour scheme red blue
-    cmap=plt.get_cmap('BrBG') # PiYG
-        
-    cmaplist=[cmap(i) for i in range(cmap.N)]
-    for loo in range((cmap.N/2)-30,(cmap.N/2)+30):
-        cmaplist.remove(cmaplist[(cmap.N/2)-30]) # remove the very pale colours in the middle
-    #cmaplist.remove(cmaplist[(cmap.N/2)-10:(cmap.N/2)+10]) # remove the very pale colours in the middle
-
-# remove the darkest and lightest (white and black) - and reverse
-#    for loo in range(40):
-#        cmaplist.remove(cmaplist[loo])
-#    cmaplist.reverse()
-#    for loo in range(10):
-#        cmaplist.remove(cmaplist[loo])
-#    cmaplist.reverse()
-
-    cmap=cmap.from_list('this_cmap',cmaplist,cmap.N)
-
-    plt.clf()
-    f,axarr=plt.subplots(6,figsize=(10,12),sharex=False)	    #6,18
-
-    for pp in range(6):
-        axarr[pp].set_position([xpos[pp],ypos[pp],xfat[pp],ytall[pp]])
-        axarr[pp].set_ylim(-91,90)
-        axarr[pp].set_xlim(-180,180)
-        axarr[pp].set_ylabel('Latitude')
-        axarr[pp].set_xlabel('Longitude')
-        pltdiff = OBSminERADPT[ptsplt[pp],:,:] # assuming time, long, lat
-	plottee=axarr[pp].scatter(longrid[np.where(pltdiff > mdi)],latgrid[np.where(pltdiff > mdi)],c=pltdiff[np.where(pltdiff > mdi)],cmap=cmap,norm=norm,marker='o',linewidth=0.,s=4)
-        axarr[pp].annotate(lettees[pp]+' Pentad: '+str((pp*12)+1),xy=(0.03,0.92),xycoords='axes fraction',size=12)
-
-    cbax=f.add_axes([0.1,0.06,0.8,0.02])
-    cb=plt.colorbar(plottee,cax=cbax,orientation='horizontal',ticks=bounds) #, extend=extend
-    cb.ax.tick_params(labelsize=12) 
-    cb.ax.set_xticklabels(strbounds)
-    plt.figtext(0.5,0.02,innee2+'-'+innee1+' difference (deg C)',size=14,ha='center')    
-    
-     # save plots as eps and png
-#    plt.savefig(OUTDIR+OutSDMapsFilDPT+".eps")
-    plt.savefig(OUTDIR+OutSDMapsFilDPT+".png")
-
-    plt.clf()
-    f,axarr=plt.subplots(6,figsize=(10,12),sharex=False)	    #6,18
-
-    for pp in range(6):
-        axarr[pp].set_position([xpos[pp],ypos[pp],xfat[pp],ytall[pp]])
-        axarr[pp].set_ylim(-91,90)
-        axarr[pp].set_xlim(-180,180)
-        axarr[pp].set_ylabel('Latitude')
-        axarr[pp].set_xlabel('Longitude')
-        pltdiff = OBSminERASHU[ptsplt[pp],:,:] # assuming time, long, lat
-	plottee=axarr[pp].scatter(longrid[np.where(pltdiff > mdi)],latgrid[np.where(pltdiff > mdi)],c=pltdiff[np.where(pltdiff > mdi)],cmap=cmap,norm=norm,marker='o',linewidth=0.,s=4)
-        axarr[pp].annotate(lettees[pp]+' Pentad: '+str((pp*12)+1),xy=(0.03,0.92),xycoords='axes fraction',size=12)
-
-    cbax=f.add_axes([0.1,0.06,0.8,0.02])
-    cb=plt.colorbar(plottee,cax=cbax,orientation='horizontal',ticks=bounds) #, extend=extend
-    cb.ax.tick_params(labelsize=12) 
-    cb.ax.set_xticklabels(strbounds)
-    plt.figtext(0.5,0.02,innee2+'-'+innee1+' difference (g/kg)',size=14,ha='center')    
-    
-     # save plots as eps and png
-#    plt.savefig(OUTDIR+OutSDMapsFilSHU+".eps")
-    plt.savefig(OUTDIR+OutSDMapsFilSHU+".png")
-
-    plt.clf()
-    f,axarr=plt.subplots(6,figsize=(10,12),sharex=False)	    #6,18
-
-    for pp in range(6):
-        axarr[pp].set_position([xpos[pp],ypos[pp],xfat[pp],ytall[pp]])
-        axarr[pp].set_ylim(-91,90)
-        axarr[pp].set_xlim(-180,180)
-        axarr[pp].set_ylabel('Latitude')
-        axarr[pp].set_xlabel('Longitude')
-        pltdiff = OBSminERAVAP[ptsplt[pp],:,:] # assuming time, long, lat
-	plottee=axarr[pp].scatter(longrid[np.where(pltdiff > mdi)],latgrid[np.where(pltdiff > mdi)],c=pltdiff[np.where(pltdiff > mdi)],cmap=cmap,norm=norm,marker='o',linewidth=0.,s=4)
-        axarr[pp].annotate(lettees[pp]+' Pentad: '+str((pp*12)+1),xy=(0.03,0.92),xycoords='axes fraction',size=12)
-
-    cbax=f.add_axes([0.1,0.06,0.8,0.02])
-    cb=plt.colorbar(plottee,cax=cbax,orientation='horizontal',ticks=bounds) #, extend=extend
-    cb.ax.tick_params(labelsize=12) 
-    cb.ax.set_xticklabels(strbounds)
-    plt.figtext(0.5,0.02,innee2+'-'+innee1+' difference (hPa)',size=14,ha='center')    
-    
-     # save plots as eps and png
-#    plt.savefig(OUTDIR+OutSDMapsFilVAP+".eps")
-    plt.savefig(OUTDIR+OutSDMapsFilVAP+".png")
-
-    plt.clf()
-    f,axarr=plt.subplots(6,figsize=(10,12),sharex=False)	    #6,18
-
-    for pp in range(6):
-        axarr[pp].set_position([xpos[pp],ypos[pp],xfat[pp],ytall[pp]])
-        axarr[pp].set_ylim(-91,90)
-        axarr[pp].set_xlim(-180,180)
-        axarr[pp].set_ylabel('Latitude')
-        axarr[pp].set_xlabel('Longitude')
-        pltdiff = OBSminERACRH[ptsplt[pp],:,:] # assuming time, long, lat
-	plottee=axarr[pp].scatter(longrid[np.where(pltdiff > mdi)],latgrid[np.where(pltdiff > mdi)],c=pltdiff[np.where(pltdiff > mdi)],cmap=cmap,norm=norm,marker='o',linewidth=0.,s=4)
-        axarr[pp].annotate(lettees[pp]+' Pentad: '+str((pp*12)+1),xy=(0.03,0.92),xycoords='axes fraction',size=12)
-
-    cbax=f.add_axes([0.1,0.06,0.8,0.02])
-    cb=plt.colorbar(plottee,cax=cbax,orientation='horizontal',ticks=bounds) #, extend=extend
-    cb.ax.tick_params(labelsize=12) 
-    cb.ax.set_xticklabels(strbounds)
-    plt.figtext(0.5,0.02,'OBS-ERA difference (%rh)',size=14,ha='center')    
-    
-     # save plots as eps and png
-#    plt.savefig(OUTDIR+OutSDMapsFilCRH+".eps")
-    plt.savefig(OUTDIR+OutSDMapsFilCRH+".png")
-
-    plt.clf()
-    f,axarr=plt.subplots(6,figsize=(10,12),sharex=False)	    #6,18
-
-    for pp in range(6):
-        axarr[pp].set_position([xpos[pp],ypos[pp],xfat[pp],ytall[pp]])
-        axarr[pp].set_ylim(-91,90)
-        axarr[pp].set_xlim(-180,180)
-        axarr[pp].set_ylabel('Latitude')
-        axarr[pp].set_xlabel('Longitude')
-        pltdiff = OBSminERACWB[ptsplt[pp],:,:] # assuming time, long, lat
-	plottee=axarr[pp].scatter(longrid[np.where(pltdiff > mdi)],latgrid[np.where(pltdiff > mdi)],c=pltdiff[np.where(pltdiff > mdi)],cmap=cmap,norm=norm,marker='o',linewidth=0.,s=4)
-        axarr[pp].annotate(lettees[pp]+' Pentad: '+str((pp*12)+1),xy=(0.03,0.92),xycoords='axes fraction',size=12)
-
-    cbax=f.add_axes([0.1,0.06,0.8,0.02])
-    cb=plt.colorbar(plottee,cax=cbax,orientation='horizontal',ticks=bounds) #, extend=extend
-    cb.ax.tick_params(labelsize=12) 
-    cb.ax.set_xticklabels(strbounds)
-    plt.figtext(0.5,0.02,innee2+'-'+innee1+' difference (deg C)',size=14,ha='center')    
-    
-     # save plots as eps and png
-#    plt.savefig(OUTDIR+OutSDMapsFilCWB+".eps")
-    plt.savefig(OUTDIR+OutSDMapsFilCWB+".png")
-
-    # set up colour scheme red blue
-    cmap=plt.get_cmap('BrBG') # PiYG
-        
-    cmaplist=[cmap(i) for i in range(cmap.N)]
-    for loo in range((cmap.N/2)-30,(cmap.N/2)+30):
-        cmaplist.remove(cmaplist[(cmap.N/2)-30]) # remove the very pale colours in the middle
-    #cmaplist.remove(cmaplist[(cmap.N/2)-10:(cmap.N/2)+10]) # remove the very pale colours in the middle
-
-# remove the darkest and lightest (white and black) - and reverse
-#    for loo in range(40):
-#        cmaplist.remove(cmaplist[loo])
-    cmaplist.reverse()
-#    for loo in range(10):
-#        cmaplist.remove(cmaplist[loo])
-#    cmaplist.reverse()
-
-    cmap=cmap.from_list('this_cmap',cmaplist,cmap.N)
-
-    plt.clf()
-    f,axarr=plt.subplots(6,figsize=(10,12),sharex=False)	    #6,18
-
-    for pp in range(6):
-        axarr[pp].set_position([xpos[pp],ypos[pp],xfat[pp],ytall[pp]])
-        axarr[pp].set_ylim(-91,90)
-        axarr[pp].set_xlim(-180,180)
-        axarr[pp].set_ylabel('Latitude')
-        axarr[pp].set_xlabel('Longitude')
-        pltdiff = OBSminERADPD[ptsplt[pp],:,:] # assuming time, long, lat
-	plottee=axarr[pp].scatter(longrid[np.where(pltdiff > mdi)],latgrid[np.where(pltdiff > mdi)],c=pltdiff[np.where(pltdiff > mdi)],cmap=cmap,norm=norm,marker='o',linewidth=0.,s=4)
-        axarr[pp].annotate(lettees[pp]+' Pentad: '+str((pp*12)+1),xy=(0.03,0.92),xycoords='axes fraction',size=12)
-
-    cbax=f.add_axes([0.1,0.06,0.8,0.02])
-    cb=plt.colorbar(plottee,cax=cbax,orientation='horizontal',ticks=bounds) #, extend=extend
-    cb.ax.tick_params(labelsize=12) 
-    cb.ax.set_xticklabels(strbounds)
-    plt.figtext(0.5,0.02,innee2+'-'+innee1+' difference (deg C)',size=14,ha='center')    
-    
-     # save plots as eps and png
-#    plt.savefig(OUTDIR+OutSDMapsFilDPD+".eps")
-    plt.savefig(OUTDIR+OutSDMapsFilDPD+".png")
-
     #pdb.set_trace()
 
 if __name__ == '__main__':
