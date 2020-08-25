@@ -1,0 +1,240 @@
+ Looking at latitudinal distributions of values good and bad:
+MDSdict=MDStool.ReadMDSkate('1980', '01', 'ERAclimNBC')
+goods=np.where((MDSdict['ATbud'] == 0) & (MDSdict['ATclim'] == 0) & (MDSdict['ATrep'] == 0) & (MDSdict['DPTbud'] == 0) & (MDSdict['DPTclim'] == 0) & (MDSdict['DPTrep'] == 0) & (MDSdict['DPTrepsat'] == 0) & (MDSdict['DPTssat'] == 0))[0]
+len(goods)
+days=np.where(MDSdict['day'][goods] == 1)[0]
+len(days)
+nights=np.where(MDSdict['day'][goods] == 0)[0]
+len(nights)
+
+1980 January
+131224 obs
+101929 goods
+45614 good days
+56315 good nights
+
+plt.scatter(MDSdict['DPT'],MDSdict['LAT'])
+plt.ylim(-90,90)
+plt.ylabel('Latitude')
+plt.xlabel('degrees C')
+plt.scatter(MDSdict['DPT'][goods],MDSdict['LAT'][goods],c='yellow')
+plt.annotate('July 2010',xy=(0.05,0.92),xycoords='axes fraction',size=14,color='black')
+plt.annotate('Good: '+str(len(goods)),xy=(0.05,0.08),xycoords='axes fraction',size=14,color='black')
+plt.annotate('All: '+"{:6d}".format(len(MDSdict['UID'])),xy=(0.05,0.02),xycoords='axes fraction',size=14,color='black')
+plt.show()
+
+plt.scatter(MDSdict['DPTA'],MDSdict['LAT'])
+plt.ylim(-90,90)
+plt.ylabel('Latitude')
+plt.xlabel('degrees C')
+plt.scatter(MDSdict['DPTA'][goods],MDSdict['LAT'][goods],c='yellow')
+plt.annotate('July 2010',xy=(0.05,0.92),xycoords='axes fraction',size=14,color='black')
+plt.annotate('Good: '+str(len(goods)),xy=(0.05,0.08),xycoords='axes fraction',size=14,color='black')
+plt.annotate('All: '+"{:6d}".format(len(MDSdict['UID'])),xy=(0.05,0.02),xycoords='axes fraction',size=14,color='black')
+plt.show()
+
+plt.scatter(MDSdict['AT'],MDSdict['LAT'])
+plt.ylim(-90,90)
+plt.ylabel('Latitude')
+plt.xlabel('degrees C')
+plt.scatter(MDSdict['AT'][goods],MDSdict['LAT'][goods],c='yellow')
+plt.annotate('July 2010',xy=(0.05,0.92),xycoords='axes fraction',size=14,color='black')
+plt.annotate('Good: '+str(len(goods)),xy=(0.05,0.08),xycoords='axes fraction',size=14,color='black')
+plt.annotate('All: '+"{:6d}".format(len(MDSdict['UID'])),xy=(0.05,0.02),xycoords='axes fraction',size=14,color='black')
+plt.show()
+
+plt.scatter(MDSdict['ATA'],MDSdict['LAT'])
+plt.ylim(-90,90)
+plt.ylabel('Latitude')
+plt.xlabel('degrees C')
+plt.scatter(MDSdict['ATA'][goods],MDSdict['LAT'][goods],c='yellow')
+plt.annotate('July 2010',xy=(0.05,0.92),xycoords='axes fraction',size=14,color='black')
+plt.annotate('Good: '+str(len(goods)),xy=(0.05,0.08),xycoords='axes fraction',size=14,color='black')
+plt.annotate('All: '+"{:6d}".format(len(MDSdict['UID'])),xy=(0.05,0.02),xycoords='axes fraction',size=14,color='black')
+plt.show()
+
+
+plt.scatter(MDSdict['DPT'][goods[nights]],MDSdict['LAT'][goods[nights]])
+plt.ylim(-90,90)
+plt.ylabel('Latitude')
+plt.xlabel('degrees C')
+plt.scatter(MDSdict['DPT'][goods[days]],MDSdict['LAT'][goods[days]],c='red')
+plt.annotate('July 2010',xy=(0.05,0.92),xycoords='axes fraction',size=14,color='black')
+plt.annotate('Good Days: '+"{:6d}".format(len(days)),xy=(0.05,0.08),xycoords='axes fraction',size=14,color='red')
+plt.annotate('Good Nights: '+"{:6d}".format(len(nights)),xy=(0.05,0.02),xycoords='axes fraction',size=14,color='blue')
+plt.show()
+
+plt.scatter(MDSdict['DPTA'][goods[nights]],MDSdict['LAT'][goods[nights]])
+plt.ylim(-90,90)
+plt.ylabel('Latitude')
+plt.xlabel('degrees C')
+plt.scatter(MDSdict['DPTA'][goods[days]],MDSdict['LAT'][goods[days]],c='red')
+plt.annotate('July 2010',xy=(0.05,0.92),xycoords='axes fraction',size=14,color='black')
+plt.annotate('Good Days: '+"{:6d}".format(len(days)),xy=(0.05,0.08),xycoords='axes fraction',size=14,color='red')
+plt.annotate('Good Nights: '+"{:6d}".format(len(nights)),xy=(0.05,0.02),xycoords='axes fraction',size=14,color='blue')
+plt.show()
+
+plt.scatter(MDSdict['AT'][goods[nights]],MDSdict['LAT'][goods[nights]])
+plt.ylim(-90,90)
+plt.ylabel('Latitude')
+plt.xlabel('degrees C')
+plt.scatter(MDSdict['AT'][goods[days]],MDSdict['LAT'][goods[days]],c='red')
+plt.annotate('July 2010',xy=(0.05,0.92),xycoords='axes fraction',size=14,color='black')
+plt.annotate('Good Days: '+"{:6d}".format(len(days)),xy=(0.05,0.08),xycoords='axes fraction',size=14,color='red')
+plt.annotate('Good Nights: '+"{:6d}".format(len(nights)),xy=(0.05,0.02),xycoords='axes fraction',size=14,color='blue')
+plt.show()
+
+plt.scatter(MDSdict['ATA'][goods[nights]],MDSdict['LAT'][goods[nights]])
+plt.ylim(-90,90)
+plt.ylabel('Latitude')
+plt.xlabel('degrees C')
+plt.scatter(MDSdict['ATA'][goods[days]],MDSdict['LAT'][goods[days]],c='red')
+plt.annotate('July 2010',xy=(0.05,0.92),xycoords='axes fraction',size=14,color='black')
+plt.annotate('Good Days: '+"{:6d}".format(len(days)),xy=(0.05,0.08),xycoords='axes fraction',size=14,color='red')
+plt.annotate('Good Nights: '+"{:6d}".format(len(nights)),xy=(0.05,0.02),xycoords='axes fraction',size=14,color='blue')
+plt.show()
+
+plt.scatter(MDSdict['SHU'][goods[nights]],MDSdict['LAT'][goods[nights]])
+plt.ylim(-90,90)
+plt.ylabel('Latitude')
+plt.xlabel('g/kg')
+plt.scatter(MDSdict['SHU'][goods[days]],MDSdict['LAT'][goods[days]],c='yellow')
+plt.show()
+
+plt.scatter(MDSdict['SHUA'][goods[nights]],MDSdict['LAT'][goods[nights]])
+plt.ylim(-90,90)
+plt.ylabel('Latitude')
+plt.xlabel('g/kg')
+plt.scatter(MDSdict['SHUA'][goods[days]],MDSdict['LAT'][goods[days]],c='yellow')
+plt.show()
+
+plt.scatter(MDSdict['CRH'][goods[nights]],MDSdict['LAT'][goods[nights]])
+plt.ylim(-90,90)
+plt.ylabel('Latitude')
+plt.xlabel('%rh')
+plt.scatter(MDSdict['CRH'][goods[days]],MDSdict['LAT'][goods[days]],c='yellow')
+plt.show()
+
+plt.scatter(MDSdict['CRHA'][goods[nights]],MDSdict['LAT'][goods[nights]])
+plt.ylim(-90,90)
+plt.ylabel('Latitude')
+plt.xlabel('%rh')
+plt.scatter(MDSdict['CRHA'][goods[days]],MDSdict['LAT'][goods[days]],c='yellow')
+plt.show()
+
+lengths=np.where(MDSdict['LOV'] > 0)[0]
+len(lengths)
+pH=np.where(MDSdict['HOP'] > 0)[0]
+len(pH)
+aH=np.where(MDSdict['HOA'] > 0)[0]
+len(aH)
+tH=np.where(MDSdict['HOT'] > 0)[0]
+len(tH)
+bH=np.where(MDSdict['HOB'] > 0)[0]
+len(bH)
+paH=np.where((MDSdict['HOP'] > 0) & (MDSdict['HOA'] > 0))[0]
+len(paH)
+
+plt.scatter(MDSdict['HOA'][paH],MDSdict['HOP'][paH])
+plt.ylabel('Visual Observing Platform Height (m)')
+plt.xlabel('Anemometer Height (m)')
+plt.scatter(MDSdict['HOA'][paH],MDSdict['HOA'][paH]-MDSdict['HOP'][paH],c='red')
+plt.show()
+
+plt.scatter(MDSdict['HOA'][aH],MDSdict['LAT'][aH])
+plt.show()
+
+plt.scatter(MDSdict['HOP'][aH],MDSdict['LAT'][pH])
+plt.show()
+
+1980 January
+/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/ERAclimNBC/new_suite_198001_ERAclimNBC.txt
+('Number of obs read in: ', 131224)
+101580 goods
+45049 days
+56531 nights
+0 vessell lengths (LOV)
+34202 visual observing platform heights (HOP)
+13392 anemometer heights (HOA)
+0 thermometer heights (HOT)
+0 barometer heights (HOB)
+11210 visual obs platform AND anemometer heights
+
+1980 June
+132811 read in
+98399 goods
+58643 days
+39756 nights
+0 vessell lengths (LOV)
+32002 visual observing platform heights (HOP)
+12647 anemometer heights (HOA)
+0 thermometer heights (HOT)
+0 barometer heights (HOB)
+10618 visual obs platform AND anemometer heights
+
+1990 January
+122293 read in
+99537 good obs
+43458 days
+56079 nights
+0 vessell lengths (LOV)
+65176 visual observing platform heights (HOP)
+30418 anemometer heights (HOA)
+92 thermometer heights (HOT)
+92 barometer heights (HOB)
+26314 visual obs platform AND anemometer heights
+The obs with HOT and HOB present are all from shipid DBBH. The anemometer height
+is 40m and the thermometer/barometer heights are 28.
+Need more examples!
+Estimated average thermometer height for Jan 1990 is:
+16m to 24m 1973 to 2006 is 0.24m per year or 0.02m per month
+Jan 1990 is 205 months after 1973 so 16+(205*0.02) = 20.1. So 28m is 'higher
+than average'.
+
+2000 January
+163644 obs read in
+141553 good obs
+61740 days
+79813 nights
+20662 vessell lengths (LOV)
+0 visual observing platform heights (HOP)
+32299 anemometer heights (HOA)
+0 thermometer heights (HOT)
+56992 barometer heights (HOB)
+0 visual obs platform AND anemometer heights
+Different to other years so far!
+31642 anemometer height and barometer height (Figure)
+15862 anemometer height, barometer height and length of vessel
+MEAN difference between anemometer and barometer height is 11.33m (so close to
+12 from DBBH in 1990 January!)
+20270 barometer height and length of vessel (Figure)
+Very clear relationship between length of vessel and height of barometer -
+difference increases almost linearly e.g., HOB = LOV/8.5
+np.mean(MDSdict['LOV'][blH]/MDSdict['HOB'][blH])
+However, there is a lot of variation around this!!!
+Should try and pull together many sets of data and plot:
+LOV with HOB and or HOT
+HOA with HOB and or HOT
+HOP with HOB and or HOT
+Then we can infer actual height from LOV, HOA or HOP or year/month*0.02
+
+So
+Should we make the climatology check larger? Especially in the Tropics?
+Sort out mean eq to get HOT/HOB - and uncertainty
+Sort out how to derive q to 10m (still higher than models/reanalyses but at
+least constant) - Smith papers
+Sort out applying adjustment to screened obs (how many do we know for definite?)
+WRITE A PROG TO READ IN EACH MONTH AND EXTRACT THE USFUL BITS - BY DECADE!
+
+
+2015 January
+318426 read in
+269874 good obs
+105467 days
+164407 nights
+
+SO - looks like the climatology check is kicking out too much? There is a cut
+off ~13 deg from the climatology in mid-high lats and it also gets a bit narrow
+around the tropics. Maybe slacken a bit - with risk of including quite a lot of
+junk. Redoing with OBSclim may help because there does seem to be a strong
+positive skew in the anomalies suggesting that the ERA clims are too low.

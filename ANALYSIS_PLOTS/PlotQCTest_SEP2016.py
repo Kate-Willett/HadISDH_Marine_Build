@@ -78,7 +78,7 @@
 # Call key words for type (ERAclimNBC), year start and end, month start and end (default whole year) and variable
 # Ideally we would run all vars together to save time but its just tooooooo big
 #
-# python2.7 PlotQCTest_SEP2016.py --year1 1973 --year2 1973 --month1 1 --month2 1 --typee ERAclimNBC --varee AT 
+# python2.7 PlotQCTest_SEP2016.py --year1 1973 --year2 1973 --month1 1 --month2 1 --typee ERAclimNBC --varee AT --PlotLegend Yes (No)
 #
 # This runs the code, outputs the plots
 # 
@@ -115,6 +115,17 @@
 # VERSION/RELEASE NOTES
 # -----------------------
 # 
+# Version 2 (2 July 2019)
+# ---------
+#  
+# Enhancements
+# Can now switch full legend on and off (PlotLegend = True) and has dates on plots
+#  
+# Changes
+#  
+# Bug fixes
+#
+#
 # Version 1 (22 AAeptember 2016)
 # ---------
 #  
@@ -134,8 +145,9 @@
 import datetime as dt
 import copy
 # Folling two lines should be uncommented if using with SPICE or screen
-## import matplotlib
-## matplotlib.use('Agg')
+import matplotlib
+matplotlib.use('Agg')
+#
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.dates import date2num,num2date
@@ -156,13 +168,15 @@ import MDS_RWtools as mrw
 # PLOTQCTEST
 #*************************************************************************
 def PlotQCTest(FileName, WhichVar, WhichVals, WhichPlot, TotalObs, FailTrk, FailClimAT, FailBuddyAT, FailRepAT,
-               FailClimDPT, FailBuddyDPT, FailRepDPT, FailRepSatDPT, FailSSatDPT):
+               FailClimDPT, FailBuddyDPT, FailRepDPT, FailRepSatDPT, FailSSatDPT,YearTitle, PlotLegend):
     ''' FileName - director path and filename without .eps or .png '''
     ''' WhicVar - AT, DPT, SHU or CRH - so we know what units and titles to use '''
     ''' WhichVals - Abs or Anoms so we know what xtitles to use '''
     ''' WhichPlot - DAY, NIGHT or BOTH so we know what titles to use '''
     ''' TotalObs - Total number of ALL obs in period to calculate percentage frequencies '''
     ''' FailTrk...FailSSatDPT - the nRow by 2Col array (value,day=1) to plot '''
+    ''' YearTitle - is a string of dates to write on the plot '''
+    ''' PlotLegend - a True/False variable to switch on/off full legend '''
     ''' This code makes a png and/or eps of QC fail frequency by value (anomaly or absolute) '''
     ''' of the chosen variable (AT, DPT, SHU or CRH). '''
     ''' From this we hope to see whether there is a prevelance of low/high value removals '''
@@ -257,109 +271,130 @@ def PlotQCTest(FileName, WhichVar, WhichVals, WhichPlot, TotalObs, FailTrk, Fail
 
     # For each QC flag plot a line as No. Obs on left axis and % of total obs on right axis	   
     i = 0
+    ax1.annotate(YearTitle,xy=(0.05,0.94-(i*gap)),xycoords='axes fraction',size=14,color='black')
+ 
+    i = 1
     ThisHist = np.histogram(FailTrk[np.where(FailTrk[:,1] != PlotMe)[0],0],binsies)
     HalfX = (ThisHist[1][1] - ThisHist[1][0]) / 2.
     ax1.plot(ThisHist[1][0:50]+HalfX,ThisHist[0],c='hotpink',linestyle='solid',linewidth=2) 
     meanHist = '{:6.2f}'.format(np.mean(FailTrk[np.where(FailTrk[:,1] != PlotMe)[0],0]))
     sdHist = '{:6.2f}'.format(np.std(FailTrk[np.where(FailTrk[:,1] != PlotMe)[0],0]))
     PctFail = '{:6.2f}'.format((len(FailTrk[np.where(FailTrk[:,1] != PlotMe)[0],0]) / np.float(TotalObs)) * 100.)+'%'
-    ax1.annotate('track check ('+meanHist+', '+sdHist+', '+PctFail+')',xy=(0.05,0.94-(i*gap)),xycoords='axes fraction',size=12,color='hotpink')
+    if (PlotLegend == 'Yes'):
+        ax1.annotate('track check',xy=(0.98,0.94-(i*gap)),xycoords='axes fraction',size=12,color='hotpink',horizontalalignment = 'right')
+    ax1.annotate(meanHist+', '+sdHist+', '+PctFail,xy=(0.02,0.94-(i*gap)),xycoords='axes fraction',size=12,color='hotpink',horizontalalignment = 'left')
     if (len(FailTrk[np.where(FailTrk[:,1] != PlotMe)[0],0]) > 0):
         y1AxMAX = np.max([y1AxMAX,np.max(ThisHist[0])])
     print(y1AxMAX)
     
-    i = 1
+    i = 2
     ThisHist = np.histogram(FailClimAT[np.where(FailClimAT[:,1] != PlotMe)[0],0],binsies)
     HalfX = (ThisHist[1][1] - ThisHist[1][0]) / 2.
     ax1.plot(ThisHist[1][0:50]+HalfX,ThisHist[0],c='red',linestyle='solid',linewidth=2) 
     meanHist = '{:6.2f}'.format(np.mean(FailClimAT[np.where(FailClimAT[:,1] != PlotMe)[0],0]))
     sdHist = '{:6.2f}'.format(np.std(FailClimAT[np.where(FailClimAT[:,1] != PlotMe)[0],0]))
     PctFail = '{:6.2f}'.format((len(FailClimAT[np.where(FailClimAT[:,1] != PlotMe)[0],0]) / np.float(TotalObs)) * 100.)+'%'
-    ax1.annotate('AT climatology ('+meanHist+', '+sdHist+', '+PctFail+')',xy=(0.05,0.94-(i*gap)),xycoords='axes fraction',size=12,color='red')
+    if (PlotLegend == 'Yes'):
+        ax1.annotate('AT climatology',xy=(0.98,0.94-(i*gap)),xycoords='axes fraction',size=12,color='red',horizontalalignment = 'right')
+    ax1.annotate(meanHist+', '+sdHist+', '+PctFail,xy=(0.02,0.94-(i*gap)),xycoords='axes fraction',size=12,color='red',horizontalalignment = 'left')
     if (len(FailClimAT[np.where(FailClimAT[:,1] != PlotMe)[0],0]) > 0):
         y1AxMAX = np.max([y1AxMAX,np.max(ThisHist[0])])
     print(y1AxMAX)
 
-    i = 2
+    i = 3
     ThisHist = np.histogram(FailBuddyAT[np.where(FailBuddyAT[:,1] != PlotMe)[0],0],binsies)
     HalfX = (ThisHist[1][1] - ThisHist[1][0]) / 2.
     ax1.plot(ThisHist[1][0:50]+HalfX,ThisHist[0],c='darkorange',linestyle='solid',linewidth=2) 
     meanHist = '{:6.2f}'.format(np.mean(FailBuddyAT[np.where(FailBuddyAT[:,1] != PlotMe)[0],0]))
     sdHist = '{:6.2f}'.format(np.std(FailBuddyAT[np.where(FailBuddyAT[:,1] != PlotMe)[0],0]))
     PctFail = '{:6.2f}'.format((len(FailBuddyAT[np.where(FailBuddyAT[:,1] != PlotMe)[0],0]) / np.float(TotalObs)) * 100.)+'%'
-    ax1.annotate('AT buddy ('+meanHist+', '+sdHist+', '+PctFail+')',xy=(0.05,0.94-(i*gap)),xycoords='axes fraction',size=12,color='darkorange')
+    if (PlotLegend == 'Yes'):
+        ax1.annotate('AT buddy',xy=(0.98,0.94-(i*gap)),xycoords='axes fraction',size=12,color='darkorange',horizontalalignment = 'right')
+    ax1.annotate(meanHist+', '+sdHist+', '+PctFail,xy=(0.02,0.94-(i*gap)),xycoords='axes fraction',size=12,color='darkorange',horizontalalignment = 'left')
     if (len(FailBuddyAT[np.where(FailBuddyAT[:,1] != PlotMe)[0],0]) > 0):
         y1AxMAX = np.max([y1AxMAX,np.max(ThisHist[0])])
     print(y1AxMAX)
      
-    i = 3
+    i = 4
     ThisHist = np.histogram(FailRepAT[np.where(FailRepAT[:,1] != PlotMe)[0],0],binsies)
     HalfX = (ThisHist[1][1] - ThisHist[1][0]) / 2.
     ax1.plot(ThisHist[1][0:50]+HalfX,ThisHist[0],c='gold',linestyle='solid',linewidth=2) 
     meanHist = '{:6.2f}'.format(np.mean(FailRepAT[np.where(FailRepAT[:,1] != PlotMe)[0],0]))
     sdHist = '{:6.2f}'.format(np.std(FailRepAT[np.where(FailRepAT[:,1] != PlotMe)[0],0]))
     PctFail = '{:6.2f}'.format((len(FailRepAT[np.where(FailRepAT[:,1] != PlotMe)[0],0]) / np.float(TotalObs)) * 100.)+'%'
-    ax1.annotate('AT repeat ('+meanHist+', '+sdHist+', '+PctFail+')',xy=(0.05,0.94-(i*gap)),xycoords='axes fraction',size=12,color='gold')
+    if (PlotLegend == 'Yes'):
+        ax1.annotate('AT repeat',xy=(0.98,0.94-(i*gap)),xycoords='axes fraction',size=12,color='gold',horizontalalignment = 'right')
+    ax1.annotate(meanHist+', '+sdHist+', '+PctFail,xy=(0.02,0.94-(i*gap)),xycoords='axes fraction',size=12,color='gold',horizontalalignment = 'left')
     if (len(FailRepAT[np.where(FailRepAT[:,1] != PlotMe)[0],0]) > 0):
         y1AxMAX = np.max([y1AxMAX,np.max(ThisHist[0])])
     print(y1AxMAX)
     
-    i = 4
+    i = 5
     ThisHist = np.histogram(FailClimDPT[np.where(FailClimDPT[:,1] != PlotMe)[0],0],binsies)
     HalfX = (ThisHist[1][1] - ThisHist[1][0]) / 2.
     ax1.plot(ThisHist[1][0:50]+HalfX,ThisHist[0],c='grey',linestyle='solid',linewidth=2) 
     meanHist = '{:6.2f}'.format(np.mean(FailClimDPT[np.where(FailClimDPT[:,1] != PlotMe)[0],0]))
     sdHist = '{:6.2f}'.format(np.std(FailClimDPT[np.where(FailClimDPT[:,1] != PlotMe)[0],0]))
     PctFail = '{:6.2f}'.format((len(FailClimDPT[np.where(FailClimDPT[:,1] != PlotMe)[0],0]) / np.float(TotalObs)) * 100.)+'%'
-    ax1.annotate('DPT climatology ('+meanHist+', '+sdHist+', '+PctFail+')',xy=(0.05,0.94-(i*gap)),xycoords='axes fraction',size=12,color='grey')
+    if (PlotLegend == 'Yes'):
+        ax1.annotate('DPT climatology',xy=(0.98,0.94-(i*gap)),xycoords='axes fraction',size=12,color='grey',horizontalalignment = 'right')
+    ax1.annotate(meanHist+', '+sdHist+', '+PctFail,xy=(0.02,0.94-(i*gap)),xycoords='axes fraction',size=12,color='grey',horizontalalignment = 'left')
     if (len(FailClimDPT[np.where(FailClimDPT[:,1] != PlotMe)[0],0]) > 0): 
         y1AxMAX = np.max([y1AxMAX,np.max(ThisHist[0])])
     print(y1AxMAX)
     
-    i = 5
+    i = 6
     ThisHist = np.histogram(FailBuddyDPT[np.where(FailBuddyDPT[:,1] != PlotMe)[0],0],binsies)
     HalfX = (ThisHist[1][1] - ThisHist[1][0]) / 2.
     ax1.plot(ThisHist[1][0:50]+HalfX,ThisHist[0],c='blue',linestyle='solid',linewidth=2) 
     meanHist = '{:6.2f}'.format(np.mean(FailBuddyDPT[np.where(FailBuddyDPT[:,1] != PlotMe)[0],0]))
     sdHist = '{:6.2f}'.format(np.std(FailBuddyDPT[np.where(FailBuddyDPT[:,1] != PlotMe)[0],0]))
     PctFail = '{:6.2f}'.format((len(FailBuddyDPT[np.where(FailBuddyDPT[:,1] != PlotMe)[0],0]) / np.float(TotalObs)) * 100.)+'%'
-    ax1.annotate('DPT buddy ('+meanHist+', '+sdHist+', '+PctFail+')',xy=(0.05,0.94-(i*gap)),xycoords='axes fraction',size=12,color='blue')
+    if (PlotLegend == 'Yes'):
+        ax1.annotate('DPT buddy',xy=(0.98,0.94-(i*gap)),xycoords='axes fraction',size=12,color='blue',horizontalalignment = 'right')
+    ax1.annotate(meanHist+', '+sdHist+', '+PctFail,xy=(0.02,0.94-(i*gap)),xycoords='axes fraction',size=12,color='blue',horizontalalignment = 'left')
     if (len(FailBuddyDPT[np.where(FailBuddyDPT[:,1] != PlotMe)[0],0]) > 0): 
         y1AxMAX = np.max([y1AxMAX,np.max(ThisHist[0])])
     print(y1AxMAX)
     
-    i = 6
+    i = 7
     ThisHist = np.histogram(FailRepDPT[np.where(FailRepDPT[:,1] != PlotMe)[0],0],binsies)
     HalfX = (ThisHist[1][1] - ThisHist[1][0]) / 2.
     ax1.plot(ThisHist[1][0:50]+HalfX,ThisHist[0],c='limegreen',linestyle='solid',linewidth=2) 
     meanHist = '{:6.2f}'.format(np.mean(FailRepDPT[np.where(FailRepDPT[:,1] != PlotMe)[0],0]))
     sdHist = '{:6.2f}'.format(np.std(FailRepDPT[np.where(FailRepDPT[:,1] != PlotMe)[0],0]))
     PctFail = '{:6.2f}'.format((len(FailRepDPT[np.where(FailRepDPT[:,1] != PlotMe)[0],0]) / np.float(TotalObs)) * 100.)+'%'
-    ax1.annotate('DPT repeat ('+meanHist+', '+sdHist+', '+PctFail+')',xy=(0.05,0.94-(i*gap)),xycoords='axes fraction',size=12,color='limegreen')
+    if (PlotLegend == 'Yes'):
+        ax1.annotate('DPT repeat',xy=(0.98,0.94-(i*gap)),xycoords='axes fraction',size=12,color='limegreen',horizontalalignment = 'right')
+    ax1.annotate(meanHist+', '+sdHist+', '+PctFail,xy=(0.02,0.94-(i*gap)),xycoords='axes fraction',size=12,color='limegreen',horizontalalignment = 'left')
     if (len(FailRepDPT[np.where(FailRepDPT[:,1] != PlotMe)[0],0]) > 0):
         y1AxMAX = np.max([y1AxMAX,np.max(ThisHist[0])])
     print(y1AxMAX)
     
-    i = 7
+    i = 8
     ThisHist = np.histogram(FailRepSatDPT[np.where(FailRepSatDPT[:,1] != PlotMe)[0],0],binsies)
     HalfX = (ThisHist[1][1] - ThisHist[1][0]) / 2.
     ax1.plot(ThisHist[1][0:50]+HalfX,ThisHist[0],c='olivedrab',linestyle='solid',linewidth=2) 
     meanHist = '{:6.2f}'.format(np.mean(FailRepSatDPT[np.where(FailRepSatDPT[:,1] != PlotMe)[0],0]))
     sdHist = '{:6.2f}'.format(np.std(FailRepSatDPT[np.where(FailRepSatDPT[:,1] != PlotMe)[0],0]))
     PctFail = '{:6.2f}'.format((len(FailRepSatDPT[np.where(FailRepSatDPT[:,1] != PlotMe)[0],0]) / np.float(TotalObs)) * 100.)+'%'
-    ax1.annotate('DPT repeat saturation ('+meanHist+', '+sdHist+', '+PctFail+')',xy=(0.05,0.94-(i*gap)),xycoords='axes fraction',size=12,color='olivedrab')
+    if (PlotLegend == 'Yes'):
+        ax1.annotate('DPT repeat saturation',xy=(0.98,0.94-(i*gap)),xycoords='axes fraction',size=12,color='olivedrab',horizontalalignment = 'right')
+    ax1.annotate(meanHist+', '+sdHist+', '+PctFail,xy=(0.02,0.94-(i*gap)),xycoords='axes fraction',size=12,color='olivedrab',horizontalalignment = 'left')
     if (len(FailRepSatDPT[np.where(FailRepSatDPT[:,1] != PlotMe)[0],0]) > 0): 
         y1AxMAX = np.max([y1AxMAX,np.max(ThisHist[0])])
     print(y1AxMAX)
     
-    i = 8
+    i = 9
     ThisHist = np.histogram(FailSSatDPT[np.where(FailSSatDPT[:,1] != PlotMe)[0],0],binsies)
     HalfX = (ThisHist[1][1] - ThisHist[1][0]) / 2.
     ax1.plot(ThisHist[1][0:50]+HalfX,ThisHist[0],c='indigo',linestyle='solid',linewidth=2) 
     meanHist = '{:6.2f}'.format(np.mean(FailSSatDPT[np.where(FailSSatDPT[:,1] != PlotMe)[0],0]))
     sdHist = '{:6.2f}'.format(np.std(FailSSatDPT[np.where(FailSSatDPT[:,1] != PlotMe)[0],0]))
     PctFail = '{:6.2f}'.format((len(FailSSatDPT[np.where(FailSSatDPT[:,1] != PlotMe)[0],0]) / np.float(TotalObs)) * 100.)+'%'
-    ax1.annotate('DPT super saturation ('+meanHist+', '+sdHist+', '+PctFail+')',xy=(0.05,0.94-(i*gap)),xycoords='axes fraction',size=12,color='indigo')
+    if (PlotLegend == 'Yes'):
+        ax1.annotate('DPT super saturation',xy=(0.98,0.94-(i*gap)),xycoords='axes fraction',size=12,color='indigo',horizontalalignment = 'right')
+    ax1.annotate(meanHist+', '+sdHist+', '+PctFail,xy=(0.02,0.94-(i*gap)),xycoords='axes fraction',size=12,color='indigo',horizontalalignment = 'left')
     if (len(FailSSatDPT[np.where(FailSSatDPT[:,1] != PlotMe)[0],0]) > 0):
         y1AxMAX = np.max([y1AxMAX,np.max(ThisHist[0])])
     print(y1AxMAX)
@@ -404,18 +439,19 @@ def main(argv):
     month2 = '12'
     typee = 'ERAclimNBC' # 'ERAclimNBC', 'OBSclim1NBC', 'OBSclim2NBC'
     varee = 'AT'	# 'AT','DPT','SHU','CRH'
+    PlotLegend = 'Yes' # Yes or No to plot full legend
     
     # TWEAK ME!!!!
     # What date stamp do you want on the files?
-    nowmon = 'SEP'
-    nowyear = '2016'
+    nowmon = 'AUG'
+    nowyear = '2018'
 
     try:
         opts, args = getopt.getopt(argv, "hi:",
-	                           ["year1=","year2=","month1=","month2=","typee=","varee="])
+	                           ["year1=","year2=","month1=","month2=","typee=","varee=","PlotLegend="])
     except getopt.GetoptError:
         print 'Usage (as strings) PlotQCTest_SEP2016.py --year1 <1973> --year2 <1973> '+\
-	      '--month1 <01> --month2 <12> --typee <ERAclimNBC> --varee <AT>'
+	      '--month1 <01> --month2 <12> --typee <ERAclimNBC> --varee <AT>, --PlotLegend <Yes>'
 	sys.exit(2)
 
     for opt, arg in opts:
@@ -449,22 +485,29 @@ def main(argv):
                 varee = arg
             except:
                 sys.exit("Failed: varee not a string")
+        elif opt == "--PlotLegend":
+            try:
+                PlotLegend = arg
+            except:
+                sys.exit("Failed: PlotLegend not a string")
 
     assert year1 != -999 and year2 != -999, "Year not specified."
 
-    print(year1, year2, month1, month2, typee, varee)
+    print(year1, year2, month1, month2, typee, varee, PlotLegend)
 #    pdb.set_trace()
 
-    INDIR = '/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/'+typee+'/'
+    #INDIR = '/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/'+typee+'/'  #THRESH5_5/'
+    INDIR = '/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/'+typee+'/'  #THRESH5_5/'
     INFIL = 'new_suite_'   # 199406_ERAclimNBC.txt.gz
 
-    OUTDIR = '/data/local/hadkw/HADCRUH2/MARINE/IMAGES/QCHISTS/'
-    OutPltAbsday =    'SummaryHistQC_DAY_Abs_'+varee+'_'+typee+'_'  #1973_SEP2016.png 
-    OutPltAbsngt =    'SummaryHistQC_NIGHT_Abs_'+varee+'_'+typee+'_'
-    OutPltAbs =       'SummaryHistQC_BOTH_Abs_'+varee+'_'+typee+'_'
-    OutPltAnomsday =  'SummaryHistQC_DAY_Anoms_'+varee+'_'+typee+'_'
-    OutPltAnomsngt =  'SummaryHistQC_NIGHT_Anoms_'+varee+'_'+typee+'_'
-    OutPltAnoms =     'SummaryHistQC_BOTH_Anoms_'+varee+'_'+typee+'_'
+#    OUTDIR = '/data/local/hadkw/HADCRUH2/MARINE/IMAGES/QCHISTS/'
+    OUTDIR = 'IMAGES/'
+    OutPltAbsday =    'SummaryHistQC_DAY_Abs_I300_55_'+varee+'_'+typee+'_'  #1973_SEP2016.png 
+    OutPltAbsngt =    'SummaryHistQC_NIGHT_Abs_I300_55_'+varee+'_'+typee+'_'
+    OutPltAbs =       'SummaryHistQC_BOTH_Abs_I300_55_'+varee+'_'+typee+'_'
+    OutPltAnomsday =  'SummaryHistQC_DAY_Anoms_I300_55_'+varee+'_'+typee+'_'
+    OutPltAnomsngt =  'SummaryHistQC_NIGHT_Anoms_I300_55_'+varee+'_'+typee+'_'
+    OutPltAnoms =     'SummaryHistQC_BOTH_Anoms_I300_55_'+varee+'_'+typee+'_'
 
     # Container arrays to store info for end of loop plot (may not have enough memory for ALL vars, Abs/Anoms and Day/Night/Both
     nObs = 0 # Total number of obs for period (good and bad)
@@ -565,33 +608,35 @@ def main(argv):
 
 	# If end of year period then initialise end of year loop 
 	if (ThisMonth == '12'):
+	
+	    YearTitle = str(ThisYear)
 
 	    # plot the annual period stuff
             PlotName = OUTDIR+OutPltAbsday+str(ThisYear)+'_'+nowmon+nowyear
 	    PlotQCTest(PlotName,varee,'Abs','DAY',ANNnObs,ANNAbsFailTrk,
 	                                              ANNAbsFailClimAT,ANNAbsFailBuddyAT,ANNAbsFailRepAT,
-						      ANNAbsFailClimDPT,ANNAbsFailBuddyDPT,ANNAbsFailRepDPT,ANNAbsFailRepSatDPT,ANNAbsFailSSatDPT)
+						      ANNAbsFailClimDPT,ANNAbsFailBuddyDPT,ANNAbsFailRepDPT,ANNAbsFailRepSatDPT,ANNAbsFailSSatDPT,YearTitle,PlotLegend)
             PlotName = OUTDIR+OutPltAbsngt+str(ThisYear)+'_'+nowmon+nowyear
 	    PlotQCTest(PlotName,varee,'Abs','NIGHT',ANNnObs,ANNAbsFailTrk,
 	                                                ANNAbsFailClimAT,ANNAbsFailBuddyAT,ANNAbsFailRepAT,
-						        ANNAbsFailClimDPT,ANNAbsFailBuddyDPT,ANNAbsFailRepDPT,ANNAbsFailRepSatDPT,ANNAbsFailSSatDPT)
+						        ANNAbsFailClimDPT,ANNAbsFailBuddyDPT,ANNAbsFailRepDPT,ANNAbsFailRepSatDPT,ANNAbsFailSSatDPT,YearTitle,PlotLegend)
             PlotName = OUTDIR+OutPltAbs+str(ThisYear)+'_'+nowmon+nowyear
 	    PlotQCTest(PlotName,varee,'Abs','BOTH',ANNnObs,ANNAbsFailTrk,
 	                                               ANNAbsFailClimAT,ANNAbsFailBuddyAT,ANNAbsFailRepAT,
-						       ANNAbsFailClimDPT,ANNAbsFailBuddyDPT,ANNAbsFailRepDPT,ANNAbsFailRepSatDPT,ANNAbsFailSSatDPT)
+						       ANNAbsFailClimDPT,ANNAbsFailBuddyDPT,ANNAbsFailRepDPT,ANNAbsFailRepSatDPT,ANNAbsFailSSatDPT,YearTitle,PlotLegend)
 
             PlotName = OUTDIR+OutPltAnomsday+str(ThisYear)+'_'+nowmon+nowyear
 	    PlotQCTest(PlotName,varee,'Anoms','DAY',ANNnObs,ANNAnomsFailTrk,
 	                                              ANNAnomsFailClimAT,ANNAnomsFailBuddyAT,ANNAnomsFailRepAT,
-						      ANNAnomsFailClimDPT,ANNAnomsFailBuddyDPT,ANNAnomsFailRepDPT,ANNAnomsFailRepSatDPT,ANNAnomsFailSSatDPT)
+						      ANNAnomsFailClimDPT,ANNAnomsFailBuddyDPT,ANNAnomsFailRepDPT,ANNAnomsFailRepSatDPT,ANNAnomsFailSSatDPT,YearTitle,PlotLegend)
             PlotName = OUTDIR+OutPltAnomsngt+str(ThisYear)+'_'+nowmon+nowyear
 	    PlotQCTest(PlotName,varee,'Anoms','NIGHT',ANNnObs,ANNAnomsFailTrk,
 	                                              ANNAnomsFailClimAT,ANNAnomsFailBuddyAT,ANNAnomsFailRepAT,
-						      ANNAnomsFailClimDPT,ANNAnomsFailBuddyDPT,ANNAnomsFailRepDPT,ANNAnomsFailRepSatDPT,ANNAnomsFailSSatDPT)
+						      ANNAnomsFailClimDPT,ANNAnomsFailBuddyDPT,ANNAnomsFailRepDPT,ANNAnomsFailRepSatDPT,ANNAnomsFailSSatDPT,YearTitle,PlotLegend)
             PlotName = OUTDIR+OutPltAnoms+str(ThisYear)+'_'+nowmon+nowyear
 	    PlotQCTest(PlotName,varee,'Anoms','BOTH',ANNnObs,ANNAnomsFailTrk,
 	                                              ANNAnomsFailClimAT,ANNAnomsFailBuddyAT,ANNAnomsFailRepAT,
-						      ANNAnomsFailClimDPT,ANNAnomsFailBuddyDPT,ANNAnomsFailRepDPT,ANNAnomsFailRepSatDPT,ANNAnomsFailSSatDPT)
+						      ANNAnomsFailClimDPT,ANNAnomsFailBuddyDPT,ANNAnomsFailRepDPT,ANNAnomsFailRepSatDPT,ANNAnomsFailSSatDPT,YearTitle,PlotLegend)
 
 	    # Initialise or add to whole period arrays
 	    # No full period arrays initialised yet
@@ -649,60 +694,66 @@ def main(argv):
             
 	    # If this is a special sub-annual case then we'll have to plot the ANNarrays
 	    if (ff < 11):
-	        PlotName = OUTDIR+OutPltAbsday+year1+year2+'{:02}'.format(int(month1))+'{:02}'.format(int(month2))+'_'+nowmon+nowyear
-	        PlotQCTest(PlotName,varee,'Abs','DAY',ANNnObs,ANNAbsFailTrk,
+	        
+		YearTitle = year1+'{:02}'.format(int(month1))+' '+year2+'{:02}'.format(int(month2))
+		
+                PlotName = OUTDIR+OutPltAbsday+year1+year2+'{:02}'.format(int(month1))+'{:02}'.format(int(month2))+'_'+nowmon+nowyear
+                PlotQCTest(PlotName,varee,'Abs','DAY',ANNnObs,ANNAbsFailTrk,
 	                                              ANNAbsFailClimAT,ANNAbsFailBuddyAT,ANNAbsFailRepAT,
-						      ANNAbsFailClimDPT,ANNAbsFailBuddyDPT,ANNAbsFailRepDPT,ANNAbsFailRepSatDPT,ANNAbsFailSSatDPT)
+						      ANNAbsFailClimDPT,ANNAbsFailBuddyDPT,ANNAbsFailRepDPT,ANNAbsFailRepSatDPT,ANNAbsFailSSatDPT,YearTitle,PlotLegend)
                 PlotName = OUTDIR+OutPltAbsngt+year1+year2+'{:02}'.format(int(month1))+'{:02}'.format(int(month2))+'_'+nowmon+nowyear
 	        PlotQCTest(PlotName,varee,'Abs','NIGHT',ANNnObs,ANNAbsFailTrk,
 	                                                ANNAbsFailClimAT,ANNAbsFailBuddyAT,ANNAbsFailRepAT,
-						        ANNAbsFailClimDPT,ANNAbsFailBuddyDPT,ANNAbsFailRepDPT,ANNAbsFailRepSatDPT,ANNAbsFailSSatDPT)
+						        ANNAbsFailClimDPT,ANNAbsFailBuddyDPT,ANNAbsFailRepDPT,ANNAbsFailRepSatDPT,ANNAbsFailSSatDPT,YearTitle,PlotLegend)
                 PlotName = OUTDIR+OutPltAbs+year1+year2+'{:02}'.format(int(month1))+'{:02}'.format(int(month2))+'_'+nowmon+nowyear
 	        PlotQCTest(PlotName,varee,'Abs','BOTH',ANNnObs,ANNAbsFailTrk,
 	                                               ANNAbsFailClimAT,ANNAbsFailBuddyAT,ANNAbsFailRepAT,
-						       ANNAbsFailClimDPT,ANNAbsFailBuddyDPT,ANNAbsFailRepDPT,ANNAbsFailRepSatDPT,ANNAbsFailSSatDPT)
+						       ANNAbsFailClimDPT,ANNAbsFailBuddyDPT,ANNAbsFailRepDPT,ANNAbsFailRepSatDPT,ANNAbsFailSSatDPT,YearTitle,PlotLegend)
 
                 PlotName = OUTDIR+OutPltAnomsday+year1+year2+'{:02}'.format(int(month1))+'{:02}'.format(int(month2))+'_'+nowmon+nowyear
 	        PlotQCTest(PlotName,varee,'Anoms','DAY',ANNnObs,ANNAnomsFailTrk,
 	                                              ANNAnomsFailClimAT,ANNAnomsFailBuddyAT,ANNAnomsFailRepAT,
-						      ANNAnomsFailClimDPT,ANNAnomsFailBuddyDPT,ANNAnomsFailRepDPT,ANNAnomsFailRepSatDPT,ANNAnomsFailSSatDPT)
+						      ANNAnomsFailClimDPT,ANNAnomsFailBuddyDPT,ANNAnomsFailRepDPT,ANNAnomsFailRepSatDPT,ANNAnomsFailSSatDPT,YearTitle,PlotLegend)
                 PlotName = OUTDIR+OutPltAnomsngt+year1+year2+'{:02}'.format(int(month1))+'{:02}'.format(int(month2))+'_'+nowmon+nowyear
 	        PlotQCTest(PlotName,varee,'Anoms','NIGHT',ANNnObs,ANNAnomsFailTrk,
 	                                              ANNAnomsFailClimAT,ANNAnomsFailBuddyAT,ANNAnomsFailRepAT,
-						      ANNAnomsFailClimDPT,ANNAnomsFailBuddyDPT,ANNAnomsFailRepDPT,ANNAnomsFailRepSatDPT,ANNAnomsFailSSatDPT)
+						      ANNAnomsFailClimDPT,ANNAnomsFailBuddyDPT,ANNAnomsFailRepDPT,ANNAnomsFailRepSatDPT,ANNAnomsFailSSatDPT,YearTitle,PlotLegend)
                 PlotName = OUTDIR+OutPltAnoms+year1+year2+'{:02}'.format(int(month1))+'{:02}'.format(int(month2))+'_'+nowmon+nowyear
 	        PlotQCTest(PlotName,varee,'Anoms','BOTH',ANNnObs,ANNAnomsFailTrk,
 	                                              ANNAnomsFailClimAT,ANNAnomsFailBuddyAT,ANNAnomsFailRepAT,
-						      ANNAnomsFailClimDPT,ANNAnomsFailBuddyDPT,ANNAnomsFailRepDPT,ANNAnomsFailRepSatDPT,ANNAnomsFailSSatDPT)
+						      ANNAnomsFailClimDPT,ANNAnomsFailBuddyDPT,ANNAnomsFailRepDPT,ANNAnomsFailRepSatDPT,ANNAnomsFailSSatDPT,YearTitle,PlotLegend)
 	    
 	    # Else in all other cases - assume we only work in whole years!!!
 	    # plot the annual period stuff 
             else:
+
+		YearTitle = year1+'{:02}'.format(int(month1))+' '+year2+'{:02}'.format(int(month2))
+
 	        PlotName = OUTDIR+OutPltAbsday+year1+year2+'{:02}'.format(int(month1))+'{:02}'.format(int(month2))+'_'+nowmon+nowyear
 	        PlotQCTest(PlotName,varee,'Abs','DAY',nObs,AbsFailTrk,
 	                                              AbsFailClimAT,AbsFailBuddyAT,AbsFailRepAT,
-						      AbsFailClimDPT,AbsFailBuddyDPT,AbsFailRepDPT,AbsFailRepSatDPT,AbsFailSSatDPT)
+						      AbsFailClimDPT,AbsFailBuddyDPT,AbsFailRepDPT,AbsFailRepSatDPT,AbsFailSSatDPT,YearTitle,PlotLegend)
                 PlotName = OUTDIR+OutPltAbsngt+year1+year2+'{:02}'.format(int(month1))+'{:02}'.format(int(month2))+'_'+nowmon+nowyear
 	        PlotQCTest(PlotName,varee,'Abs','NIGHT',nObs,AbsFailTrk,
 	                                                AbsFailClimAT,AbsFailBuddyAT,AbsFailRepAT,
-						        AbsFailClimDPT,AbsFailBuddyDPT,AbsFailRepDPT,AbsFailRepSatDPT,AbsFailSSatDPT)
+						        AbsFailClimDPT,AbsFailBuddyDPT,AbsFailRepDPT,AbsFailRepSatDPT,AbsFailSSatDPT,YearTitle,PlotLegend)
                 PlotName = OUTDIR+OutPltAbs+year1+year2+'{:02}'.format(int(month1))+'{:02}'.format(int(month2))+'_'+nowmon+nowyear
 	        PlotQCTest(PlotName,varee,'Abs','BOTH',nObs,AbsFailTrk,
 	                                               AbsFailClimAT,AbsFailBuddyAT,AbsFailRepAT,
-						       AbsFailClimDPT,AbsFailBuddyDPT,AbsFailRepDPT,AbsFailRepSatDPT,AbsFailSSatDPT)
+						       AbsFailClimDPT,AbsFailBuddyDPT,AbsFailRepDPT,AbsFailRepSatDPT,AbsFailSSatDPT,YearTitle,PlotLegend)
 
                 PlotName = OUTDIR+OutPltAnomsday+year1+year2+'{:02}'.format(int(month1))+'{:02}'.format(int(month2))+'_'+nowmon+nowyear
 	        PlotQCTest(PlotName,varee,'Anoms','DAY',nObs,AnomsFailTrk,
 	                                              AnomsFailClimAT,AnomsFailBuddyAT,AnomsFailRepAT,
-						      AnomsFailClimDPT,AnomsFailBuddyDPT,AnomsFailRepDPT,AnomsFailRepSatDPT,AnomsFailSSatDPT)
+						      AnomsFailClimDPT,AnomsFailBuddyDPT,AnomsFailRepDPT,AnomsFailRepSatDPT,AnomsFailSSatDPT,YearTitle,PlotLegend)
                 PlotName = OUTDIR+OutPltAnomsngt+year1+year2+'{:02}'.format(int(month1))+'{:02}'.format(int(month2))+'_'+nowmon+nowyear
 	        PlotQCTest(PlotName,varee,'Anoms','NIGHT',nObs,AnomsFailTrk,
 	                                              AnomsFailClimAT,AnomsFailBuddyAT,AnomsFailRepAT,
-						      AnomsFailClimDPT,AnomsFailBuddyDPT,AnomsFailRepDPT,AnomsFailRepSatDPT,AnomsFailSSatDPT)
+						      AnomsFailClimDPT,AnomsFailBuddyDPT,AnomsFailRepDPT,AnomsFailRepSatDPT,AnomsFailSSatDPT,YearTitle,PlotLegend)
                 PlotName = OUTDIR+OutPltAnoms+year1+year2+'{:02}'.format(int(month1))+'{:02}'.format(int(month2))+'_'+nowmon+nowyear
 	        PlotQCTest(PlotName,varee,'Anoms','BOTH',nObs,AnomsFailTrk,
 	                                              AnomsFailClimAT,AnomsFailBuddyAT,AnomsFailRepAT,
-						      AnomsFailClimDPT,AnomsFailBuddyDPT,AnomsFailRepDPT,AnomsFailRepSatDPT,AnomsFailSSatDPT)
+						      AnomsFailClimDPT,AnomsFailBuddyDPT,AnomsFailRepDPT,AnomsFailRepSatDPT,AnomsFailSSatDPT,YearTitle,PlotLegend)
 
 
     #pdb.set_trace()

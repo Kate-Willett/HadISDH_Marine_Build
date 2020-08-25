@@ -112,14 +112,14 @@ def ReadData(FileName,typee,delimee):
 #************************************************************************
 
 INDIR = '/data/local/hadkw/HADCRUH2/MARINE/LISTS/'
-INFILH = 'HeightMetaDataStats_ships_OBSclim2NBC_I300_55_AUG2018.txt'
-INFILIT = 'InstrTypeMetaDataStats_ships_OBSclim2NBC_I300_55_AUG2018.txt'
-INFILIE = 'InstrumentMetaDataStats_ships_OBSclim2NBC_I300_55_AUG2018.txt'
+INFILH = 'HeightMetaDataStats_ships_OBSclim2NBC_I300_55_JAN2019.txt'
+INFILIT = 'InstrTypeMetaDataStats_ships_OBSclim2NBC_I300_55_JAN2019.txt'
+INFILIE = 'InstrumentMetaDataStats_ships_OBSclim2NBC_I300_55_JAN2019.txt'
 
 OUTDIR = '/data/local/hadkw/HADCRUH2/MARINE/IMAGES/'
-OutPltH = 'SummaryHeight2panel_ships_OBSclim2NBC_I300_55_AUG2018'
-OutPltIE = 'SummaryInstrumentExposure_ships_OBSclim2NBC_I300_55_AUG2018'
-OutPltIT = 'SummaryInstrumentType_ships_OBSclim2NBC_I300_55_AUG2018'
+OutPltH = 'SummaryHeight2panel_ships_OBSclim2NBC_I300_55_JAN2019'
+OutPltIE = 'SummaryInstrumentExposure_ships_OBSclim2NBC_I300_55_JAN2019'
+OutPltIT = 'SummaryInstrumentType_ships_OBSclim2NBC_I300_55_JAN2019'
 #OutPltI_EOT = 'SummaryInstrumentType_EOT_ships_ERAclimNBC_APR2016'
 #OutPltI_EOH = 'SummaryInstrumentType_EOH_ships_ERAclimNBC_APR2016'
 
@@ -274,12 +274,12 @@ ax1.annotate("SG/SL/W = ship's sling/sling/whirled",xy=(0.05,0.94-(i*gap)),xycoo
 ax1.plot(Yr[gEOH],EOHSSNVS[gEOH],c='blue',linestyle='solid',linewidth=3,marker = 'o')
 ax1.plot(Yr[gEOT],EOTSSNVS[gEOT],c='blue',linestyle='dashed',linewidth=3,marker = 'o')
 i=3
-ax1.annotate("S/SN/VS = screen/ship's/ventilated screen",xy=(0.05,0.94-(i*gap)),xycoords='axes fraction',size=12,color='blue')
+ax1.annotate("S/SN/VS = screen/ship's screen/ventilated screen",xy=(0.05,0.94-(i*gap)),xycoords='axes fraction',size=12,color='blue')
 
 ax1.plot(Yr[gEOH],EOHUS[gEOH],c='violet',linestyle='solid',linewidth=3,marker = 'o')
 ax1.plot(Yr[gEOT],EOTUS[gEOT],c='violet',linestyle='dashed',linewidth=3,marker = 'o')
 i=4
-ax1.annotate("US = unscreend",xy=(0.05,0.94-(i*gap)),xycoords='axes fraction',size=12,color='violet')
+ax1.annotate("US = unscreened",xy=(0.05,0.94-(i*gap)),xycoords='axes fraction',size=12,color='violet')
 
 ax1.set_xlabel('Year')
 ax1.set_ylabel('% of SHIP Obs with metadata', color='black')
