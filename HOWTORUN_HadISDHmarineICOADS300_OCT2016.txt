@@ -26,9 +26,10 @@
 -> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/make_and_full_qc.py
    RUN from hadobs@eld256 (ssh -Y hadobs@eld256) (make sure 2 matplotlib lines are unchecked - agg)
    RUN for January 1973:
--> python2.7 make_and_full_qc.py -i configuration.txt --year1 1973 --year2 1973 --month1 1 --month2 1
+-> python2.7 make_and_full_qc.py -i configuration_it1_I3_55.txt --year1 1973 --year2 1973 --month1 1 --month2 1
    RUN FROM SLURM with output log:
-   sbatch --mem=16000 --time=360 --ntasks=1 --output=LOG_DIR/mds10MAR2016_197301.log ./run_MDS_MAR2016.sh 1973 1973 1 1
+   ./KateSlurm_RunIt1_1970s.sh
+   sbatch --mem=16000 --time=360 --ntasks=1 --output=LOG_DIR/mdsDDMMMYYYY_197301.log ./run_MDS.sh configuration_it1_I3_55.txt 1973 1973 1 1
    	-> REQUIRES:
 	qc.py
 	qc_new_track_check.py
@@ -36,24 +37,25 @@
 	IMMA2.py
 	Extended_IMMA.py	
 	-> TWEAK:
-	Set up configuration.txt file:
-	HadISDHSwitch,True
-	data_base_host,eld256
-	HardLimits,5.5
-	data_base_dir,/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/ERAclimNBC/
-	output_suffix,ERAclimNBC
-	ICOADS_dir,/project/earthobs/ICOADS/ICOADS.3.0.0/
-	RECENT_ICOADS_dir,/project/earthobs/ICOADS/ICOADS.3.0.1/
-	AT_climatology,/project/hadobs2/hadisdh/marine/otherdata/t2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
-	DPT_climatology,/project/hadobs2/hadisdh/marine/otherdata/td2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
-	SHU_climatology,/project/hadobs2/hadisdh/marine/otherdata/q2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
-	VAP_climatology,/project/hadobs2/hadisdh/marine/otherdata/e2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
-	CRH_climatology,/project/hadobs2/hadisdh/marine/otherdata/rh2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
-	CWB_climatology,/project/hadobs2/hadisdh/marine/otherdata/tw2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
-	DPD_climatology,/project/hadobs2/hadisdh/marine/otherdata/dpd2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
-	SLP_climatology,/project/hadobs2/hadisdh/marine/otherdata/p2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
-	AT_stdev_climatology,/project/hadobs2/hadisdh/marine/otherdata/t2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
-	DPT_stdev_climatology,/project/hadobs2/hadisdh/marine/otherdata/td2m_pentad_1by1marine_ERA-Interim_data_19792015.nc 
+        ENSURE original ERA-Interim 1x1 pentad CLIMATOLOGIES ARE IN /otherdata/
+	configuration_it1_I3_55.txt should contain the following:
+	- HadISDHSwitch,True
+	- data_base_host,eld256
+	- HardLimits,5.5
+	- data_base_dir,/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/ERAclimNBC/
+	- output_suffix,ERAclimNBC
+	- ICOADS_dir,/project/earthobs/ICOADS/ICOADS.3.0.0/
+	- RECENT_ICOADS_dir,/project/earthobs/ICOADS/ICOADS.3.0.1/
+	- AT_climatology,/project/hadobs2/hadisdh/marine/otherdata/t2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
+	- DPT_climatology,/project/hadobs2/hadisdh/marine/otherdata/td2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
+	- SHU_climatology,/project/hadobs2/hadisdh/marine/otherdata/q2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
+	- VAP_climatology,/project/hadobs2/hadisdh/marine/otherdata/e2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
+	- CRH_climatology,/project/hadobs2/hadisdh/marine/otherdata/rh2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
+	- CWB_climatology,/project/hadobs2/hadisdh/marine/otherdata/tw2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
+	- DPD_climatology,/project/hadobs2/hadisdh/marine/otherdata/dpd2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
+	- SLP_climatology,/project/hadobs2/hadisdh/marine/otherdata/p2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
+	- AT_stdev_climatology,/project/hadobs2/hadisdh/marine/otherdata/t2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
+	- DPT_stdev_climatology,/project/hadobs2/hadisdh/marine/otherdata/td2m_pentad_1by1marine_ERA-Interim_data_19792015.nc 
  	-> INPUTS:
 	/project/earthobs/ICOADS/ICOADS.3.0.0/
 	/project/earthobs/ICOADS/ICOADS.3.0.1/
@@ -98,7 +100,7 @@
        	-> INPUTS:
 	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/ERAclimNBC/new_suite_197301_ERAclimNBC.txt 
        	-> OUTPUTS:
-       	/data/local/hadkw/HADCRUH/MARINE/IMAGES/QCHIST/SummaryHistQC_DAY_Abs_AT_ERAclimNBC_197319730101_SEP2016.png 
+       	/data/local/hadkw/HADCRUH/MARINE/IMAGES/QCHIST/ERAclim/SummaryHistQC_DAY_Abs_AT_ERAclimNBC_197319730101_SEP2016.png 
 	
 2.2) Grid to monthly 5by5 (renormalise) the selected and QC'd obs (***not buddy checked***)
 -> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/gridding_cam.py
@@ -311,9 +313,10 @@ MISSING DATA - OBS based anomalies have gaps - we now only output data with a cl
      We may find that the reduced climatological coverage significantly reduces the number of obs we can pass through as anomalies.
 -> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/make_and_full_qc.py
    RUN for January 1973:
--> python2.7 make_and_full_qc.py -i configuration.txt --year1 1973 --year2 1973 --month1 1 --month2 1
+-> python2.7 make_and_full_qc.py -i configuration_it2_I3_55.txt --year1 1973 --year2 1973 --month1 1 --month2 1
    RUN FROM SLURM with output log:
-   sbatch --mem=16000 --time=360 --ntasks=1 --output=LOG_DIR/mds10MAR2016_197301.log ./run_MDS_MAR2016.sh 1973 1973 1 1
+   ./KateSlurm_RunIt2_1970s.sh
+   sbatch --mem=16000 --time=360 --ntasks=1 --output=LOG_DIR/mds10MAR2016_197301.log ./run_MDS.sh configuration_it2_I3_55.txt 1973 1973 1 1
    	-> REQUIRES:
 	qc.py
 	qc_new_track_check.py
@@ -321,17 +324,19 @@ MISSING DATA - OBS based anomalies have gaps - we now only output data with a cl
 	IMMA2.py
 	Extended_IMMA.py	
 	-> TWEAK:
-	data_base_dir,/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/OBSclim1NBC/
-	output_suffix,OBSclim1NBC
-	AT_climatology,/project/hadobs2/hadisdh/marine/otherdata/t2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
-	DPT_climatology,/project/hadobs2/hadisdh/marine/otherdata/td2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
-	SHU_climatology,/project/hadobs2/hadisdh/marine/otherdata/q2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
-	VAP_climatology,/project/hadobs2/hadisdh/marine/otherdata/e2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
-	CRH_climatology,/project/hadobs2/hadisdh/marine/otherdata/rh2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
-	CWB_climatology,/project/hadobs2/hadisdh/marine/otherdata/tw2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
-	DPD_climatology,/project/hadobs2/hadisdh/marine/otherdata/dpd2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
-	AT_stdev_climatology,/project/hadobs2/hadisdh/marine/otherdata/t2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
-	DPT_stdev_climatology,/project/hadobs2/hadisdh/marine/otherdata/td2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	COPY LATEST INTERP/INFILLED 1x1 pentad CLIMATOLOGIES FROM GRIDERAclimNBC to /otherdata/
+	configuration_it2_I3_55.txt should contain the following:
+	- data_base_dir,/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/OBSclim1NBC/
+	- output_suffix,OBSclim1NBC
+	- AT_climatology,/project/hadobs2/hadisdh/marine/otherdata/t2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	- DPT_climatology,/project/hadobs2/hadisdh/marine/otherdata/td2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	- SHU_climatology,/project/hadobs2/hadisdh/marine/otherdata/q2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	- VAP_climatology,/project/hadobs2/hadisdh/marine/otherdata/e2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	- CRH_climatology,/project/hadobs2/hadisdh/marine/otherdata/rh2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	- CWB_climatology,/project/hadobs2/hadisdh/marine/otherdata/tw2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	- DPD_climatology,/project/hadobs2/hadisdh/marine/otherdata/dpd2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	- AT_stdev_climatology,/project/hadobs2/hadisdh/marine/otherdata/t2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	- DPT_stdev_climatology,/project/hadobs2/hadisdh/marine/otherdata/td2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
 	-> INPUTS:
 	/project/earthobs/ICOADS/ICOADS.3.0.0/
 	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/RECENTICOADS/
@@ -593,9 +598,11 @@ VERY LITTLE DIFFERENCE IN CLIMATOLOGY COVERAGE!!!
 4.1) Run LOOP 3 of the qc, buddy check - OBS clims 
 -> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/make_and_full_qc.py
    RUN for January 1973:
--> python2.7 make_and_full_qc.py -i configuration.txt --year1 1973 --year2 1973 --month1 1 --month2 1
+-> python2.7 make_and_full_qc.py -i configuration_it3_I3_55.txt --year1 1973 --year2 1973 --month1 1 --month2 1
    RUN FROM SLURM with output log:
-   sbatch --mem=16000 --time=360 --ntasks=1 --output=LOG_DIR/mds10MAR2016_197301.log ./run_MDS_MAR2016.sh 1973 1973 1 1
+   ./KateSlurn_RunIt3.sh
+   or
+   sbatch --mem=16000 --time=360 --ntasks=1 --output=LOG_DIR/mds10MAR2016_197301.log ./run_MDS.sh configuration_it3_I3_55.txt 1973 1973 1 1
    	-> REQUIRES:
 	qc.py
 	qc_new_track_check.py
@@ -603,17 +610,19 @@ VERY LITTLE DIFFERENCE IN CLIMATOLOGY COVERAGE!!!
 	IMMA2.py
 	Extended_IMMA.py	
 	-> TWEAK:
-	data_base_dir,/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/OBSclim2NBC/
-	output_suffix,OBSclim2NBC
-	AT_climatology,/project/hadobs2/hadisdh/marine/otherdata/t2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
-	DPT_climatology,/project/hadobs2/hadisdh/marine/otherdata/td2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
-	SHU_climatology,/project/hadobs2/hadisdh/marine/otherdata/q2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
-	VAP_climatology,/project/hadobs2/hadisdh/marine/otherdata/e2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
-	CRH_climatology,/project/hadobs2/hadisdh/marine/otherdata/rh2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
-	CWB_climatology,/project/hadobs2/hadisdh/marine/otherdata/tw2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
-	DPD_climatology,/project/hadobs2/hadisdh/marine/otherdata/dpd2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
-	AT_stdev_climatology,/project/hadobs2/hadisdh/marine/otherdata/t2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
-	DPT_stdev_climatology,/project/hadobs2/hadisdh/marine/otherdata/td2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	COPY LATEST INTERP/INFILLED 1x1 pentad CLIMATOLOGIES FROM GRIDOBSclim1NBC to /otherdata/
+	configuration_it3_I3_55.txt should contain the following:
+	- data_base_dir,/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/OBSclim2NBC/
+	- output_suffix,OBSclim2NBC
+	- AT_climatology,/project/hadobs2/hadisdh/marine/otherdata/t2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	- DPT_climatology,/project/hadobs2/hadisdh/marine/otherdata/td2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	- SHU_climatology,/project/hadobs2/hadisdh/marine/otherdata/q2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	- VAP_climatology,/project/hadobs2/hadisdh/marine/otherdata/e2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	- CRH_climatology,/project/hadobs2/hadisdh/marine/otherdata/rh2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	- CWB_climatology,/project/hadobs2/hadisdh/marine/otherdata/tw2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	- DPD_climatology,/project/hadobs2/hadisdh/marine/otherdata/dpd2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	- AT_stdev_climatology,/project/hadobs2/hadisdh/marine/otherdata/t2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	- DPT_stdev_climatology,/project/hadobs2/hadisdh/marine/otherdata/td2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
 	-> INPUTS:
 	/project/earthobs/ICOADS/ICOADS.3.0.0/
 	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/RECENTICOADS/
@@ -882,9 +891,14 @@ with bias corrected climatology!
 5.1) Bias adjust the QC'd and buddy checked obs and estimate uncertainties
 -> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/MDS_make_extended.py
    RUN for January 1973
+--> module load scitools/default_legacy-current   
 --> python2.7 MDS_make_extended.py --year1 1973 --year2 1973 --month1 1 --month2 1 --typee OBSclim2NBC
    RUN from SLURM for BCtotal   
    sbatch --mem=16000 --time=360 --ntasks=1 --output=LOGFILES/mdsext_1973.log ./run_MDSEXT_APR2016.sh '1973' '1973' '01' '01' 'OBSclim2NBC'
+   THE ABOVE DOESN'T WORK WITH module load etc though - not sure why really
+   Instead - modify: run_make_MDS_extended.bash to select start/end year and any specific months
+   run this by:
+   --> sbatch run_make_MDS_extended.bash
    	-> REQUIRES:
 	HeightCorrect.py
 	CalcHums.py
@@ -996,7 +1010,8 @@ with bias corrected climatology!
 	...and all other uncertainty sources
 
    5.2.2) Package all individual year/month files into one big gridded file
-   If this is an update (any start year other than 1973) or uncertainty field then this merges with the existing gridded file
+   If this is an update (any start year other than 1973) then this merges with the existing gridded file
+   At the moment it keeps the uncertainty fields seperate so that I do not need to then edit all down stream processing code. I may do this later.
 -> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/make_complete_datafiles.py (could the climatology and renorm-if-ERA be rolled
 into this?)
    RUN for Jan 1973 to Dec 2015 for months 
@@ -1039,6 +1054,9 @@ into this?)
 	OBSclim2BClocal_5x5_monthly_from_daily_day_relax.nc
 	OBSclim2BClocal_5x5_monthly_from_daily_night_relax.nc
         OBSclim2BClocal_5x5_monthly_from_daily_both_relax.nc
+	OBSclim2BClocal_uSCN_5x5_monthly_from_daily_day_relax.nc
+	OBSclim2BClocal_uSCN_5x5_monthly_from_daily_night_relax.nc
+        OBSclim2BClocal_uSCN_5x5_monthly_from_daily_both_relax.nc
 	
    5.2.3) Create monthly 5by5 climatologies and standard deviations
 -> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/make_5x5monthly_climatology.py
@@ -1099,7 +1117,7 @@ into this?)
    5.2.5) Interpolate monthly 5by5 climatologies to pentad 1by1 and infill where possible
 -> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/InterpClimtoPentad1by1.py
    RUN for second iteration OBSclim1NBC q:
--> python2.7 InterpClimtoPentad1by1.py --doWHAT bcT --varee q
+-> python2.7 InterpClimtoPentad1by1.py --doWHAT BC (BCship) --varee q
 	-> REQUIRES:
 	-> TWEAK:	
 	version = 'beta1'
@@ -1116,6 +1134,42 @@ into this?)
 #	COPY 1x1_pentad to:
 #	/data/local/hadkw/HADCRUH2/MARINE/otherdata/q2m_OBSclim2NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
 
+   5.2.6) Create actual total uncertainty combining all elements - this will be larger than uTOT which was combined at the ob level and therefore has no
+   correlation. 
+-> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/Combined_uncertainty_Grids.py
+THIS IS PYTHON 3 so for now:
+-> module load scitools/default-current
+-> python Combined_Uncertainty_Grids.py --year1 1973 --year2 2018 --month1 01 --month2 12 --timings both (day, night) --platform ship (all)
+        -> TWEAK:
+	-> REQUIRES:
+	-> INPUTS:
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocalship/ or not ship
+	both
+	OBSclim2BClocal_uHGT_5x5_monthly_from_daily_both_relax.nc
+	OBSclim2BClocal_uSCN_5x5_monthly_from_daily_both_relax.nc
+	OBSclim2BClocal_uR_5x5_monthly_from_daily_both_relax.nc
+	OBSclim2BClocal_uM_5x5_monthly_from_daily_both_relax.nc
+	OBSclim2BClocal_uC_5x5_monthly_from_daily_both_relax.nc
+	day
+	OBSclim2BClocal_uHGT_5x5_monthly_from_daily_day_relax.nc
+	OBSclim2BClocal_uSCN_5x5_monthly_from_daily_day_relax.nc
+	OBSclim2BClocal_uR_5x5_monthly_from_daily_day_relax.ncs
+	OBSclim2BClocal_uM_5x5_monthly_from_daily_day_relax.nc
+	OBSclim2BClocal_uC_5x5_monthly_from_daily_day_relax.nc
+	night
+	OBSclim2BClocal_uHGT_5x5_monthly_from_daily_night_relax.nc
+	OBSclim2BClocal_uSCN_5x5_monthly_from_daily_night_relax.nc
+	OBSclim2BClocal_uR_5x5_monthly_from_daily_night_relax.nc
+	OBSclim2BClocal_uM_5x5_monthly_from_daily_night_relax.nc
+	OBSclim2BClocal_uC_5x5_monthly_from_daily_night_relax.nc
+	-> OUTPUTS:
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocal/
+	OBSclim2BClocal_uOBS_5x5_monthly_from_daily_both_relax.nc
+	OBSclim2BClocal_uSAMP_5x5_monthly_from_daily_both_relax.nc
+	OBSclim2BClocal_usbarSQ_5x5_monthly_from_daily_both_relax.nc
+	OBSclim2BClocal_urbar_5x5_monthly_from_daily_both_relax.nc
+	OBSclim2BClocal_uFULL_5x5_monthly_from_daily_both_relax.nc
+   
 5.3) OPTIONAL make up global average files and plot
 -> /data/local/hadkw/HADCRUH/MARINE/EUSTACEMDS/SUSTACE_SST_MAT/global_average_timeseries.py
    RUN for first iteration ERAclimNBC q:
@@ -1139,7 +1193,7 @@ into this?)
 	plots:
     	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/PLOTSOBSclim2BClocal/
 	OBSclim2BClocal_5x5_monthly_renorm19812010_anomalies_from_daily_both_relax_specific_humidity_ts.png
-	OBSclim2BClocal_5x5_monthly_renorm19812010_anomalies_from_daily_day_relax_specific_humidity_ts.png
+	OBSclim2BClocal_5x5_monthly_renorm19812010_anomalies_froml_daily_day_relax_specific_humidity_ts.png
 	OBSclim2BClocal_5x5_monthly_renorm19812010_anomalies_from_daily_night_relax_specific_humidity_ts.png
 
 NOTE: We may wish to create an interpolated bias corrected climatology but no point clim checking non-bias corrected data 
