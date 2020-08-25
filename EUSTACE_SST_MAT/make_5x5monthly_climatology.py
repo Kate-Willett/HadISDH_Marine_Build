@@ -52,6 +52,16 @@ Plots to appear in
 VERSION/RELEASE NOTES
 -----------------------
 
+Version 3 (11 May 2020) Kate Willett
+---------
+ 
+Enhancements
+Now worls with doNOWHOLE which is a bias corrected with no whole number flagged data
+ 
+Changes
+ 
+Bug fixes
+
 Version 2 (26 Sep 2016) Kate Willett
 ---------
  
@@ -118,7 +128,7 @@ grid_lons = np.arange(-180 + DELTA_LAT, 180 + DELTA_LON, DELTA_LON)
 # KATE modified
 def calculate_climatology(suffix = "relax", start_year = 1981, end_year = 2010, period = "both", daily = False, 
                           doQC = False, doQC1it = False, doQC2it = False, doQC3it = False, 
-			  doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False,
+			  doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doNOWHOLE = False,
 			  ShipOnly = False):
 #def calculate_climatology(suffix = "relax", start_year = 1981, end_year = 2010, period = "both", daily = False, doQC = False, doBC = False):
 # end
@@ -142,6 +152,7 @@ def calculate_climatology(suffix = "relax", start_year = 1981, end_year = 2010, 
     :param bool doBChgt: work on the height only bias corrected data
     :param bool doBCscn: work on the screen only bias corrected data
 # end
+    :param bool doNOWHOLE: work on the bias corrected data with whole number flagged data removed
 # KATE modified
     :param bool ShipOnly: work on the ship platform only data
 # end
@@ -149,7 +160,7 @@ def calculate_climatology(suffix = "relax", start_year = 1981, end_year = 2010, 
     :returns:
     '''
 # KATE modified
-    settings = set_paths_and_vars.set(doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn, 
+    settings = set_paths_and_vars.set(doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn, doNOWHOLE = doNOWHOLE,
                                       doQC = doQC, doQC1it = doQC1it, doQC2it = doQC2it, doQC3it = doQC3it,
 				      ShipOnly = ShipOnly)
     #settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC)
@@ -321,6 +332,8 @@ if __name__=="__main__":
     parser.add_argument('--doBCscn', dest='doBCscn', action='store_true', default = False,
                         help='process the screen only bias corrected data, default = False')
 # end
+    parser.add_argument('--doNOWHOLE', dest='doNOWHOLE', action='store_true', default = False,
+                        help='process the bias corrected data with whole number flagged data removed, default = False')
 # KATE modified
     parser.add_argument('--ShipOnly', dest='ShipOnly', action='store_true', default = False,
                         help='process the ship platform type only data, default = False')
@@ -332,7 +345,7 @@ if __name__=="__main__":
     calculate_climatology(suffix = str(args.suffix), start_year = int(args.start_year), end_year = int(args.end_year), period = str(args.period), daily = args.daily, \
 # KATE modified
                           doQC = args.doQC, doQC1it = args.doQC1it, doQC2it = args.doQC2it, doQC3it = args.doQC3it, \
-			  doBC = args.doBC, doBCtotal = args.doBCtotal, doBChgt = args.doBChgt, doBCscn = args.doBCscn, \
+			  doBC = args.doBC, doBCtotal = args.doBCtotal, doBChgt = args.doBChgt, doBCscn = args.doBCscn, doNOWHOLE = args.doNOWHOLE, \
 			  ShipOnly = args.ShipOnly)
                           #doQC = args.doQC, doBC = args.doBC)
 # end

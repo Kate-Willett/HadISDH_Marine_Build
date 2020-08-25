@@ -40,7 +40,7 @@ Input data stored in:
 -----------------------
 HOW TO RUN THE CODE
 -----------------------
-python2.7 merge_day_night.py --suffix relax --clims --months --start_year YYYY --end_year YYYY --start_month MM --end_month MM (OPTIONAL: one of --doQC1it, --doQC2it, --doQC3it, --doBCtotal, --doBCinstr, --doBChgt, + --ShipOnly)
+python2.7 merge_day_night.py --suffix relax --clims --months --start_year YYYY --end_year YYYY --start_month MM --end_month MM (OPTIONAL: one of --doQC1it, --doQC2it, --doQC3it, --doBCtotal, --doBCinstr, --doBChgt, --doNOWHOLE,+ --ShipOnly)
 Run for uncertainty (with BCtotal and ShipOnly)
 python2.7 merge_day_night.py --suffix relax --months --start_year YYYY --end_year YYYY --start_month MM --end_month MM --doBCtotal --doUSCN --ShipOnly
  (--doUHGT, --doUR, --doUC, --doUM, --doUTOT, --doUSLR)
@@ -63,10 +63,22 @@ OUTPUT
 /project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BChgt/
 /project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BCinstr/
 /project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BCtotalship/
+/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BCtotalshipNOWHOLE/
 
 -----------------------
 VERSION/RELEASE NOTES
 -----------------------
+
+Version 4 (11 May 2020) Kate Willett
+---------
+ 
+Enhancements
+This now works with --doNOWHOLE which runs a BCtotal version with all of the rounding flagged data removed (run with --ShipOnly
+ 
+Changes
+ 
+Bug fixes
+
 
 Version 3 (9 Oct 2018) Kate Willett
 ---------
@@ -265,12 +277,16 @@ def do_merge(fileroot, mdi, suffix = "relax", clims = False, doMedian = False, T
     else:
         # Assumed correlating at r=1
         if doUSLR | doUSCN | doUHGT | doUC:
-            merged_data = np.sqrt(np.ma.power(np.ma.sum(all_data[:, :len(OBS_ORDER)], axis = 0),2.)) / np.sqrt(np.ma.count(all_data[:, :len(OBS_ORDER)], axis = 0))
+# John K thinks that this should be /N rather than /SQRT(N) which will make uncertainties smaller so I'm trying it
+#            merged_data = np.sqrt(np.ma.power(np.ma.sum(all_data[:, :len(OBS_ORDER)], axis = 0),2.)) / np.sqrt(np.ma.count(all_data[:, :len(OBS_ORDER)], axis = 0))
+            merged_data = np.sqrt(np.ma.power(np.ma.sum(all_data[:, :len(OBS_ORDER)], axis = 0),2.)) / np.ma.count(all_data[:, :len(OBS_ORDER)], axis = 0)
 #            print('Doing correlated mean combo:',merged_data)
 #	    pdb.set_trace()
 	# Assumed no correlation r=0
 	elif doUR | doUM | doUTOT:
-            merged_data = np.sqrt(np.ma.sum(np.ma.power(all_data[:, :len(OBS_ORDER)],2.), axis = 0)) / np.sqrt(np.ma.count(all_data[:, :len(OBS_ORDER)], axis = 0))
+# John K thinks that this should be /N rather than /SQRT(N) which will make uncertainties smaller so I'm trying it
+#            merged_data = np.sqrt(np.ma.sum(np.ma.power(all_data[:, :len(OBS_ORDER)],2.), axis = 0)) / np.sqrt(np.ma.count(all_data[:, :len(OBS_ORDER)], axis = 0))
+            merged_data = np.sqrt(np.ma.sum(np.ma.power(all_data[:, :len(OBS_ORDER)],2.), axis = 0)) / np.ma.count(all_data[:, :len(OBS_ORDER)], axis = 0)
 #            print('Doing uncorrelated mean combo:',merged_data)
 #	    pdb.set_trace()
         else:
@@ -383,7 +399,7 @@ def get_fileroot(settings, climatology = False, pentads = False, months = [], do
 #************************************************************************
 # KATE modified
 def set_up_merge(suffix = "relax", clims = False, months = False, pentads = False, start_year = defaults.START_YEAR, end_year = defaults.END_YEAR, start_month = 1, end_month = 12, 
-                 doQC = False, doQC1it = False, doQC2it = False, doQC3it = False, doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, 
+                 doQC = False, doQC1it = False, doQC2it = False, doQC3it = False, doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doNOWHOLE = False,
 		 doUSLR = False, doUSCN = False, doUHGT = False, doUR = False, doUM = False, doUC = False, doUTOT = False, ShipOnly = False):
 #def set_up_merge(suffix = "relax", clims = False, months = False, pentads = False, start_year = defaults.START_YEAR, end_year = defaults.END_YEAR, start_month = 1, end_month = 12, doQC = False, doBC = False):
 # end
@@ -409,6 +425,7 @@ def set_up_merge(suffix = "relax", clims = False, months = False, pentads = Fals
     :param bool doBChgt: work on the height only bias corrected data
     :param bool doBCscn: work on the screen only bias corrected data
 # end
+    :param bool doNOWHOLE: work on the BCtotal data with no whole number flagged data
     :param bool doBC: work on the bias corrected data
 # UNC NEW
     :param bool doUSLR: work on solar adjustment uncertainty    
@@ -428,7 +445,7 @@ def set_up_merge(suffix = "relax", clims = False, months = False, pentads = Fals
     '''
     
 # KATE modified
-    settings = set_paths_and_vars.set(doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn, doQC = doQC, doQC1it = doQC1it, doQC2it = doQC2it, doQC3it = doQC3it, \
+    settings = set_paths_and_vars.set(doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn, doNOWHOLE = doNOWHOLE, doQC = doQC, doQC1it = doQC1it, doQC2it = doQC2it, doQC3it = doQC3it, \
                                       doUSLR = doUSLR, doUSCN = doUSCN, doUHGT = doUHGT, doUR = doUR, doUM = doUM, doUC = doUC, doUTOT = doUTOT, ShipOnly = ShipOnly)
     #settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC)
 # end
@@ -545,6 +562,8 @@ if __name__=="__main__":
     parser.add_argument('--doBCscn', dest='doBCscn', action='store_true', default = False,
                         help='process the height only bias corrected data, default = False')
 # end
+    parser.add_argument('--doNOWHOLE', dest='doNOWHOLE', action='store_true', default = False,
+                        help='process the bias corrected data with all whole number flagged data removed, default = False')
 # UNC NEW - THESE MUST BE RUN WITH --doBCtotal and --ShipOnly
     parser.add_argument('--doUSCN', dest='doUSCN', action='store_true', default = False,
                         help='process the bias corrected data uncertainties for instrument adjustment, default = False')
@@ -574,7 +593,7 @@ if __name__=="__main__":
                      start_year = int(args.start_year), end_year = int(args.end_year), \
                      start_month = int(args.start_month), end_month = int(args.end_month), \
 		     doQC = args.doQC, doQC1it = args.doQC1it, doQC2it = args.doQC2it, doQC3it = args.doQC3it, \
-		     doBC = args.doBC, doBCtotal = args.doBCtotal, doBChgt = args.doBChgt, doBCscn = args.doBCscn, \
+		     doBC = args.doBC, doBCtotal = args.doBCtotal, doBChgt = args.doBChgt, doBCscn = args.doBCscn, doNOWHOLE = args.doNOWHOLE, \
 		     doUSLR = args.doUSLR, doUSCN = args.doUSCN, doUHGT = args.doUHGT, doUR = args.doUR, doUM = args.doUM, doUC = args.doUC, doUTOT = args.doUTOT, \
 		     ShipOnly = args.ShipOnly)
     #set_up_merge(suffix = str(args.suffix), clims = args.clims, months = args.months, pentads = args.pentads, \

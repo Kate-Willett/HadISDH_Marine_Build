@@ -55,7 +55,7 @@ python2.7 gridding_cam.py --suffix relax --period day --start_year YYYY --end_ye
 python2.7 gridding_cam.py --suffix relax --period day --start_year YYYY --end_year YYYY --start_month MM --end_month MM --doQC (--ShipOnly)
 
 # for BC data only
-python2.7 gridding_cam.py --suffix relax --period day --start_year YYYY --end_year YYYY --start_month MM --end_month MM --doBCtotal (--doBCscn, --doBChgt) (--ShipOnly)
+python2.7 gridding_cam.py --suffix relax --period day --start_year YYYY --end_year YYYY --start_month MM --end_month MM --doBCtotal (--doBCscn, --doBChgt, --doNOWHOLE) (--ShipOnly)
 
 # for uncertainty data only
 python2.7 gridding_cam.py --suffix relax --period day --start_year YYYY --end_year YYYY --start_month MM --end_month MM --doBCtotal --doUSLR (--doUSCN, --doUHGT, --doUR, --doUM, --doUC, --doUTOT) (--ShipOnly)
@@ -104,6 +104,17 @@ Plots to appear in
 -----------------------
 VERSION/RELEASE NOTES
 -----------------------
+
+Version 4 (7 May 2020) Kate Willett
+---------
+ 
+Enhancements
+This now does a NOWHOLE version which grids the BCtotal ShipOnly (optional) values that have not been given a whole number flag
+ 
+Changes
+
+Bug fixes
+
 
 Version 3 (24 Sep 2018) Kate Willett
 ---------
@@ -221,7 +232,7 @@ SwitchOutput = 0
 # KATE modified    
 def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = defaults.END_YEAR, start_month = 1, end_month = 12, 
                 doQC = False, doQC1it = False, doQC2it = False, doQC3it = False, doSST_SLP = False, 
-		doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, 
+		doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doNOWHOLE = False,
 		doUSLR = False, doUSCN = False, doUHGT = False, doUR = False, doUM = False, doUC = False, doUTOT = False,
 		ShipOnly = False):
 #def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = defaults.END_YEAR, start_month = 1, end_month = 12, doQC = False, doSST_SLP = False, doBC = False, doUncert = False):
@@ -247,6 +258,7 @@ def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = d
     :param bool doBChgt: work on the height only bias corrected data
     :param bool doBCscn: work on the screen only bias corrected data
 # end
+    :param bool doNOWHOLE: work on the bias corrected data that doesn't have any whole number flags set
 # UNC NEW
     :param bool doUSLR: work on BC and solar adj uncertainty with correlation
     :param bool doUSCN: work on BC and instrument adj uncertainty with correlation
@@ -262,7 +274,7 @@ def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = d
     :returns:
     '''
 # KATE modified    
-    settings = set_paths_and_vars.set(doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn, doQC = doQC, doQC1it = doQC1it, doQC2it = doQC2it, doQC3it = doQC3it, 
+    settings = set_paths_and_vars.set(doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn, doNOWHOLE = doNOWHOLE, doQC = doQC, doQC1it = doQC1it, doQC2it = doQC2it, doQC3it = doQC3it, 
                                       doUSLR = doUSLR, doUSCN = doUSCN, doUHGT = doUHGT, doUR = doUR, doUM = doUM, doUC = doUC, doUTOT = doUTOT, ShipOnly = ShipOnly)
     #settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC)
 # end
@@ -270,7 +282,7 @@ def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = d
 
 # KATE modified  - added other BC options  
 #    if doBC:
-    if doBC | doBCtotal | doBChgt | doBCscn:
+    if doBC | doBCtotal | doBChgt | doBCscn | doNOWHOLE:
 # end
         fields = mds.TheDelimitersExt # extended (BC)
 # UNC NEW
@@ -281,7 +293,7 @@ def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = d
 
 # KATE modified  - added other BC options  
 #    OBS_ORDER = utils.make_MetVars(settings.mdi, doSST_SLP = doSST_SLP, multiplier = True, doBC = doBC) # ensure that convert from raw format at writing stage with multiplier
-    OBS_ORDER = utils.make_MetVars(settings.mdi, doSST_SLP = doSST_SLP, multiplier = True, doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn) # ensure that convert from raw format at writing stage with multiplier
+    OBS_ORDER = utils.make_MetVars(settings.mdi, doSST_SLP = doSST_SLP, multiplier = True, doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn, doNOWHOLE = doNOWHOLE) # ensure that convert from raw format at writing stage with multiplier
 # end
 
     # KW switching between 4 ('_strict') for climatology build and 2 for anomaly buily ('_relax') - added subscripts to files
@@ -298,6 +310,8 @@ def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = d
 # KATE modified
     if doQC1it | doQC2it:
         these_flags = {"ATclim":0,"ATrep":0,"DPTclim":0,"DPTssat":0,"DPTrep":0,"DPTrepsat":0}
+    elif doNOWHOLE: # this should now pull through only those without rounding / whole number flags set
+        these_flags = {"ATbud":0, "ATclim":0,"ATround":0,"ATrep":0,"DPTbud":0,"DPTclim":0,"DPTround":0,"DPTssat":0,"DPTrep":0,"DPTrepsat":0}    
     else:
         these_flags = {"ATbud":0, "ATclim":0,"ATrep":0,"DPTbud":0,"DPTclim":0,"DPTssat":0,"DPTrep":0,"DPTrepsat":0}    
     #these_flags = {"ATbud":0, "ATclim":0,"ATrep":0,"DPTbud":0,"DPTclim":0,"DPTssat":0,"DPTrep":0,"DPTrepsat":0}
@@ -317,7 +331,7 @@ def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = d
             # process the monthly file
 # KATE modified  - added other BC options  
 #            if doBC:
-            if doBC | doBCtotal | doBChgt | doBCscn:
+            if doBC | doBCtotal | doBChgt | doBCscn | doNOWHOLE:
 # end
                 filename = "new_suite_{}{:02d}_{}_extended.txt".format(year, month, settings.OUTROOT)
 # UNC NEW
@@ -330,7 +344,7 @@ def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = d
 # KATE modified  - added other BC options  
 #            raw_platform_data, raw_obs, raw_meta, raw_qc = utils.read_qc_data(filename, settings.ICOADS_LOCATION, fields, doBC = doBC)
             raw_platform_data, raw_obs, raw_meta, raw_qc = utils.read_qc_data(filename, settings.ICOADS_LOCATION, fields, doBC = doBC, 
-	                                                   doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn, ShipOnly = ShipOnly)
+	                                                   doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn, doNOWHOLE = doNOWHOLE, ShipOnly = ShipOnly)
 # end
 # UNC NEW
             if doUSLR | doUSCN | doUHGT | doUR | doUM | doUC | doUTOT: # Read in the uncertainty info but only if we're doing a full BC run
@@ -376,20 +390,20 @@ def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = d
                         plot_qc_diagnostics.values_vs_lat_dist(variable, lats, raw_obs[:, variable.column], raw_qc, these_flags, \
 			        settings.PLOT_LOCATION + "qc_actuals_{}_{}{:02d}_{}.png".format(variable.name, year, month, suffix), multiplier = variable.multiplier, \
 # KATE modified  - added other BC options  
-				doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn)
+				doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn, doNOWHOLE = doNOWHOLE)
 # end
 
             # QC sub-selection
 	    
 # KATE modified - added QC iterations but also think this needs to include the bias corrected versions because the QC flags need to be applied to those too.
 # Not sure what was happening previously with the doBC run - any masking to QC'd obs?
-            if doQC | doQC1it | doQC2it | doQC3it | doBC | doBCtotal | doBChgt | doBCscn:
+            if doQC | doQC1it | doQC2it | doQC3it | doBC | doBCtotal | doBChgt | doBCscn | doNOWHOLE:
             #if doQC:
 # end
                 print "Using {} as flags".format(these_flags)
 # KATE modified - BC options
 #                mask = utils.process_qc_flags(raw_qc, these_flags, doBC = doBC)
-                mask = utils.process_qc_flags(raw_qc, these_flags, doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn)
+                mask = utils.process_qc_flags(raw_qc, these_flags, doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn, doNOWHOLE = doNOWHOLE)
 # end
 		print "All Obs: ",len(mask)
 		print "Good Obs: ",len(mask[np.where(mask == 0)])
@@ -449,7 +463,7 @@ def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = d
 # KATE modified - to add settings.doMedian instead of just doMedian which seems to be consistent with the other bits and BC options
 	        raw_month_grid, raw_month_n_obs, this_month_period = utils.grid_1by1_cam(clean_data, raw_qc, hours_since, lat_index, lon_index, \
 	              grid_hours, grid_lats, grid_lons, OBS_ORDER, settings.mdi, doMedian = settings.doMedian, \
-		      doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn)
+		      doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn, doNOWHOLE = doNOWHOLE)
 	    #raw_month_grid, raw_month_n_obs, this_month_period = utils.grid_1by1_cam(clean_data, raw_qc, hours_since, lat_index, lon_index, grid_hours, grid_lats, grid_lons, OBS_ORDER, settings.mdi, doMedian = True, doBC = doBC)
 # end
                 del clean_data
@@ -526,12 +540,16 @@ def do_gridding(suffix = "relax", start_year = defaults.START_YEAR, end_year = d
 # Use n_hrs_per_day because we're combining the already propagated uncertainties at the 1by1 3hr level, not from all individual obs
                 # if its correlated (r=1) do it like this
 		if doUSLR | doUSCN | doUHGT | doUC: #                        
-                    unc_daily_grid = np.sqrt(np.ma.power(np.ma.sum(unc_this_month_grid, axis = 2),2.)) / np.sqrt(n_hrs_per_day)
+# John K thinks it should be divude by N, not SQRT(N)
+#                    unc_daily_grid = np.sqrt(np.ma.power(np.ma.sum(unc_this_month_grid, axis = 2),2.)) / np.sqrt(n_hrs_per_day)
+                    unc_daily_grid = np.sqrt(np.ma.power(np.ma.sum(unc_this_month_grid, axis = 2),2.)) / n_hrs_per_day
                     unc_daily_grid.fill_value = settings.mdi
 
                 # if its NOT correlated (r=0) do it like this
 		if doUR | doUM | doUTOT: #                        
-                    unc_daily_grid = np.sqrt(np.ma.sum(np.ma.power(unc_this_month_grid, 2.), axis = 2)) / np.sqrt(n_hrs_per_day)
+# John K thinks it should be divude by N, not SQRT(N)
+#                    unc_daily_grid = np.sqrt(np.ma.sum(np.ma.power(unc_this_month_grid, 2.), axis = 2)) / np.sqrt(n_hrs_per_day)
+                    unc_daily_grid = np.sqrt(np.ma.sum(np.ma.power(unc_this_month_grid, 2.), axis = 2)) / n_hrs_per_day
                     unc_daily_grid.fill_value = settings.mdi
 
 
@@ -790,6 +808,8 @@ if __name__=="__main__":
     parser.add_argument('--doBCscn', dest='doBCscn', action='store_true', default = False,
                         help='process the screen bias corrected data only, default = False')
 # end
+    parser.add_argument('--doNOWHOLE', dest='doNOWHOLE', action='store_true', default = False,
+                        help='process the total bias corrected data that has no whole number flag set, default = False')
 # UNC NEW
 # MUST SET doBCtotal for these to work:
     parser.add_argument('--doUSLR', dest='doUSLR', action='store_true', default = False,
@@ -819,7 +839,7 @@ if __name__=="__main__":
                     start_month = int(args.start_month), end_month = int(args.end_month), \
 # KATE modified
                     doQC = args.doQC, doQC1it = args.doQC1it, doQC2it = args.doQC2it, doQC3it = args.doQC3it, \
-		    doBC = args.doBC, doBCtotal = args.doBCtotal, doBChgt = args.doBChgt, doBCscn = args.doBCscn, \
+		    doBC = args.doBC, doBCtotal = args.doBCtotal, doBChgt = args.doBChgt, doBCscn = args.doBCscn, doNOWHOLE = args.doNOWHOLE, \
 		    doUSLR = args.doUSLR, doUSCN = args.doUSCN, doUHGT = args.doUHGT, doUR = args.doUR, doUM = args.doUM, doUC = args.doUC, doUTOT = args.doUTOT, \
 		    ShipOnly = args.ShipOnly)
                     #doQC = args.doQC, doBC = args.doBC)

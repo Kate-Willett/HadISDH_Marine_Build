@@ -45,6 +45,17 @@ Plots to appear in
 VERSION/RELEASE NOTES
 -----------------------
 
+Version 3 (7 May 2020) Kate Willett
+---------
+ 
+Enhancements
+Can now cope with doNOWHOLE BC with no whole number flags
+ 
+Changes
+ 
+Bug fixes
+
+
 Version 2 (29 Sep 2016) Kate Willett
 ---------
  
@@ -84,7 +95,7 @@ import pdb
 #*****************************************************
 # KATE modified - BC options
 #def values_vs_lat(var, lats, data, qc_flags, these_flags, filename, multiplier = 100., doBC = False):
-def values_vs_lat(var, lats, data, qc_flags, these_flags, filename, multiplier = 100., doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False):
+def values_vs_lat(var, lats, data, qc_flags, these_flags, filename, multiplier = 100., doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doNOWHOLE = False):
 # end
     '''
     Plots showing benefit of QC using all QC flags bar day/night
@@ -102,12 +113,13 @@ def values_vs_lat(var, lats, data, qc_flags, these_flags, filename, multiplier =
     :param bool doBChgt: work on the height only bias corrected QC flag definitions
     :param bool doBCscn: work on the screen only bias corrected QC flag definitions
 # end
+    :param bool doNOWHOLE: work on the bias corrected QC flag definitions with no rounding flags set
     '''
 
     # get the final data mask
 # KATE modified - QC options
 #    data_mask = utils.process_qc_flags(qc_flags, these_flags, doBC = doBC)
-    data_mask = utils.process_qc_flags(qc_flags, these_flags, doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn)
+    data_mask = utils.process_qc_flags(qc_flags, these_flags, doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn, doNOWHOLE = doNOWHOLE)
 # end
     # apportion the mask
     clean_data = np.ma.masked_array(data, data_mask)
@@ -153,7 +165,7 @@ def values_vs_lat(var, lats, data, qc_flags, these_flags, filename, multiplier =
 #*****************************************************
 # KATE modified - BC options
 #def values_vs_lat_dist(var, lats, data, qc_flags, these_flags, filename, multiplier = 100., doBC = False):
-def values_vs_lat_dist(var, lats, data, qc_flags, these_flags, filename, multiplier = 100., doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False):
+def values_vs_lat_dist(var, lats, data, qc_flags, these_flags, filename, multiplier = 100., doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doNOWHOLE = False):
 # end
     '''
     Plots showing benefit of QC using all QC flags bar day/night
@@ -172,12 +184,13 @@ def values_vs_lat_dist(var, lats, data, qc_flags, these_flags, filename, multipl
     :param bool doBChgt: work on the height only bias corrected QC flag definitions
     :param bool doBCscn: work on the screen only bias corrected QC flag definitions
 # end
+    :param bool doNOWHOLE: work on the bias corrected QC flag definitions with no whole number flags set
     '''
 
     # get the final data mask
 # KATE modified - BC options
 #    data_mask = utils.process_qc_flags(qc_flags, these_flags, doBC = doBC)
-    data_mask = utils.process_qc_flags(qc_flags, these_flags, doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn)
+    data_mask = utils.process_qc_flags(qc_flags, these_flags, doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn, doNOWHOLE = doNOWHOLE)
 # end
 
     # apportion the mask

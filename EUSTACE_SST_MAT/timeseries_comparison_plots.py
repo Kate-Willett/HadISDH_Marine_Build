@@ -29,7 +29,9 @@ compare_BCNBC
 # run BA types comparison for all or ship only which includes noBA and noQC
 * compare_PTs
 # run ship vs all comparison for dayQC, nightQC, bothQC, dayBA, nightBA, bothBA - also has ERA-Interim on there and NOCs Trends are computed over common period.
-
+* compare_RH
+# run noQC, BA and BA_no_whole for ship both data only to see if removing the whole number flagged data makes any difference
+NOT THAT THIS DOESN'T HAVE PARTICULARLY AFFECTED DECKS REMOVED WHICH WOULD BE ANOTHER WAY OF DOING IT
 -----------------------
 LIST OF MODULES
 -----------------------
@@ -59,6 +61,8 @@ tcp.compare_BCNBC('all',AddNOCS = False) # or 'ship' If AddNOCS is not set to fa
 tcp.compare_BCtype('all',AddNOCS = False) # or 'ship' (ship not set up yet for all different BA types) If AddNOCS is not set to false then NOCS will be plotted for specific humidity
 # run ship vs all comparison for dayQC, nightQC, bothQC, dayBA, nightBA, bothBA
 tcp.compare_PTs('noBA',AddNOCS = False, AddERA = False) # or 'BClocal' If AddNOCS or AddERA is not set to false then NOCS nad ERA will be plotted for specific humidity (rh, t and td for ERA too)
+# run ship both RH comparison noQC, BA, BA_no_whole
+tcp.compare_RH('both') # or 'day' or 'night' - only works for RH and only both at the moment
 
 or with Python 3
 module load scitools/default-current
@@ -83,13 +87,14 @@ Plots to appear in
 VERSION/RELEASE NOTES
 -----------------------
 
-Version 6 (4 May 2020)
+Version 6 (11 May 2020)
 ---------
  
 Enhancements
 All trend text on plot now goes top down so is in the same order as the legend
 RH now has trends from 1982 onwards shown as text on the plots in parentheses
 All trends now only to 2 sig figures and st error to 3 sig figures
+Now has a compare_RH plot
  
 Changes
 Now uses OLS with AR(1) Correction for serial correlation rather than median of pairwise slopes - requires LinearTrends.py!!!
@@ -189,7 +194,8 @@ GRID_LOCATION = {"noBA" : "GRIDSOBSclim2NBC",
 		 "QC" : "GRIDSOBSclim2NBC", 
 		 "noQC" : "GRIDSOBSclim2noQC",
 		 "BA_HGT" : "GRIDSOBSclim2BClocalHGT", 
-		 "BA_INST" : "GRIDSOBSclim2BClocalINST"}
+		 "BA_INST" : "GRIDSOBSclim2BClocalINST",
+		 "BA_no_whole" : "GRIDSOBSclim2BClocal"}
 		 
 #PLOT_LOCATION = "/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/PLOTS_comparison/"
 PLOT_LOCATION = "/data/users/hadkw/WORKING_HADISDH/MARINE/IMAGES/"
@@ -299,7 +305,7 @@ def do_plot(data, title, outname):
                     #slope_error = np.mean([(upper-slope), (slope-lower)])
                     
 		    # OLS with AR1 Correction
-                    slopes = OLS_AR1Corr(d.y.data[0:ERATimePointer], d.y.mdi, 0.95)
+                    slopes = OLS_AR1Corr(d.y.data[0:ERATimePointer], d.y.mdi, 0.9)
                     slope = slopes[0]
                     slope_error = slopes[4]
                     
@@ -311,9 +317,9 @@ def do_plot(data, title, outname):
                         #slope_errorRH = np.mean([(upperRH-slopeRH), (slopeRH-lowerRH)])
 
 		        # OLS with AR1 Correction
-                        slopesRH = OLS_AR1Corr(d.y.data[ERAPost82RHPointer[0]:ERAPost82RHPointer[1]], d.y.mdi, 0.95)
-                        slopeRH = slopes[0]
-                        slope_errorRH = slopes[4]
+                        slopesRH = OLS_AR1Corr(d.y.data[ERAPost82RHPointer[0]:ERAPost82RHPointer[1]], d.y.mdi, 0.9)
+                        slopeRH = slopesRH[0]
+                        slope_errorRH = slopesRH[4]
 
                 else:
                     # annual - also want MPW slope
@@ -321,7 +327,7 @@ def do_plot(data, title, outname):
                     #slope_error = np.mean([(upper-slope), (slope-lower)])
 
 		    # OLS with AR1 Correction
-                    slopes = OLS_AR1Corr(d.y.data[TimePointers[0]:TimePointers[1]], d.y.mdi, 0.95)
+                    slopes = OLS_AR1Corr(d.y.data[TimePointers[0]:TimePointers[1]], d.y.mdi, 0.9)
                     slope = slopes[0]
                     slope_error = slopes[4]
 
@@ -333,9 +339,9 @@ def do_plot(data, title, outname):
                         #slope_errorRH = np.mean([(upperRH-slopeRH), (slopeRH-lowerRH)])
 
 		        # OLS with AR1 Correction
-                        slopesRH = OLS_AR1Corr(d.y.data[Post82RHPointer[0]:Post82RHPointer[1]], d.y.mdi, 0.95)
-                        slopeRH = slopes[0]
-                        slope_errorRH = slopes[4]
+                        slopesRH = OLS_AR1Corr(d.y.data[Post82RHPointer[0]:Post82RHPointer[1]], d.y.mdi, 0.9)
+                        slopeRH = slopesRH[0]
+                        slope_errorRH = slopesRH[4]
 
                 plt.plot(slope_years, slope_values, c = d.c, lw = 1)
 
@@ -1026,3 +1032,70 @@ def compare_PTs(Plot_Type = 'noBA', AddNOCS = True, AddERA = True):
 
             print("Making plot")
             do_plot(to_plot, title, "{}_{}_{}_ShipAll.png".format(var.name, period,Plot_Type))
+
+#************************************************************************************************************
+# SHIP  RH comparisons for noQC, BA and BA_no_whole (ship only)
+def compare_RH(Plot_Type = 'both'):
+    ''' Run the platform (ship vs all) comparison plot '''
+    ''' Plot_Type = 'noBA'. 'BA' - default = noBA  '''
+    ''' AddNOCS = True - default = True so NOCS time series will be added for q '''
+    ''' AddERA = True - default = True so ERA time series will be added for q, rh, t and td '''
+
+    version = "_renorm19812010_anomalies"
+    #OLD: version = "_anomalies"
+    DATA_LOCATION = "/project/hadobs2/hadisdh/marine/ICOADS.3.0.0"
+    # OLD: DATA_LOCATION = "/project/hadobs2/hadisdh/marine/ICOADS.2.5.1/"
+    
+    correction = "WHOLE NUMBERS"
+    period = Plot_Type
+    Ob_Type = "ship"
+
+    for v, var in enumerate(OBS_ORDER):
+
+        if (var.name != "relative_humidity_anomalies"):
+            continue
+
+       # separate plots for both/day/night
+        to_plot = []
+
+        for Series in ["noQC", "BA", "BA_no_whole"]:
+	    
+            for time_res in ["annual", "monthly"]:
+                if time_res == "annual":
+                    zorder = 10
+                    lw = 2
+                else:
+                    zorder = 1
+                    lw = 1
+
+	        # Catch for filenames which are either NBC or BClocal, not BClocalHGT or BClocalINST
+                if (Series == "noQC"):
+                    ThisCorr = "NBC"
+                    FlagType = ""
+                    color = "red"
+                elif (Series == "BA"):
+                    ThisCorr = "BClocal"
+                    FlagType = ""
+                    color = "black"
+                elif (Series == "BA_no_whole"):
+                    ThisCorr = "BClocal"
+                    FlagType = "NOWHOLE"
+                    color = "grey"
+                
+                filename = "{}/{}ship{}/OBSclim2{}_5x5_monthly{}_from_daily_{}_{}_ts_{}.nc".format(DATA_LOCATION, GRID_LOCATION[Series], FlagType, ThisCorr, version, period, suffix, time_res) 
+# OLD:                filename = "{}/{}/ERAclim{}_5x5_monthly{}_from_daily_{}_{}_ts_{}.nc".format(DATA_LOCATION, GRID_LOCATION[correction], correction, version, period, suffix, time_res) 
+
+                y, t = get_data(filename,var)
+
+                label = "{}".format(Series)
+                    
+                if time_res == "annual":
+                    to_plot += [PlotData(var.name, y, t, label, color, zorder, lw)]
+                else:
+                    to_plot += [PlotData(var.name, y, t, "", color, zorder, lw)]
+
+        
+            title = "{} - {} - {}".format(" ".join([s.capitalize() for s in var.name.split("_")]), period, correction)
+
+            print("Making plot")
+            do_plot(to_plot, title, "{}_{}_{}_RHComp.png".format(var.name, period,Plot_Type))

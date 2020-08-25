@@ -60,6 +60,17 @@ OUTPUT
 VERSION/RELEASE NOTES
 -----------------------
 
+Version 4 (11 May 2020) Kate Willett
+---------
+ 
+Enhancements
+This can now work with doNOWHOLE - a bias corrected run with no whole number flagged data
+ 
+Changes
+ 
+Bug fixes
+
+
 Version 3 (29 Oct 2018) Kate Willett
 ---------
  
@@ -126,7 +137,7 @@ defaults = set_paths_and_vars.set()
 #************************************************************************
 # KATE modified
 def combine_files(suffix = "relax", pentads = False, do3hr = False, months = False, daily = False, start_year = defaults.START_YEAR, end_year = defaults.END_YEAR, start_month = 1, end_month = 12, period = "both", 
-                  doQC = False, doQC1it = False, doQC2it = False, doQC3it = False, doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False,
+                  doQC = False, doQC1it = False, doQC2it = False, doQC3it = False, doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doNOWHOLE = False,
 # UNC NEW		  
 		  doUSLR = False, doUSCN = False, doUHGT = False, doUR = False, doUM = False, doUC = False, doUTOT = False, ShipOnly = False):
 #def combine_files(suffix = "relax", pentads = False, do3hr = False, months = False, daily = False, start_year = defaults.START_YEAR, end_year = defaults.END_YEAR, start_month = 1, end_month = 12, period = "both", doQC = False, doBC = False):
@@ -156,6 +167,7 @@ def combine_files(suffix = "relax", pentads = False, do3hr = False, months = Fal
     :param bool doBChgt: work on the hieght only bias corrected data
     :param bool doBCscn: work on the screen only bias corrected data
 # end
+    :param bool doNOWHOLE: work on the bias corrected data with no whole number flagged data
 # UNC NEW
     :param bool doUSLR: do solar adjustment uncertainties
     :param bool doUSCN: do instrument adjustment uncertainties
@@ -189,7 +201,7 @@ def combine_files(suffix = "relax", pentads = False, do3hr = False, months = Fal
         uSource = 'uTOT'
 
 # KATE modified
-    settings = set_paths_and_vars.set(doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn, doQC = doQC, doQC1it = doQC1it, doQC2it = doQC2it, doQC3it = doQC3it, 
+    settings = set_paths_and_vars.set(doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn, doNOWHOLE = doNOWHOLE, doQC = doQC, doQC1it = doQC1it, doQC2it = doQC2it, doQC3it = doQC3it, 
                                       doUSLR = doUSLR, doUSCN = doUSCN, doUHGT = doUHGT, doUR = doUR, doUM = doUM, doUC = doUC, doUTOT = doUTOT, ShipOnly = ShipOnly)
     #settings = set_paths_and_vars.set(doBC = doBC, doQC = doQC)
     
@@ -548,6 +560,8 @@ if __name__=="__main__":
     parser.add_argument('--doBCscn', dest='doBCscn', action='store_true', default = False,
                         help='process the screen only bias corrected data, default = False')
 # end
+    parser.add_argument('--doNOWHOLE', dest='doNOWHOLE', action='store_true', default = False,
+                        help='process the bias corrected data with whole number flagged data removed, default = False')
 # UNC NEW - THESE MUST BE RUN WITH --doBCtotal and --ShipOnly
     parser.add_argument('--doUSCN', dest='doUSCN', action='store_true', default = False,
                         help='process the bias corrected data uncertainties for instrument adjustment, default = False')
@@ -576,7 +590,7 @@ if __name__=="__main__":
                       start_month = int(args.start_month), end_month = int(args.end_month), period = str(args.period),\
 # KATE modified
                       doQC = args.doQC, doQC1it = args.doQC1it, doQC2it = args.doQC2it, doQC3it = args.doQC3it, \
-		      doBC = args.doBC, doBCtotal = args.doBCtotal, doBChgt = args.doBChgt, doBCscn = args.doBCscn, \
+		      doBC = args.doBC, doBCtotal = args.doBCtotal, doBChgt = args.doBChgt, doBCscn = args.doBCscn, doNOWHOLE = args.doNOWHOLE, \
 # UNC NEW		      
 		      doUSLR = args.doUSLR, doUSCN = args.doUSCN, doUHGT = args.doUHGT, doUR = args.doUR, doUM = args.doUM, doUC = args.doUC, doUTOT = args.doUTOT, \
 		      ShipOnly = args.ShipOnly)

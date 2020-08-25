@@ -3,7 +3,7 @@
 # 
 # Author: Kate Willett
 # Created: 16 October 2015
-# Last update: 16 October 2015
+# Last update: 10 April 2019
 # Location: /data/local/hadkw/HADCRUH2/UPDATE2014/PROGS/PYTHON/	
 # GitHub: https://github.com/Kate-Willett/Climate_Explorer/tree/master/PYTHON/
 # -----------------------
@@ -53,7 +53,8 @@
 #    LatInfo = [36,-87.5] # number of latitudes, start latitude
 #    LonInfo = [72,-177.5] # number of longitudes, start longitude
 #
-#    python2.7 
+#    module load scitools/default-current
+#    python
 #    from ReadNetCDF import GetGrid
 #
 #    # Premaking of arrays not strictly necessary:
@@ -88,6 +89,17 @@
 # VERSION/RELEASE NOTES
 # -----------------------
 # 
+# Version 3 (10th April 2019)
+# ---------
+#  
+# Enhancements
+# Mow python 3
+#  
+# Changes
+# Now python 3
+#  
+# Bug fixes
+#
 # Version 2 (28th February 2018)
 # ---------
 #  

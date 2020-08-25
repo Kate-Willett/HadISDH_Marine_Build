@@ -41,6 +41,17 @@ None
 VERSION/RELEASE NOTES
 -----------------------
 
+Version 3 7 May 2020 (Kate Willett)
+---------
+ 
+Enhancements
+--doNOWHOLE - BC total but without any data that have whole number rounding flag
+ 
+Changes
+ 
+Bug fixes
+
+
 Version 2 26 Sep 2016 (Kate Willett)
 ---------
  
@@ -116,7 +127,7 @@ class Settings(object):
 
 #*********************************************
 # *** KATE MODIFIED
-def set(doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doQC = True, doQC1it = False, doQC2it = False, doQC3it = False, 
+def set(doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doNOWHOLE = False, doQC = True, doQC1it = False, doQC2it = False, doQC3it = False, 
         doUSLR = False, doUSCN = False, doUHGT = False, doUR = False, doUM = False, doUC = False, doUTOT = False, ShipOnly = False):
 #def set(doBC = False, doQC = True):
 # end
@@ -129,6 +140,7 @@ def set(doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doQC 
     :param bool doBChgt: set up for height only bias correction
     :param bool doBCscn: set up for screen only bias correction
 # end
+    :param bool doNOWHOLE: set up for bias correction and no whole numbers
     :param bool doQC: set up for quality control
 # *** KATE MODIFIED
     :param bool doQC1it: set up for 1st iteration quality control with no buddy check
@@ -151,7 +163,7 @@ def set(doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doQC 
     '''
 
 
-    plots = True
+    plots = False
     doMedian = False
     
 # KATE MODIFIED TO BRING OUT COMMON DIR PATHS
@@ -203,6 +215,21 @@ def set(doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doQC 
             ICOADS_LOCATION=ICOADS_DIR+"{}/".format(OUTROOT)
             DATA_LOCATION=DATA_DIR+"GRIDSOBSclim2BClocalship/"
             PLOT_LOCATION=PLOT_DIR+"PLOTSOBSclim2BClocalship/"
+
+    elif doNOWHOLE:
+        # Constants in CAPS
+        OUTROOT = "OBSclim2BClocal"
+
+        ICOADS_LOCATION=ICOADS_DIR+"{}/".format(OUTROOT)
+
+        DATA_LOCATION=DATA_DIR+"GRIDSOBSclim2BClocalNOWHOLE/"
+        PLOT_LOCATION=PLOT_DIR+"PLOTSOBSclim2BClocalNOWHOLE/"
+
+        if ShipOnly:
+	    OUTROOT = "OBSclim2BClocal"
+            ICOADS_LOCATION=ICOADS_DIR+"{}/".format(OUTROOT)
+            DATA_LOCATION=DATA_DIR+"GRIDSOBSclim2BClocalshipNOWHOLE/"
+            PLOT_LOCATION=PLOT_DIR+"PLOTSOBSclim2BClocalshipNOWHOLE/"
 
     elif doBChgt:
         # Constants in CAPS

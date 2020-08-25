@@ -44,6 +44,17 @@ Version 2 (26 Sep 2016) Kate Willett
 ---------
  
 Enhancements
+This now works with doNOWHOLE which is BC total but no data with whole number flags
+ 
+Changes
+ 
+Bug fixes
+
+
+Version 2 (26 Sep 2016) Kate Willett
+---------
+ 
+Enhancements
 This can now work with the 3 QC iterations and BC options
 This has a ShipOnly option in read_qc_data to pull through only ship data --ShipOnly
 Bug fixed to work with ship only bias corrected data - platform_meta[:,2] rather than the QConly platform_meta[:,3]
@@ -124,7 +135,7 @@ class TimeVar(object):
 #*****************************************************
 # KATE modified - added BC options
 #def set_qc_flag_list(doBC = False, doUncert = False):
-def set_qc_flag_list(doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doUncert = False):
+def set_qc_flag_list(doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doNOWHOLE = False, doUncert = False):
 # end 
     '''
     Set the QC flags present in the raw data
@@ -138,7 +149,7 @@ def set_qc_flag_list(doBC = False, doBCtotal = False, doBChgt = False, doBCscn =
 
 # KATE modified - added BC options
 #    if doBC:
-    if doBC | doBCtotal | doBChgt | doBCscn:
+    if doBC | doBCtotal | doBChgt | doBCscn | doNOWHOLE:
 # end
         # reduced number of QC flags.
         return np.array(["day","land","trk","date1","date2","pos","blklst","dup",\
@@ -172,7 +183,7 @@ def set_qc_flag_list(doBC = False, doBCtotal = False, doBChgt = False, doBCscn =
 #*****************************************************
 # KATE modified - added BC options
 #def read_qc_data(filename, location, fieldwidths, doBC = False):
-def read_qc_data(filename, location, fieldwidths, doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, ShipOnly = False):
+def read_qc_data(filename, location, fieldwidths, doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doNOWHOLE = False, ShipOnly = False):
 # end
     """
     Read in the QC'd data and return
@@ -190,6 +201,7 @@ def read_qc_data(filename, location, fieldwidths, doBC = False, doBCtotal = Fals
     :param bool doBChgt: run on the height only bias corrected data
     :param bool doBCscn: run on the screen only bias corrected data
 # end
+    :param bool doNOWHOLE: run on the bias corrected data with no whole number flags set
 # KATE modified - added BC options
     :param bool ShipOnly: select only ship platform (0:5) data
 # end
@@ -226,7 +238,7 @@ def read_qc_data(filename, location, fieldwidths, doBC = False, doBCtotal = Fals
                     platform_qc += [fields[8+18+14+14+14+14+12:]]
 
 # KATE modified - added BC options
-                elif doBCtotal:
+                elif doBCtotal | doNOWHOLE:
                     # some lines might not be the correct length
                     assert len(line) == 751
                 
@@ -313,7 +325,7 @@ def read_qc_data(filename, location, fieldwidths, doBC = False, doBCtotal = Fals
 
         # filter PT=0:5 only
 	# If its a BC run then PT is element 2 (3rd) but if its QC only then PT is element 3 (4th)
-        if doBC | doBCtotal | doBChgt | doBCscn:
+        if doBC | doBCtotal | doBChgt | doBCscn | doNOWHOLE:
             PT = np.array([int(x) for x in platform_meta[:,2]])
         else:
             PT = np.array([int(x) for x in platform_meta[:,3]])
@@ -903,7 +915,7 @@ def set_MetVar_attributes(name, long_name, standard_name, units, mdi, dtype, col
 #*****************************************************
 # KATE modified - BC options
 #def make_MetVars(mdi, doSST_SLP = False, multiplier = False, doBC = False):
-def make_MetVars(mdi, doSST_SLP = False, multiplier = False, doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False):
+def make_MetVars(mdi, doSST_SLP = False, multiplier = False, doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doNOWHOLE = False):
 # end
     '''
     Set up the MetVars and return a list.  
@@ -918,6 +930,7 @@ def make_MetVars(mdi, doSST_SLP = False, multiplier = False, doBC = False, doBCt
     :param bool doBChgt: run on height only bias corrected data (adjusts the columns to read in from data array)
     :param bool doBCscn: run on screen only bias corrected data (adjusts the columns to read in from data array)
 # end
+    :param bool doNOWHOLE: run on bias corrected data with no whoel number flags (adjusts the columns to read in from data array)
    
     :returns: list [mat, mat_an, dpt, dpt_an, shu, shu_an, vap, vap_an, crh, crh_an, cwb, cwb_an, dpd, dpd_an]
       if doSST_SLP:
@@ -929,7 +942,7 @@ def make_MetVars(mdi, doSST_SLP = False, multiplier = False, doBC = False, doBCt
 
 # KATE modified - BC options
 #    if doBC:
-    if doBC | doBCtotal | doBChgt | doBCscn:
+    if doBC | doBCtotal | doBChgt | doBCscn | doNOWHOLE:
 # end    
         mat = set_MetVar_attributes("marine_air_temperature", "Marine Air Temperature", "marine air temperature", "degrees C", mdi, np.dtype('float64'), 0, multiplier = multiplier)
         mat_an = set_MetVar_attributes("marine_air_temperature_anomalies", "Marine Air Temperature Anomalies", "marine air temperature anomalies", "degrees C", mdi, np.dtype('float64'), 1, multiplier = multiplier)
@@ -1015,7 +1028,7 @@ def PlotFirstField(filename, variable = "Marine Air Temperature", vmin = None,vm
 #*********************************************************
 # KATE modified - added BC options
 #def process_qc_flags(qc_flags, these_flags, doBC = False):
-def process_qc_flags(qc_flags, these_flags, doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False):
+def process_qc_flags(qc_flags, these_flags, doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doNOWHOLE = False):
 # end
     '''
     :param array qc_flags: names of QC flags in column order
@@ -1026,6 +1039,7 @@ def process_qc_flags(qc_flags, these_flags, doBC = False, doBCtotal = False, doB
     :param bool doBChgt: run on height only bias corrected data (adjusts the columns to read in from data array)
     :param bool doBCscn: run on screen only bias corrected data (adjusts the columns to read in from data array)
 # end
+    :param bool doNOWHOLE: run on bias corrected data with no whole number flags set (adjusts the columns to read in from data array)
 
     Test values
     0 - pass
@@ -1036,7 +1050,7 @@ def process_qc_flags(qc_flags, these_flags, doBC = False, doBCtotal = False, doB
 
 # KATE modified - BC options
 #    QC_FLAGS = set_qc_flag_list(doBC = doBC)
-    QC_FLAGS = set_qc_flag_list(doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn)
+    QC_FLAGS = set_qc_flag_list(doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn, doNOWHOLE = doNOWHOLE)
 # end
 
     # set up a mask with every point set
@@ -1065,7 +1079,7 @@ def process_qc_flags(qc_flags, these_flags, doBC = False, doBCtotal = False, doB
 #*********************************************************
 # KATE modified - added BC options
 #def day_or_night(qc_flags, doBC = False):
-def day_or_night(qc_flags, doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False):
+def day_or_night(qc_flags, doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doNOWHOLE = False):
 # end
     '''
     Return locations of observations which are day or night
@@ -1077,6 +1091,7 @@ def day_or_night(qc_flags, doBC = False, doBCtotal = False, doBChgt = False, doB
     :param bool doBChgt: run on height only bias corrected data (adjusts the columns to read in from data array)
     :param bool doBCscn: run on screen only bias corrected data (adjusts the columns to read in from data array)
 # end
+    :param bool doNOWHOLE: run on bias corrected data with no whole number flags set(adjusts the columns to read in from data array)
 
     :returns: day_locs, night_locs - locations of day/night obs
     '''
@@ -1095,7 +1110,7 @@ def day_or_night(qc_flags, doBC = False, doBCtotal = False, doBChgt = False, doB
 #*********************************************************
 # KATE modified - added BC options
 #def grid_1by1_cam(clean_data, raw_qc, hours_since, lat_index, lon_index, grid_hours, grid_lats, grid_lons, OBS_ORDER, mdi, doMedian = True, doBC = False):
-def grid_1by1_cam(clean_data, raw_qc, hours_since, lat_index, lon_index, grid_hours, grid_lats, grid_lons, OBS_ORDER, mdi, doMedian = True, doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False):
+def grid_1by1_cam(clean_data, raw_qc, hours_since, lat_index, lon_index, grid_hours, grid_lats, grid_lons, OBS_ORDER, mdi, doMedian = True, doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doNOWHOLE = False):
 # end
     '''
     Grid using the Climate Anomaly Method on 1x1 degree for each month
@@ -1116,11 +1131,12 @@ def grid_1by1_cam(clean_data, raw_qc, hours_since, lat_index, lon_index, grid_ho
     :param bool doBChgt: run on height only bias corrected data (adjusts the columns to read in from data array)
     :param bool doBCscn: run on screen only bias corrected data (adjusts the columns to read in from data array)
 # end
+    :param bool doNOWHOLE: run on bias corrected data with no whole number flags(adjusts the columns to read in from data array)
     '''
 
 # KATE modified - BC options
 #    QC_FLAGS = set_qc_flag_list(doBC = doBC)
-    QC_FLAGS = set_qc_flag_list(doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn)
+    QC_FLAGS = set_qc_flag_list(doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn, doNOWHOLE = doNOWHOLE)
 # end
 
     day_flag_loc, = np.where(QC_FLAGS == 'day')[0]
@@ -1190,7 +1206,7 @@ def grid_1by1_cam(clean_data, raw_qc, hours_since, lat_index, lon_index, grid_ho
 #*********************************************************
 def grid_1by1_cam_unc(clean_data, unc_clean_data,
                       raw_qc, hours_since, lat_index, lon_index, grid_hours, grid_lats, grid_lons, OBS_ORDER, mdi, doMedian = True, 
-		      doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False,
+		      doBC = False, doBCtotal = False, doBChgt = False, doBCscn = False, doNOWHOLE = False,
 		      doUSLR = False, doUSCN = False, doUHGT = False, doUR = False, doUM = False, doUC = False, doUTOT = False):
     '''
     Grid using the Climate Anomaly Method on 1x1 degree for each month
@@ -1210,6 +1226,7 @@ def grid_1by1_cam_unc(clean_data, unc_clean_data,
     :param bool doBCtotal: do total bias corrected
     :param bool doBCscn: do instrument bias corrected
     :param bool doBChgt: do height bias corrected
+    :param bool doNOWHOLE: do bias corrected with no whole number flags set
 # UNC NEW
     :param bool doUSLR: work on BC and solar adj uncertainty with correlation
     :param bool doUSCN: work on BC and instrument adj uncertainty with correlation
@@ -1222,7 +1239,7 @@ def grid_1by1_cam_unc(clean_data, unc_clean_data,
 
 # KATE modified - BC options
 #    QC_FLAGS = set_qc_flag_list(doBC = doBC)
-    QC_FLAGS = set_qc_flag_list(doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn)
+    QC_FLAGS = set_qc_flag_list(doBC = doBC, doBCtotal = doBCtotal, doBChgt = doBChgt, doBCscn = doBCscn, doNOWHOLE = doNOWHOLE)
 # end
 
     day_flag_loc, = np.where(QC_FLAGS == 'day')[0]
@@ -1290,7 +1307,9 @@ def grid_1by1_cam_unc(clean_data, unc_clean_data,
                                 this_month_grid[:, gh, lt, ln] = average
                                 this_month_grid.mask[:, gh, lt, ln] = False # unset the mask
 				
-                                unc_this_month_grid[:, gh, lt, ln] = unc_average/np.sqrt(this_month_obs[gh, lt, ln])
+# John K thinks that this should be /N rather than /SQRT(N) which will make uncertainties smaller so I'm trying it
+#                                unc_this_month_grid[:, gh, lt, ln] = unc_average/np.sqrt(this_month_obs[gh, lt, ln])
+                                unc_this_month_grid[:, gh, lt, ln] = unc_average/this_month_obs[gh, lt, ln]
                                 unc_this_month_grid.mask[:, gh, lt, ln] = False # unset the mask
 				
                                 # restricting to day or night then set the flag and it's allowed value (Extended_IMMA.py line 668 - #0=night, 1=day)
@@ -1474,19 +1493,27 @@ def grid_5by5_unc(data, unc_data, n_obs, grid_lats, grid_lons, doMedian = True, 
 # UNC NEW np.sqrt(np.ma.sum(np.ma.power(uTOT_this_month_grid, 2.), axis = 2)) / np.sqrt(n_hrs_per_day)
                         # if correlation at r=1 then do like this
                         if doUSLR | doUSCN | doUHGT | doUC:
-                            unc_new_data[var, lt, ln] = np.sqrt(np.ma.power(np.ma.sum(unc_data[var, :, lat-DELTA:lat, lon-DELTA:lon]), 2.)) / np.sqrt(n_grids)
+# John K thinks that this should be /N rather than /SQRT(N) which will make uncertainties smaller so I'm trying it
+#                            unc_new_data[var, lt, ln] = np.sqrt(np.ma.power(np.ma.sum(unc_data[var, :, lat-DELTA:lat, lon-DELTA:lon]), 2.)) / np.sqrt(n_grids)
+                            unc_new_data[var, lt, ln] = np.sqrt(np.ma.power(np.ma.sum(unc_data[var, :, lat-DELTA:lat, lon-DELTA:lon]), 2.)) / n_grids
                         # if NO correlation at r=0 then do like this
                         elif doUR | doUM | doUTOT:
-                            unc_new_data[var, lt, ln] = np.sqrt(np.ma.sum(np.ma.power(unc_data[var, :, lat-DELTA:lat, lon-DELTA:lon], 2.))) / np.sqrt(n_grids)
+# John K thinks that this should be /N rather than /SQRT(N) which will make uncertainties smaller so I'm trying it
+#                            unc_new_data[var, lt, ln] = np.sqrt(np.ma.sum(np.ma.power(unc_data[var, :, lat-DELTA:lat, lon-DELTA:lon], 2.))) / np.sqrt(n_grids)
+                            unc_new_data[var, lt, ln] = np.sqrt(np.ma.sum(np.ma.power(unc_data[var, :, lat-DELTA:lat, lon-DELTA:lon], 2.))) / n_grids
                     else:
                         new_data[var, lt, ln] = np.ma.mean(data[var, lat-DELTA:lat, lon-DELTA:lon])
 # UNC NEW np.sqrt(np.ma.sum(np.ma.power(uTOT_this_month_grid, 2.), axis = 2)) / np.sqrt(n_hrs_per_day)
                         # if correlation at r=1 then do like this
                         if doUSLR | doUSCN | doUHGT | doUC:
-                            unc_new_data[var, lt, ln] = np.sqrt(np.ma.power(np.ma.sum(unc_data[var, lat-DELTA:lat, lon-DELTA:lon]), 2.)) / np.sqrt(n_grids)
+# John K thinks that this should be /N rather than /SQRT(N) which will make uncertainties smaller so I'm trying it
+#                            unc_new_data[var, lt, ln] = np.sqrt(np.ma.power(np.ma.sum(unc_data[var, lat-DELTA:lat, lon-DELTA:lon]), 2.)) / np.sqrt(n_grids)
+                            unc_new_data[var, lt, ln] = np.sqrt(np.ma.power(np.ma.sum(unc_data[var, lat-DELTA:lat, lon-DELTA:lon]), 2.)) / n_grids
                         # if NO correlation at r=0 then do like this
                         elif doUR | doUM | doUTOT:
-                            unc_new_data[var, lt, ln] = np.sqrt(np.ma.sum(np.ma.power(unc_data[var, lat-DELTA:lat, lon-DELTA:lon], 2.))) / np.sqrt(n_grids)
+# John K thinks that this should be /N rather than /SQRT(N) which will make uncertainties smaller so I'm trying it
+#                            unc_new_data[var, lt, ln] = np.sqrt(np.ma.sum(np.ma.power(unc_data[var, lat-DELTA:lat, lon-DELTA:lon], 2.))) / np.sqrt(n_grids)
+                            unc_new_data[var, lt, ln] = np.sqrt(np.ma.sum(np.ma.power(unc_data[var, lat-DELTA:lat, lon-DELTA:lon], 2.))) / n_grids
 
                 if n_grids < N_OBS:
                     new_data.mask[var, lt, ln] = True
