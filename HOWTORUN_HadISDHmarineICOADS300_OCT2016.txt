@@ -1232,6 +1232,12 @@ Blog hadisdh.blogspot.com
 Tarball old version files and images (from HadOBS) and put on mass
  /adhoc/users/kate.willett/HADISDH/HadISDH_marine_<version>_tarczf
 
+tar -czf HadISDH_marine_v1002018f_tarczf /data/marinev1002018f/* /images/olderversions/marinev1002018f/* HadISDH.marine.1.0.0.2018f_update.pdf
+list check
+tar -tvf HadISDH_marine_v1002018f_tarczf
+
+moo put -v HadISDH_marine_v1002018f_tarczf moose:/adhoc/users/kate.willett/HADISDH/
+
     
 THings to check
 Distribution of QC removals after each iteration - any improvement?
