@@ -1,0 +1,1137 @@
+1) Sort out ERA climatologies
+-> /data/local/hadkw/HADCRUH2/UPDATE2015/PROGS/IDL/makeERApentads_FEB2016.pro
+	-> INPUTS: 
+	ERAINTERIM_drybulbT_6hr_1by1_'+indecs+
+	ERAINTERIM_dewpointT_6hr_1by1_'+indecs+
+	ERAINTERIM_sp_6hr_1by1_'+indecs+
+	-> OUTPUTS:
+	q2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
+
+DONE
+	
+2.1) Run LOOP 1 of the qc (no buddy needed but can do it anyway) - ERA-Interim clims
+-> python2.7 make_and_full_qc.py -i configuration.txt --year1 1973 --year2 1973 --month1 1 --month2 1
+   RUN FROM SLURM with output log:
+   sbatch --mem=16000 --time=360 --ntasks=1 --output=LOG_DIR/mds10MAR2016_197301.log ./run_MDS_MAR2016.sh 1973 1973 1 1
+ 	-> INPUTS:
+	/project/earthobs/ICOADS/ICOADS.3.0.0/
+	/project/earthobs/ICOADS/ICOADS.3.0.1/
+	/project/hadobs2/hadisdh/marine/otherdata/HadSST2_pentad_climatology.nc
+	/project/hadobs2/hadisdh/marine/otherdata/HadNMAT2_pentad_climatology.nc
+	/project/hadobs2/hadisdh/marine/otherdata/t2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
+	/project/hadobs2/hadisdh/marine/otherdata/td2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
+	/project/hadobs2/hadisdh/marine/otherdata/q2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
+	/project/hadobs2/hadisdh/marine/otherdata/e2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
+	/project/hadobs2/hadisdh/marine/otherdata/rh2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
+	/project/hadobs2/hadisdh/marine/otherdata/tw2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
+	/project/hadobs2/hadisdh/marine/otherdata/dpd2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
+	/project/hadobs2/hadisdh/marine/otherdata/p2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
+	/project/hadobs2/hadisdh/marine/otherdata/OSTIA_pentad_stdev_climatology.nc
+	/project/hadobs2/hadisdh/marine/otherdata/NMAT/
+	/project/hadobs2/hadisdh/marine/otherdata/list_of_ids_that_are_not_ships.txt
+	/project/hadobs2/hadisdh/marine/otherdata/HadSST2_pentad_stdev_climatology.nc
+	/project/hadobs2/hadisdh/marine/otherdata/t2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
+	/project/hadobs2/hadisdh/marine/otherdata/td2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
+	/project/hadobs2/hadisdh/marine/otherdata/OSTIA_compare_1x1x5box_to_buddy_average.nc
+	/project/hadobs2/hadisdh/marine/otherdata/OSTIA_compare_one_ob_to_1x1x5box.nc
+	/project/hadobs2/hadisdh/marine/otherdata/OSTIA_buddy_range_sampling_error.nc	
+	-> OUTPUTS:
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/ERAclimNBC/new_suite_197301_ERAclimNBC.txt 
+        ...
+
+DONE Jan 1973 to Dec 2017
+
+   2.1.1) Plot annual and decadal QC summary plots
+-> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/ANALYSIS_PLOTS/PlotQCTest_SEP2016.py
+   python2.7 PlotQCTest_SEP2016.py --year1 1973 --year2 1973 --month1 1 --month2 1 -- typee ERAclimNBC --varee AT
+   sbatch --mem=16000 --time=360 --ntasks=1 --output=PlotQC197301AT.log ./RunPlotQC.sh 1973 1973 1 1 ERAClimNBC AT
+       	-> INPUTS:
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/ERAclimNBC/new_suite_197301_ERAclimNBC.txt 
+       	-> OUTPUTS:
+       	/data/local/hadkw/HADCRUH/MARINE/IMAGES/QCHIST/ERAclim/SummaryHistQC_DAY_Abs_AT_ERAclimNBC_197319730101_SEP2016.png 
+
+DONE Jan 1973 to Dec 2017
+	
+2.2) Grid to monthly 5by5 (renormalise) the selected and QC'd obs (***not buddy checked***)
+-> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/gridding_cam.py
+-> python2.7 gridding_cam.py --start_year 1973 --end_year 1973 --start_month 01 --end_month 01 --suffix relax --doQC1it 
+   submit_spice_jobs_it1QCnobud.bash
+	-> INPUTS:
+        /project/hadobs2/hadisdh/marine/ICOADS.3.0.0/ERAclimNBC/new_suite_197301_ERAclimNBC.txt
+	-> OUTPUTS:
+	DATA
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSERAclimNBC/
+	ERAclimNBC_5x5_monthly_197301_from_daily_day_relax.nc
+	ERAclimNBC_5x5_monthly_197301_from_daily_night_relax.nc
+	ERAclimNBC_5x5_monthly_197301_from_daily_all_relax.nc
+	PLOTS
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/PLOTSERAclimNBC/
+	for each year/month
+	obs_distribution_197301_relax.png                  		# frequency distribution of observation times for this period                       
+	qc_actuals_dew_point_temperature_197301_relax.png  		# degrees C by latitude scatter of all and QC passing data for DPT          
+	qc_actuals_dew_point_temperature_anomalies_197301_relax.png  	# degrees C by latitude scatter of all and QC passing data for DPT anomalies
+	qc_actuals_specific_humidity_197301_relax.png			# g/kg by latitude scatter of all and QC passing data for SHU
+        qc_actuals_specific_humidity_anomalies_197301_relax.png		# g/kg  bylatitude scatter of all and QC passing data for SHU anomalies
+        qc_actuals_relative_humidity_197301_relax.png			# %rh by latitude scatter of all and QC passing data for CRH
+        qc_actuals_relative_humidity_anomalies_197301_relax.png		# %rh by latitude scatter of all and QC passing data for CRH anomalies
+ 
+        n_obs_5x5_monthly_from_daily_197301_day_relax.png		# frequency distribution of obs in each 5x5 month
+        n_obs_5x5_monthly_from_daily_197301_night_relax.png		# frequency distribution of obs in each 5x5 month
+        n_obs_5x5_monthly_from_daily_197301_all_relax.png		# frequency distribution of obs in each 5x5 month
+        n_grids_5x5_monthly_from_daily_197301_day_relax.png    		# frequency distribution of 1x1 day grids in each 5x5 month	
+        n_grids_5x5_monthly_from_daily_197301_night_relax.png  		# frequency distribution of 1x1 day grids in each 5x5 month
+        n_grids_5x5_monthly_from_daily_197301_all_relax.png    		# frequency distribution of 1x1 day grids in each 5x5 month
+
+DONE Jan 1973 to Dec 2017
+	
+   2.2.1) Merge the day and night monthly 5by5s to create both (supercedes 'all')	
+-> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/merge_day_night.py
+-> python2.7 merge_day_night.py --suffix relax --months --start_year 1973 --end_year 2015 --start_month 01 --end_month 12 --doQC1it 
+        -> INPUTS:
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSERAclimNBC/
+	5x5 monthlies (mean) - for each year/month/var
+	ERAclimNBC_5x5_monthly_197301_from_daily_day_relax.nc
+	ERAclimNBC_5x5_monthly_197301_from_daily_night_relax.nc
+        -> OUTPUTS
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSERAclimNBC/ERAclimNBC_5x5_monthly_197301_from_daily_both_relax.nc
+
+DONE Jan 1973 to Dec 2017
+
+   2.2.2) Package all individual year/month files into one big gridded file If this is an update (any start year other than 1973) then this merges with the existing gridded
+   file
+-> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/make_complete_datafiles.py (could the climatology and renorm-if-ERA be rolled
+into this?)
+   both
+-> python2.7 make_complete_data_files.py --suffix relax --months --daily --period both --start_year 1973 --end_year 2015 --start_month 01 --end_month 12 --doQC1it   
+   day
+-> python2.7 make_complete_data_files.py --suffix relax --months --daily --period day --start_year 1973 --end_year 2015 --start_month 01 --end_month 12 --doQC1it   
+   night
+-> python2.7 make_complete_data_files.py --suffix relax --months --daily --period night --start_year 1973 --end_year 2015 --start_month 01 --end_month 12 --doQC1it   
+	-> INPUTS:
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSERAclimNBC/
+	ERAclimNBC_5x5_monthly_197301_from_daily_day_relax.nc
+	ERAclimNBC_5x5_monthly_197301_from_daily_night_relax.nc
+        ERAclimNBC_5x5_monthly_197301_from_daily_both_relax.nc
+	-> OUTPUTS:
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSERAclimNBC/
+	ERAclimNBC_5x5_monthly_from_daily_day_relax.nc
+	ERAclimNBC_5x5_monthly_from_daily_night_relax.nc
+        ERAclimNBC_5x5_monthly_from_daily_both_relax.nc
+
+DONE Jan 1973 to Dec 2017
+	
+   2.2.3) Create monthly 5by5 climatologies and standard deviations
+-> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/make_5x5monthly_climatology.py
+    both
+-> python2.7 make_5x5monthly_climatology.py --suffix relax --start_year 1981 --end_year 2010 --period both --daily --doQC1it
+    day
+-> python2.7 make_5x5monthly_climatology.py --suffix relax --start_year 1981 --end_year 2010 --period day --daily --doQC1it
+    night
+-> python2.7 make_5x5monthly_climatology.py --suffix relax --start_year 1981 --end_year 2010 --period night --daily --doQC1it
+	-> INPUTS:
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSERAclimNBC/
+        ERAclimNBC_5x5_monthly_from_daily_both_relax.nc
+	ERAclimNBC_5x5_monthly_from_daily_day_relax.nc
+	ERAclimNBC_5x5_monthly_from_daily_night_relax.nc
+	-> OUTPUTS:
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSERAclimNBC/
+	ERAclimNBC_5x5_monthly_climatology_from_daily_both_relax.nc
+	ERAclimNBC_5x5_monthly_stdev_from_daily_both_relax.nc
+	ERAclimNBC_5x5_monthly_climatology_from_daily_day_relax.nc
+	ERAclimNBC_5x5_monthly_stdev_from_daily_day_relax.nc
+	ERAclimNBC_5x5_monthly_climatology_from_daily_night_relax.nc
+	ERAclimNBC_5x5_monthly_stdev_from_daily_night_relax.nc
+
+DONE Jan 1981 to Dec 2010
+
+   2.2.4) Renormalise the 5by5 monthly anomalies by the difference between the OBS mean over the 1981-2010 period and 0 (assume should be zero mean over
+   the 1981-2010 period.
+-> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/apply_5x5monthly_climatology.py
+    both
+-> python2.7 apply_5x5monthly_climatology.py --suffix relax --period both --daily --doQC1it
+    day
+-> python2.7 apply_5x5monthly_climatology.py --suffix relax --period day --daily --doQC1it
+    night
+-> python2.7 apply_5x5monthly_climatology.py --suffix relax --period night --daily --doQC1it
+	-> INPUTS:	
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSERAclimNBC/
+        ERAclimNBC_5x5_monthly_from_daily_both_relax.nc
+	ERAclimNBC_5x5_monthly_from_daily_day_relax.nc
+	ERAclimNBC_5x5_monthly_from_daily_night_relax.nc
+	ERAclimNBC_5x5_monthly_climatology_from_daily_both_relax.nc
+	ERAclimNBC_5x5_monthly_climatology_from_daily_day_relax.nc
+	ERAclimNBC_5x5_monthly_climatology_from_daily_night_relax.nc
+	-> OUTPUTS:
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSERAclimNBC/
+        ERAclimNBC_5x5_monthly_renorm19812010_anomalies_from_daily_both_relax.nc
+	ERAclimNBC_5x5_monthly_renorm19812010_anomalies_from_daily_day_relax.nc
+	ERAclimNBC_5x5_monthly_renorm19812010_anomalies_from_daily_night_relax.nc
+
+DONE Jan 1973 to Dec 2017
+
+2.3) Interpolate monthly 5by5 climatologies to pentad 1by1 and infill where
+     possible
+-> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/InterpClimtoPentad1by1.py
+-> python2.7 InterpClimtoPentad1by1.py --doWHAT it1 --varee q
+	-> INPUTS:
+    	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSERAclimNBC/
+	ERAclimNBC_5x5_monthly_climatology_from_daily_both_relax.nc
+    	ERAclimNBC_5x5_monthly_stdev_from_daily_both_relax.nc	
+	-> OUTPUTS:
+    	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSERAclimNBC/
+	q2m_ERAclimNBC_5x5_monthly_climatology_stdev_from_daily_both_relax_INFILLED.nc
+    	q2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+
+	COPY 1x1_pentad to:
+	/data/local/hadkw/HADCRUH2/MARINE/otherdata/q2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+
+DONE Jan 1981 to Dec 2010
+
+2.4) OPTIONAL make up global average files and plot
+-> /data/local/hadkw/HADCRUH/MARINE/EUSTACEMDS/SUSTACE_SST_MAT/global_average_timeseries.py
+   RUN for first iteration ERAclimNBC q:
+-> python2.7 global_average_timeseries.py --suffix relax --doQC1it
+	-> REQUIRES:
+	utils.py
+	set_paths_and_vars.py - set file paths and some universal variables.
+	-> TWEAK:	
+	-> INPUTS:
+    	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSERAclimNBC/
+	ERAclimNBC_5x5_monthly_renorm19812010_anomalies_from_daily_both_relax.nc
+	ERAclimNBC_5x5_monthly_renorm19812010_anomalies_from_daily_day_relax.nc
+	ERAclimNBC_5x5_monthly_renorm19812010_anomalies_from_daily_night_relax.nc
+	-> OUTPUTS:
+	data:
+    	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSERAclimNBC/
+	ERAclimNBC_5x5_monthly_renorm19812010_anomalies_from_daily_both_relax_specific_humidity_ts.nc
+	ERAclimNBC_5x5_monthly_renorm19812010_anomalies_from_daily_day_relax_specific_humidity_ts.nc
+	ERAclimNBC_5x5_monthly_renorm19812010_anomalies_from_daily_night_relax_specific_humidity_ts.nc
+	plots:
+    	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/PLOTSERAclimNBC/
+	ERAclimNBC_5x5_monthly_renorm19812010_anomalies_from_daily_both_relax_specific_humidity_ts.png
+	ERAclimNBC_5x5_monthly_renorm19812010_anomalies_from_daily_day_relax_specific_humidity_ts.png
+	ERAclimNBC_5x5_monthly_renorm19812010_anomalies_from_daily_night_relax_specific_humidity_ts.png
+
+
+MISSING DATA - OBS based anomalies have gaps - we now only output data with a climatology value
+	 
+3.1) Run LOOP 2 of the qc (no buddy needed but can do it anyway) - OBS clims 
+     We may find that the reduced climatological coverage significantly reduces the number of obs we can pass through as anomalies.
+-> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/make_and_full_qc.py
+   RUN for January 1973:
+-> python2.7 make_and_full_qc.py -i configuration.txt --year1 1973 --year2 1973 --month1 1 --month2 1
+   RUN FROM SLURM with output log:
+   sbatch --mem=16000 --time=360 --ntasks=1 --output=LOG_DIR/mds10MAR2016_197301.log ./run_MDS_MAR2016.sh 1973 1973 1 1
+   	-> REQUIRES:
+	qc.py
+	qc_new_track_check.py
+	spherical_geometry.py
+	IMMA2.py
+	Extended_IMMA.py	
+	-> TWEAK:
+	data_base_dir,/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/OBSclim1NBC/
+	output_suffix,OBSclim1NBC
+	AT_climatology,/project/hadobs2/hadisdh/marine/otherdata/t2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	DPT_climatology,/project/hadobs2/hadisdh/marine/otherdata/td2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	SHU_climatology,/project/hadobs2/hadisdh/marine/otherdata/q2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	VAP_climatology,/project/hadobs2/hadisdh/marine/otherdata/e2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	CRH_climatology,/project/hadobs2/hadisdh/marine/otherdata/rh2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	CWB_climatology,/project/hadobs2/hadisdh/marine/otherdata/tw2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	DPD_climatology,/project/hadobs2/hadisdh/marine/otherdata/dpd2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	AT_stdev_climatology,/project/hadobs2/hadisdh/marine/otherdata/t2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	DPT_stdev_climatology,/project/hadobs2/hadisdh/marine/otherdata/td2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	-> INPUTS:
+	/project/earthobs/ICOADS/ICOADS.3.0.0/
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/RECENTICOADS/
+	/project/hadobs2/hadisdh/marine/otherdata/HadSST2_pentad_climatology.nc
+	/project/hadobs2/hadisdh/marine/otherdata/HadNMAT2_pentad_climatology.nc
+	/project/hadobs2/hadisdh/marine/otherdata/t2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	/project/hadobs2/hadisdh/marine/otherdata/td2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	/project/hadobs2/hadisdh/marine/otherdata/q2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	/project/hadobs2/hadisdh/marine/otherdata/e2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	/project/hadobs2/hadisdh/marine/otherdata/rh2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	/project/hadobs2/hadisdh/marine/otherdata/tw2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	/project/hadobs2/hadisdh/marine/otherdata/dpd2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	/project/hadobs2/hadisdh/marine/otherdata/p2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
+	/project/hadobs2/hadisdh/marine/otherdata/OSTIA_pentad_stdev_climatology.nc
+	/project/hadobs2/hadisdh/marine/otherdata/NMAT/
+	/project/hadobs2/hadisdh/marine/otherdata/list_of_ids_that_are_not_ships.txt
+	/project/hadobs2/hadisdh/marine/otherdata/HadSST2_pentad_stdev_climatology.nc
+	/project/hadobs2/hadisdh/marine/otherdata/t2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	/project/hadobs2/hadisdh/marine/otherdata/td2m_ERAclimNBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	/project/hadobs2/hadisdh/marine/otherdata/OSTIA_compare_1x1x5box_to_buddy_average.nc
+	/project/hadobs2/hadisdh/marine/otherdata/OSTIA_compare_one_ob_to_1x1x5box.nc
+	/project/hadobs2/hadisdh/marine/otherdata/OSTIA_buddy_range_sampling_error.nc
+	-> OUTPUTS:
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/OBSclim1NBC/
+
+   3.1.1) Plot annual and decadal QC summary plots
+   Do we notice any tendency to remove low RH in the pre 1982 and high RH post 2010? - A bit in climatology, especially DPT
+   - also remove more daytime (low RH) for climatology and early day buddy.
+   HOPEFULLY THIS GETS BETTER WITH OBSclim2?
+   WOULD ALSO BE GOOD TO KNOW IF THERE IS A SHIFT IN DISTRIBUTION ANYWAY - not so much except in last few years drying?
+-> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/ANALYSIS_PLOTS/PlotQCTest_SEP2016.py
+   Run from hadkw
+   RUN for January 1973
+   python2.7 PlotQCTest_SEP2016.py --year1 1973 --year2 1973 --month1 1 --month2 1 -- typee OBSclim1NBC --varee AT
+   RUN from SLURM with output log
+   sbatch --mem=16000 --time=360 --ntasks=1 --output=PlotQC197301AT.log ./RunPlotQC.sh 1973 1973 1 1 OBSClim1NBC AT
+       	-> TWEAK:
+       	Check dates and filepaths are ok for this run
+       	-> REQUIRES:
+       	MDS_RWtools.py
+       	-> INPUTS:
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/OBSclim1NBC/new_suite_197301_OBSclim1NBC.txt 
+       	-> OUTPUTS:
+       	/data/local/hadkw/HADCRUH/MARINE/IMAGES/QCHIST/SummaryHistQC_DAY_Abs_AT_OBSclim1NBC_197319730101_SEP2016.png 
+       
+3.2) Grid to monthly 5by5 (renormalise) the selected and QC'd obs (***still not buddy checked***)
+-> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/gridding_cam.py
+   RUN for January 1973
+-> python2.7 gridding_cam.py --start_year 1973 --end_year 1973 --start_month 01 --end_month 01 --suffix relax --doQC2it 
+   RUN from SLURM for iteration 2 - this code creates the slurm scripts and runs them
+   submit_spice_jobs_it2QCnobud.bash
+   	-> REQUIRES:
+	utils.py
+	set_paths_and_vars.py - set file paths and some universal variables.
+	plot_qc_diagnostics.py - to output plots of clean obs vs all
+	MDS_RWtools.py - for the file format
+	-> TWEAK:
+	year and end in submit_spice_jobs_it1QCnobud.bash	
+	SwitchOutput = 0 (0 if we only want to output monthly stuff, 1 if we want 3hrly and daily too)
+	-> INPUTS:
+        /project/hadobs2/hadisdh/marine/ICOADS.3.0.0/OBSclim1NBC/new_suite_197301_OBSclim1NBC.txt
+	-> OUTPUTS:
+	DATA
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim1NBC/
+	<optional>
+	 - to 3hourly 1x1s (median) - for each year/month/var
+	 - OBSclim1NBC_1x1_3hr_197301_day_relax.nc
+	 - OBSclim1NBC_1x1_3hr_197301_night_relax.nc
+	 - OBSclim1NBC_1x1_3hr_197301_all_relax.nc
+	 - to 1x1 dailies (mean) - for each year/month/var
+	 - OBSclim1NBC_1x1_daily_197301_day_relax.nc
+	 - OBSclim1NBC_1x1_daily_197301_night_relax.nc
+	 - OBSclim1NBC_1x1_daily_197301_all_relax.nc	
+	to 5x5 monthlies (mean) - for each year/month/var
+	OBSclim1NBC_5x5_monthly_197301_from_daily_day_relax.nc
+	OBSclim1NBC_5x5_monthly_197301_from_daily_night_relax.nc
+	OBSclim1NBC_5x5_monthly_197301_from_daily_all_relax.nc
+	PLOTS
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0./PLOTSOBSclim1NBC/
+	for each year/month
+	obs_distribution_197301_relax.png                  		# frequency distribution of observation times for this period                       
+	qc_actuals_dew_point_temperature_197301_relax.png  		# degrees C by latitude scatter of all and QC passing data for DPT          
+	qc_actuals_dew_point_temperature_anomalies_197301_relax.png  	# degrees C by latitude scatter of all and QC passing data for DPT anomalies
+	qc_actuals_specific_humidity_197301_relax.png			# g/kg by latitude scatter of all and QC passing data for SHU
+        qc_actuals_specific_humidity_anomalies_197301_relax.png		# g/kg  bylatitude scatter of all and QC passing data for SHU anomalies
+        qc_actuals_relative_humidity_197301_relax.png			# %rh by latitude scatter of all and QC passing data for CRH
+        qc_actuals_relative_humidity_anomalies_197301_relax.png		# %rh by latitude scatter of all and QC passing data for CRH anomalies 
+        <optional>
+	 - n_obs_1x1_daily_197301_day_relax.png    			# frequency distribution of obs in each 1x1 day               
+         - n_obs_1x1_daily_197301_night_relax.png       		# frequency distribution of obs in each 1x1 day          
+         - n_obs_1x1_daily_197301_all_relax.png                         # frequency distribution of obs in each 1x1 day
+         - n_grids_1x1_daily_197301_day_relax.png                   	# frequency distribution of 1x1 3hr grids in each 1x1 day
+         - n_grids_1x1_daily_197301_night_relax.png               	# frequency distribution of 1x1 3hr grids in each 1x1 day
+         - n_grids_1x1_daily_197301_all_relax.png                 	# frequency distribution of 1x1 3hr grids in each 1x1 day (8)
+        n_obs_5x5_monthly_from_daily_197301_day_relax.png		# frequency distribution of obs in each 5x5 month
+        n_obs_5x5_monthly_from_daily_197301_night_relax.png		# frequency distribution of obs in each 5x5 month
+        n_obs_5x5_monthly_from_daily_197301_all_relax.png		# frequency distribution of obs in each 5x5 month
+        n_grids_5x5_monthly_from_daily_197301_day_relax.png    		# frequency distribution of 1x1 day grids in each 5x5 month	
+        n_grids_5x5_monthly_from_daily_197301_night_relax.png  		# frequency distribution of 1x1 day grids in each 5x5 month
+        n_grids_5x5_monthly_from_daily_197301_all_relax.png    		# frequency distribution of 1x1 day grids in each 5x5 month
+
+	
+   3.2.1) Merge the day and night monthly 5by5s to create both (supercedes 'all')	
+-> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/merge_day_night.py
+   RUN for January 1973 to December 2015 no clims (loops through each month)
+-> python2.7 merge_day_night.py --suffix relax --months --start_year 1973 --end_year 2015 --start_month 01 --end_month 12 --doQC2it 
+        -> TWEAK:
+	-> REQUIRES:
+	utils.py
+	set_paths_and_vars.py - set file paths and some universal variables.
+        -> INPUTS:
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim1NBC/
+	5x5 monthlies (mean) - for each year/month/var
+	OBSclim1NBC_5x5_monthly_197301_from_daily_day_relax.nc
+	OBSclim1NBC_5x5_monthly_197301_from_daily_night_relax.nc
+        -> OUTPUTS
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim1NBC/OBSclim1NBC_5x5_monthly_197301_from_daily_both_relax.nc
+
+   3.2.2) Package all individual year/month files into one big gridded file
+-> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/make_complete_datafiles.py (could the climatology and renorm-if-ERA be rolled
+into this?)
+   RUN for Jan 1973 to Dec 2015 for months 
+   both
+-> python2.7 make_complete_data_files.py --suffix relax --months --daily --period both --start_year 1973 --end_year 2015 --start_month 01 --end_month 12 --doQC2it   
+   day
+-> python2.7 make_complete_data_files.py --suffix relax --months --daily --period day --start_year 1973 --end_year 2015 --start_month 01 --end_month 12 --doQC2it   
+   night
+-> python2.7 make_complete_data_files.py --suffix relax --months --daily --period night --start_year 1973 --end_year 2015 --start_month 01 --end_month 12 --doQC2it   
+        -> TWEAK:
+	-> REQUIRES:
+	utils.py
+	set_paths_and_vars.py - set file paths and some universal variables.
+	-> INPUTS:
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim1NBC/
+	OBSclim1NBC_5x5_monthly_197301_from_daily_day_relax.nc
+	OBSclim1NBC_5x5_monthly_197301_from_daily_night_relax.nc
+        OBSclim1NBC_5x5_monthly_197301_from_daily_both_relax.nc
+	-> OUTPUTS:
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim1NBC/
+	OBSclim1NBC_5x5_monthly_from_daily_day_relax.nc
+	OBSclim1NBC_5x5_monthly_from_daily_night_relax.nc
+        OBSclim1NBC_5x5_monthly_from_daily_both_relax.nc
+	
+   3.2.3) Create monthly 5by5 climatologies and standard deviations
+-> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/make_5x5monthly_climatology.py
+   RUN for a 1981-2010 climatology
+    both
+-> python2.7 make_5x5monthly_climatology.py --suffix relax --start_year 1981 --end_year 2010 --period both --daily --doQC2it
+    day
+-> python2.7 make_5x5monthly_climatology.py --suffix relax --start_year 1981 --end_year 2010 --period day --daily --doQC2it
+    night
+-> python2.7 make_5x5monthly_climatology.py --suffix relax --start_year 1981 --end_year 2010 --period night --daily --doQC2it
+   	-> TWEAK:
+	-> REQUIRES:
+	utils.py
+	set_paths_and_vars.py - set file paths and some universal variables.
+	-> INPUTS:
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim1NBC/
+        OBSclim1NBC_5x5_monthly_from_daily_both_relax.nc
+	OBSclim1NBC_5x5_monthly_from_daily_day_relax.nc
+	OBSclim1NBC_5x5_monthly_from_daily_night_relax.nc
+	-> OUTPUTS:
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim1NBC/
+	OBSclim1NBC_5x5_monthly_climatology_from_daily_both_relax.nc
+	OBSclim1NBC_5x5_monthly_stdev_from_daily_both_relax.nc
+	OBSclim1NBC_5x5_monthly_climatology_from_daily_day_relax.nc
+	OBSclim1NBC_5x5_monthly_stdev_from_daily_day_relax.nc
+	OBSclim1NBC_5x5_monthly_climatology_from_daily_night_relax.nc
+	OBSclim1NBC_5x5_monthly_stdev_from_daily_night_relax.nc
+
+   3.2.4) Renormalise the 5by5 monthly anomalies by the difference between the OBS mean over the 1981-2010 period and 0 (assume should be zero mean over
+   the 1981-2010 period.
+   This shouldn't affect the climatology or standard deviations!
+-> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/apply_5x5monthly_climatology.py
+   RUN 
+    both
+-> python2.7 apply_5x5monthly_climatology.py --suffix relax --period both --daily --doQC2it
+    day
+-> python2.7 apply_5x5monthly_climatology.py --suffix relax --period day --daily --doQC2it
+    night
+-> python2.7 apply_5x5monthly_climatology.py --suffix relax --period night --daily --doQC2it
+	-> TWEAK:
+	Check that the output file name is still ok to use 'renorm19812010' - what is your climatology period?
+	-> REQUIRES:
+	utils.py
+	-> INPUTS:	
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim1NBC/
+        OBSclim1NBC_5x5_monthly_from_daily_both_relax.nc
+	OBSclim1NBC_5x5_monthly_from_daily_day_relax.nc
+	OBSclim1NBC_5x5_monthly_from_daily_night_relax.nc
+	OBSclim1NBC_5x5_monthly_climatology_from_daily_both_relax.nc
+	OBSclim1NBC_5x5_monthly_climatology_from_daily_day_relax.nc
+	OBSclim1NBC_5x5_monthly_climatology_from_daily_night_relax.nc
+	-> OUTPUTS:
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim1NBC/
+        OBSclim1NBC_5x5_monthly_renorm19812010_anomalies_from_daily_both_relax.nc
+	OBSclim1NBC_5x5_monthly_renorm19812010_anomalies_from_daily_day_relax.nc
+	OBSclim1NBC_5x5_monthly_renorm19812010_anomalies_from_daily_night_relax.nc
+   
+3.3) Interpolate monthly 5by5 climatologies to pentad 1by1 and infill where possible
+-> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/InterpClimtoPentad1by1.py
+   RUN for second iteration OBSclim1NBC q:
+-> python2.7 InterpClimtoPentad1by1.py --doWHAT it2 --varee q
+	-> REQUIRES:
+	-> TWEAK:	
+	version = 'beta1'
+    	StClim = 1981
+    	EdClim = 2010
+	-> INPUTS:
+    	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim1NBC/
+	OBSclim1NBC_5x5_monthly_climatology_from_daily_both_relax.nc
+    	OBSclim1NBC_5x5_monthly_stdev_from_daily_both_relax.nc	
+	-> OUTPUTS:
+    	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim1NBC/
+	q2m_OBSclim1NBC_5x5_monthly_climatology_stdev_from_daily_both_relax_INFILLED.nc
+    	q2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	COPY 1x1_pentad to:
+	/data/local/hadkw/HADCRUH2/MARINE/otherdata/q2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+
+3.4) OPTIONAL make up global average files and plot
+-> /data/local/hadkw/HADCRUH/MARINE/EUSTACEMDS/SUSTACE_SST_MAT/global_average_timeseries.py
+   RUN for first iteration ERAclimNBC q:
+-> python2.7 global_average_timeseries.py --suffix relax --doQC2it
+	-> REQUIRES:
+	utils.py
+	set_paths_and_vars.py - set file paths and some universal variables.
+	-> TWEAK:	
+	-> INPUTS:
+    	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSERAclimNBC/
+	ERAclimNBC_5x5_monthly_renorm19812010_anomalies_from_daily_both_relax.nc
+	ERAclimNBC_5x5_monthly_renorm19812010_anomalies_from_daily_day_relax.nc
+	ERAclimNBC_5x5_monthly_renorm19812010_anomalies_from_daily_night_relax.nc
+	-> OUTPUTS:
+	data:
+    	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSERAclimNBC/
+	ERAclimNBC_5x5_monthly_renorm19812010_anomalies_from_daily_both_relax_specific_humidity_ts.nc
+	ERAclimNBC_5x5_monthly_renorm19812010_anomalies_from_daily_day_relax_specific_humidity_ts.nc
+	ERAclimNBC_5x5_monthly_renorm19812010_anomalies_from_daily_night_relax_specific_humidity_ts.nc
+	plots:
+    	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/PLOTSERAclimNBC/
+	ERAclimNBC_5x5_monthly_renorm19812010_anomalies_from_daily_both_relax_specific_humidity_ts.png
+	ERAclimNBC_5x5_monthly_renorm19812010_anomalies_from_daily_day_relax_specific_humidity_ts.png
+	ERAclimNBC_5x5_monthly_renorm19812010_anomalies_from_daily_night_relax_specific_humidity_ts.png
+
+SO - just thinking that the OBSclim should really be the same between OBSclim1 and OBSclim2 because its based on the absolute values,
+not the anomalies. I suppose the iterations gradually change what is flagged as failing the QC so fewer/different obs will pass through
+into the climatology. Essentially there has to be a climatology for an ob to pass the climatology test or it gets given an 8 and then 
+fails. So - keep the 3 iterations!
+
+I have now tested three different climatology/buddy check thresholds to see if that makes any difference to RH global average time series. I have tested
+CONSERVATIVE 	3.5 * sd (1 to 4), [3.5,3.0,2.5, 2.0] * sd - quite a bit more removed but some bulls eyes still remain in grids. Slightly different global average time series but still moist pre 1982 period.
+NORMAL 		4.5 * sd (1 to 4), [4.5,4.0,3.5, 3.0] * sd - fair amount removed, moist pre-1982 bias clear
+RELAXES 	5.5 * sd (1 to 4), [5.5,5.0,4.5, 4.0] * sd - far less removed, moist pre-1982 bias clear 
+
+VERY LITTLE DIFFERENCE IN CLIMATOLOGY COVERAGE!!!
+
+
+   
+4.1) Run LOOP 3 of the qc, buddy check - OBS clims 
+-> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/make_and_full_qc.py
+   RUN for January 1973:
+-> python2.7 make_and_full_qc.py -i configuration.txt --year1 1973 --year2 1973 --month1 1 --month2 1
+   RUN FROM SLURM with output log:
+   sbatch --mem=16000 --time=360 --ntasks=1 --output=LOG_DIR/mds10MAR2016_197301.log ./run_MDS_MAR2016.sh 1973 1973 1 1
+   	-> REQUIRES:
+	qc.py
+	qc_new_track_check.py
+	spherical_geometry.py
+	IMMA2.py
+	Extended_IMMA.py	
+	-> TWEAK:
+	data_base_dir,/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/OBSclim2NBC/
+	output_suffix,OBSclim2NBC
+	AT_climatology,/project/hadobs2/hadisdh/marine/otherdata/t2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	DPT_climatology,/project/hadobs2/hadisdh/marine/otherdata/td2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	SHU_climatology,/project/hadobs2/hadisdh/marine/otherdata/q2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	VAP_climatology,/project/hadobs2/hadisdh/marine/otherdata/e2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	CRH_climatology,/project/hadobs2/hadisdh/marine/otherdata/rh2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	CWB_climatology,/project/hadobs2/hadisdh/marine/otherdata/tw2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	DPD_climatology,/project/hadobs2/hadisdh/marine/otherdata/dpd2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	AT_stdev_climatology,/project/hadobs2/hadisdh/marine/otherdata/t2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	DPT_stdev_climatology,/project/hadobs2/hadisdh/marine/otherdata/td2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	-> INPUTS:
+	/project/earthobs/ICOADS/ICOADS.3.0.0/
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/RECENTICOADS/
+	/project/hadobs2/hadisdh/marine/otherdata/HadSST2_pentad_climatology.nc
+	/project/hadobs2/hadisdh/marine/otherdata/HadNMAT2_pentad_climatology.nc
+	/project/hadobs2/hadisdh/marine/otherdata/t2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	/project/hadobs2/hadisdh/marine/otherdata/td2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	/project/hadobs2/hadisdh/marine/otherdata/q2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	/project/hadobs2/hadisdh/marine/otherdata/e2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	/project/hadobs2/hadisdh/marine/otherdata/rh2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	/project/hadobs2/hadisdh/marine/otherdata/tw2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	/project/hadobs2/hadisdh/marine/otherdata/dpd2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	/project/hadobs2/hadisdh/marine/otherdata/p2m_pentad_1by1marine_ERA-Interim_data_19792015.nc
+	/project/hadobs2/hadisdh/marine/otherdata/OSTIA_pentad_stdev_climatology.nc
+	/project/hadobs2/hadisdh/marine/otherdata/NMAT/
+	/project/hadobs2/hadisdh/marine/otherdata/list_of_ids_that_are_not_ships.txt
+	/project/hadobs2/hadisdh/marine/otherdata/HadSST2_pentad_stdev_climatology.nc
+	/project/hadobs2/hadisdh/marine/otherdata/t2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	/project/hadobs2/hadisdh/marine/otherdata/td2m_OBSclim1NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	/project/hadobs2/hadisdh/marine/otherdata/OSTIA_compare_1x1x5box_to_buddy_average.nc
+	/project/hadobs2/hadisdh/marine/otherdata/OSTIA_compare_one_ob_to_1x1x5box.nc
+	/project/hadobs2/hadisdh/marine/otherdata/OSTIA_buddy_range_sampling_error.nc	
+	-> OUTPUTS:
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/OBSclim2NBC/
+
+   4.1.1) Plot annual and decadal QC summary plots
+   Do we notice any tendency to remove low RH in the pre 1982 and high RH post 2010? - A bit in climatology, especially DPT
+   - also remove more daytime (low RH) for climatology and early day buddy.
+-> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/ANALYSIS_PLOTS/PlotQCTest_SEP2016.py
+   Run from hadkw
+   RUN for January 1973
+   python2.7 PlotQCTest_SEP2016.py --year1 1973 --year2 1973 --month1 1 --month2 1 -- typee OBSclim2NBC --varee AT
+   RUN from SLURM with output log
+   sbatch --mem=16000 --time=360 --ntasks=1 --output=PlotQC197301AT.log ./RunPlotQC.sh 1973 1973 1 1 OBSClim2NBC AT
+       	-> TWEAK:
+       	Check dates and filepaths are ok for this run
+       	-> REQUIRES:
+       	MDS_RWtools.py
+       	-> INPUTS:
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/OBSclim2NBC/new_suite_197301_OBSclim2NBC.txt 
+       	-> OUTPUTS:
+       	/data/local/hadkw/HADCRUH/MARINE/IMAGES/QCHIST/SummaryHistQC_DAY_Abs_AT_OBSclim2NBC_197319730101_SEP2016.png 
+
+4.2) Grid to monthly 5by5 (no renormalise?) the selected and QC'd obs, (***now buddy checked***)
+-> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/gridding_cam.py
+   RUN for January 1973
+-> python2.7 gridding_cam.py --start_year 1973 --end_year 1973 --start_month 01 --end_month 01 --suffix relax --doQC3it 
+   RUN from SLURM for iteration 3 - this code creates the slurm scripts and runs them
+   submit_spice_jobs_it3QC.bash
+   	-> REQUIRES:
+	utils.py
+	set_paths_and_vars.py - set file paths and some universal variables.
+	plot_qc_diagnostics.py - to output plots of clean obs vs all
+	MDS_RWtools.py - for the file format
+	-> TWEAK:
+	year and end in submit_spice_jobs_it2QC.bash	
+	SwitchOutput = 0 (0 if we only want to output monthly stuff, 1 if we want 3hrly and daily too)
+	-> INPUTS:
+        /project/hadobs2/hadisdh/marine/ICOADS.3.0.0/OBSclim2NBC/new_suite_197301_OBSclim2NBC.txt
+	-> OUTPUTS:
+	DATA
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2NBC/
+	<optional>
+	 - to 3hourly 1x1s (median) - for each year/month/var
+	 - OBSclim2NBC_1x1_3hr_197301_day_relax.nc
+	 - OBSclim2NBC_1x1_3hr_197301_night_relax.nc
+	 - OBSclim2NBC_1x1_3hr_197301_all_relax.nc
+	 - to 1x1 dailies (mean) - for each year/month/var
+	 - OBSclim2NBC_1x1_daily_197301_day_relax.nc
+	 - OBSclim2NBC_1x1_daily_197301_night_relax.nc
+	 - OBSclim2NBC_1x1_daily_197301_all_relax.nc	
+	to 5x5 monthlies (mean) - for each year/month/var
+	OBSclim2NBC_5x5_monthly_197301_from_daily_day_relax.nc
+	OBSclim2NBC_5x5_monthly_197301_from_daily_night_relax.nc
+	OBSclim2NBC_5x5_monthly_197301_from_daily_all_relax.nc
+	PLOTS
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/PLOTSOBSclim2NBC/
+	for each year/month
+	obs_distribution_197301_relax.png                  		# frequency distribution of observation times for this period                       
+	qc_actuals_dew_point_temperature_197301_relax.png  		# degrees C by latitude scatter of all and QC passing data for DPT          
+	qc_actuals_dew_point_temperature_anomalies_197301_relax.png  	# degrees C by latitude scatter of all and QC passing data for DPT anomalies
+	qc_actuals_specific_humidity_197301_relax.png			# g/kg by latitude scatter of all and QC passing data for SHU
+        qc_actuals_specific_humidity_anomalies_197301_relax.png		# g/kg  bylatitude scatter of all and QC passing data for SHU anomalies
+        qc_actuals_relative_humidity_197301_relax.png			# %rh by latitude scatter of all and QC passing data for CRH
+        qc_actuals_relative_humidity_anomalies_197301_relax.png		# %rh by latitude scatter of all and QC passing data for CRH anomalies 
+        <optional>
+	 - n_obs_1x1_daily_197301_day_relax.png    			# frequency distribution of obs in each 1x1 day               
+         - n_obs_1x1_daily_197301_night_relax.png       		# frequency distribution of obs in each 1x1 day          
+         - n_obs_1x1_daily_197301_all_relax.png                         # frequency distribution of obs in each 1x1 day
+         - n_grids_1x1_daily_197301_day_relax.png                   	# frequency distribution of 1x1 3hr grids in each 1x1 day
+         - n_grids_1x1_daily_197301_night_relax.png               	# frequency distribution of 1x1 3hr grids in each 1x1 day
+         - n_grids_1x1_daily_197301_all_relax.png                 	# frequency distribution of 1x1 3hr grids in each 1x1 day (8)
+        n_obs_5x5_monthly_from_daily_197301_day_relax.png		# frequency distribution of obs in each 5x5 month
+        n_obs_5x5_monthly_from_daily_197301_night_relax.png		# frequency distribution of obs in each 5x5 month
+        n_obs_5x5_monthly_from_daily_197301_all_relax.png		# frequency distribution of obs in each 5x5 month
+        n_grids_5x5_monthly_from_daily_197301_day_relax.png    		# frequency distribution of 1x1 day grids in each 5x5 month	
+        n_grids_5x5_monthly_from_daily_197301_night_relax.png  		# frequency distribution of 1x1 day grids in each 5x5 month
+        n_grids_5x5_monthly_from_daily_197301_all_relax.png    		# frequency distribution of 1x1 day grids in each 5x5 month
+	
+   4.2.1) Merge the day and night monthly 5by5s to create both (supercedes 'all')	
+-> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/merge_day_night.py
+   RUN for January 1973 to December 2015 no clims (loops through each month)
+-> python2.7 merge_day_night.py --suffix relax --months --start_year 1973 --end_year 2015 --start_month 01 --end_month 12 --doQC3it 
+        -> TWEAK:
+	-> REQUIRES:
+	utils.py
+	set_paths_and_vars.py - set file paths and some universal variables.
+        -> INPUTS:
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2NBC/
+	5x5 monthlies (mean) - for each year/month/var
+	OBSclim2NBC_5x5_monthly_197301_from_daily_day_relax.nc
+	OBSclim2NBC_5x5_monthly_197301_from_daily_night_relax.nc
+        -> OUTPUTS
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2NBC/OBSclim2NBC_5x5_monthly_197301_from_daily_both_relax.nc
+
+   4.2.2) Package all individual year/month files into one big gridded file
+   If this is an update (any start year other than 1973) then this merges with the existing gridded file
+-> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/make_complete_datafiles.py (could the climatology and renorm-if-ERA be rolled
+into this?)
+   RUN for Jan 1973 to Dec 2015 for months 
+   both
+-> python2.7 make_complete_data_files.py --suffix relax --months --daily --period both --start_year 1973 --end_year 2015 --start_month 01 --end_month 12 --doQC3it   
+   day
+-> python2.7 make_complete_data_files.py --suffix relax --months --daily --period day --start_year 1973 --end_year 2015 --start_month 01 --end_month 12 --doQC3it   
+   night
+-> python2.7 make_complete_data_files.py --suffix relax --months --daily --period night --start_year 1973 --end_year 2015 --start_month 01 --end_month 12 --doQC3it   
+        -> TWEAK:
+	-> REQUIRES:
+	utils.py
+	set_paths_and_vars.py - set file paths and some universal variables.
+	-> INPUTS:
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2NBC/
+	OBSclim2NBC_5x5_monthly_197301_from_daily_day_relax.nc
+	OBSclim2NBC_5x5_monthly_197301_from_daily_night_relax.nc
+        OBSclim2NBC_5x5_monthly_197301_from_daily_both_relax.nc
+	-> OUTPUTS:
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2NBC/
+	OBSclim2NBC_5x5_monthly_from_daily_day_relax.nc
+	OBSclim2NBC_5x5_monthly_from_daily_night_relax.nc
+        OBSclim2NBC_5x5_monthly_from_daily_both_relax.nc
+	
+   4.2.3) Create monthly 5by5 climatologies and standard deviations
+-> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/make_5x5monthly_climatology.py
+   RUN for a 1981-2010 climatology
+    both
+-> python2.7 make_5x5monthly_climatology.py --suffix relax --start_year 1981 --end_year 2010 --period both --daily --doQC3it
+    day
+-> python2.7 make_5x5monthly_climatology.py --suffix relax --start_year 1981 --end_year 2010 --period day --daily --doQC3it
+    night
+-> python2.7 make_5x5monthly_climatology.py --suffix relax --start_year 1981 --end_year 2010 --period night --daily --doQC3it
+   	-> TWEAK:
+	-> REQUIRES:
+	utils.py
+	set_paths_and_vars.py - set file paths and some universal variables.
+	-> INPUTS:
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2NBC/
+        OBSclim2NBC_5x5_monthly_from_daily_both_relax.nc
+	OBSclim2NBC_5x5_monthly_from_daily_day_relax.nc
+	OBSclim2NBC_5x5_monthly_from_daily_night_relax.nc
+	-> OUTPUTS:
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2NBC/
+	OBSclim2NBC_5x5_monthly_climatology_from_daily_both_relax.nc
+	OBSclim2NBC_5x5_monthly_stdev_from_daily_both_relax.nc
+	OBSclim2NBC_5x5_monthly_climatology_from_daily_day_relax.nc
+	OBSclim2NBC_5x5_monthly_stdev_from_daily_day_relax.nc
+	OBSclim2NBC_5x5_monthly_climatology_from_daily_night_relax.nc
+	OBSclim2NBC_5x5_monthly_stdev_from_daily_night_relax.nc
+
+   4.2.4) Renormalise the 5by5 monthly anomalies by the difference between the OBS mean over the 1981-2010 period and 0 (assume should be zero mean over
+   the 1981-2010 period.
+   This shouldn't affect the climatology or standard deviations!
+-> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/apply_5x5monthly_climatology.py
+   RUN 
+    both
+-> python2.7 apply_5x5monthly_climatology.py --suffix relax --period both --daily --doQC3it
+    day
+-> python2.7 apply_5x5monthly_climatology.py --suffix relax --period day --daily --doQC3it
+    night
+-> python2.7 apply_5x5monthly_climatology.py --suffix relax --period night --daily --doQC3it
+	-> TWEAK:
+	Check that the output file name is still ok to use 'renorm19812010' - what is your climatology period?
+	-> REQUIRES:
+	utils.py
+	-> INPUTS:	
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2NBC/
+        OBSclim2NBC_5x5_monthly_from_daily_both_relax.nc
+	OBSclim2NBC_5x5_monthly_from_daily_day_relax.nc
+	OBSclim2NBC_5x5_monthly_from_daily_night_relax.nc
+	OBSclim2NBC_5x5_monthly_climatology_from_daily_both_relax.nc
+	OBSclim2NBC_5x5_monthly_climatology_from_daily_day_relax.nc
+	OBSclim2NBC_5x5_monthly_climatology_from_daily_night_relax.nc
+	-> OUTPUTS:
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2NBC/
+        OBSclim2NBC_5x5_monthly_renorm19812010_anomalies_from_daily_both_relax.nc
+	OBSclim2NBC_5x5_monthly_renorm19812010_anomalies_from_daily_day_relax.nc
+	OBSclim2NBC_5x5_monthly_renorm19812010_anomalies_from_daily_night_relax.nc
+  
+   4.2.5) Interpolate monthly 5by5 climatologies to pentad 1by1 and infill where possible
+-> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/InterpClimtoPentad1by1.py
+   RUN for second iteration OBSclim1NBC q:
+-> python2.7 InterpClimtoPentad1by1.py --doWHAT it3 --varee q
+	-> REQUIRES:
+	-> TWEAK:	
+	version = 'beta1'
+    	StClim = 1981
+    	EdClim = 2010
+	-> INPUTS:
+    	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2NBC/
+	OBSclim2NBC_5x5_monthly_climatology_from_daily_both_relax.nc
+    	OBSclim2NBC_5x5_monthly_stdev_from_daily_both_relax.nc	
+	-> OUTPUTS:
+    	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2NBC/
+	q2m_OBSclim2NBC_5x5_monthly_climatology_stdev_from_daily_both_relax_INFILLED.nc
+    	q2m_OBSclim2NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	COPY 1x1_pentad to:
+	/data/local/hadkw/HADCRUH2/MARINE/otherdata/q2m_OBSclim2NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+
+4.3) OPTIONAL make up global average files and plot
+-> /data/local/hadkw/HADCRUH/MARINE/EUSTACEMDS/SUSTACE_SST_MAT/global_average_timeseries.py
+   RUN for first iteration ERAclimNBC q:
+-> python2.7 global_average_timeseries.py --suffix relax --doQC3it
+	-> REQUIRES:
+	utils.py
+	set_paths_and_vars.py - set file paths and some universal variables.
+	-> TWEAK:	
+	-> INPUTS:
+    	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2NBC/
+	OBSclim2NBC_5x5_monthly_renorm19812010_anomalies_from_daily_both_relax.nc
+	OBSclim2NBC_5x5_monthly_renorm19812010_anomalies_from_daily_day_relax.nc
+	OBSclim2NBC_5x5_monthly_renorm19812010_anomalies_from_daily_night_relax.nc
+	-> OUTPUTS:
+	data:
+    	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2NBC/
+	OBSclim2NBC_5x5_monthly_renorm19812010_anomalies_from_daily_both_relax_specific_humidity_ts.nc
+	OBSclim2NBC_5x5_monthly_renorm19812010_anomalies_from_daily_day_relax_specific_humidity_ts.nc
+	OBSclim2NBC_5x5_monthly_renorm19812010_anomalies_from_daily_night_relax_specific_humidity_ts.nc
+	plots:
+    	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/PLOTSOBSclim2NBC/
+	OBSclim2NBC_5x5_monthly_renorm19812010_anomalies_from_daily_both_relax_specific_humidity_ts.png
+	OBSclim2NBC_5x5_monthly_renorm19812010_anomalies_from_daily_day_relax_specific_humidity_ts.png
+	OBSclim2NBC_5x5_monthly_renorm19812010_anomalies_from_daily_night_relax_specific_humidity_ts.png
+
+4.4) Interpolate monthly 5by5 climatologies to pentad 1by1 and infill where possible
+-> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/InterpClimtoPentad1by1.py
+   RUN for second iteration OBSclim1NBC q:
+-> python2.7 InterpClimtoPentad1by1.py --doWHAT it3 --varee q
+	-> REQUIRES:
+	-> TWEAK:	
+	version = 'beta1'
+    	StClim = 1981
+    	EdClim = 2010
+	-> INPUTS:
+    	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim1NBC/
+	OBSclim2NBC_5x5_monthly_climatology_from_daily_both_relax.nc
+    	OBSclim2NBC_5x5_monthly_stdev_from_daily_both_relax.nc	
+	-> OUTPUTS:
+    	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim1NBC/
+	q2m_OBSclim2NBC_5x5_monthly_climatology_stdev_from_daily_both_relax_INFILLED.nc
+    	q2m_OBSclim2NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+	COPY 1x1_pentad to:
+	/data/local/hadkw/HADCRUH2/MARINE/otherdata/q2m_OBSclim2NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+
+NOTE: We may wish to create an interpolated bias corrected climatology but no point clim checking non-bias corrected data 
+with bias corrected climatology!
+
+5.1) Bias adjust the QC'd and buddy checked obs and estimate uncertainties
+-> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/MDS_make_extended.py
+   RUN for January 1973
+--> python2.7 MDS_make_extended.py --year1 1973 --year2 1973 --month1 1 --month2 1 --typee OBSclim2NBC
+   RUN from SLURM for BCtotal   
+   sbatch --mem=16000 --time=360 --ntasks=1 --output=LOGFILES/mdsext_1973.log ./run_MDSEXT_APR2016.sh '1973' '1973' '01' '01' 'OBSclim2NBC'
+   	-> REQUIRES:
+	HeightCorrect.py
+	CalcHums.py
+	MDS_RW_tools.py
+	-> TWEAK:
+	Make sure MDS_RW_tools.py is pointing to the correct directory path e.g. ICOADS.3.0.0
+ 	-> INPUTS:
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/OBSclim2NBC/
+	-> OUTPUTS:
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/OBSclimBClocal/new_suite_197301_OBSclim2NBClocal_extended.txt 
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/OBSclimBClocal/new_suite_197301_OBSclim2NBClocal_uncertainty.txt 
+
+5.2) Grid to monthly 5by5 (no renormalise?) the selected and QC'd and bias adjusted (all, height only and instrument only) obs, (***now buddy checked***)
+-> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/gridding_cam.py
+   RUN for January 1973
+-> python2.7 gridding_cam.py --start_year 1973 --end_year 1973 --start_month 01 --end_month 01 --suffix relax --doBCtotal (--doBChgt, --doBCscn) 
+   RUN from SLURM for iteration 2 - this code creates the slurm scripts and runs them
+   submit_spice_jobs_BCtotal.bash (submit_spice_jobs_BChgt.bash, submit_spice_jobs_BCscn.bash,
+   submit_spice_jobs_BCtotalship.bash)
+   The above will grid the data only. You then need to run seperately for each uncertainty source (too big to run as one)
+   RUN WITH --doBCtotal --ShipOnly
+   We'll only go with ShipOnly for uncertainty anyway.
+   - --doUSCN or --doUSCNship submit_spice_jobs_USCN.bash or submit_spice_jobs_USCNship.bash
+   - --doUHGT or --doUHGTship submit_spice_jobs_UHGT.bash or submit_spice_jobs_UHGTship.bash
+   - --doUR or --doURship submit_spice_jobs_UR.bash or submit_spice_jobs_URship.bash
+   - --doUM or --doUMship submit_spice_jobs_UM.bash or submit_spice_jobs_UMship.bash
+   - --doUC or --doUCship submit_spice_jobs_UC.bash or submit_spice_jobs_UCship.bash
+   - --doUTOT or --doUTOTship submit_spice_jobs_UTOT.bash or submit_spice_jobs_UTOTship.bash
+   - --doUSLR or --doUSLRship submit_spice_jobs_USLR.bash or submit_spice_jobs_USLRship.bash - NOT CURRENTLY ACTIVE!!!
+   	-> REQUIRES:
+	utils.py
+	set_paths_and_vars.py - set file paths and some universal variables - have set PLOTS to no plots
+	#plot_qc_diagnostics.py - to output plots of clean obs vs all
+	MDS_RWtools.py - for the file format
+	-> TWEAK:
+	year and end in submit_spice_jobs_itBCtotsl.bash	
+	SwitchOutput = 0 (0 if we only want to output monthly stuff, 1 if we want 3hrly and daily too) in gridding_cam.py
+	set plots = False in set_paths_and_vars.py to turn off all plotting
+	-> INPUTS:
+        /project/hadobs2/hadisdh/marine/ICOADS.3.0.0/OBSclim2BClocal/new_suite_197301_OBSclim2BClocal_extended.txt
+        /project/hadobs2/hadisdh/marine/ICOADS.3.0.0/OBSclim2BClocal/new_suite_197301_OBSclim2BClocal_uncertainty.txt
+	-> OUTPUTS:
+	BCtotal
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocal/
+	OBSclim2BClocal_5x5_monthly_197301_from_daily_day_relax.nc
+	OBSclim2BClocal_5x5_monthly_197301_from_daily_night_relax.nc
+	OBSclim2BClocal_5x5_monthly_197301_from_daily_all_relax.nc
+	BChgt
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocalHGT/
+	OBSclim2BClocal_5x5_monthly_197301_from_daily_day_relax.nc
+	OBSclim2BClocal_5x5_monthly_197301_from_daily_night_relax.nc
+	OBSclim2BClocal_5x5_monthly_197301_from_daily_all_relax.nc
+	BCscn
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocalINST/
+	OBSclim2BClocal_5x5_monthly_197301_from_daily_day_relax.nc
+	OBSclim2BClocal_5x5_monthly_197301_from_daily_night_relax.nc
+	OBSclim2BClocal_5x5_monthly_197301_from_daily_all_relax.nc
+	BCtotal --ShipOnly
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocalship/
+	OBSclim2BClocal_5x5_monthly_197301_from_daily_day_relax.nc
+	OBSclim2BClocal_5x5_monthly_197301_from_daily_night_relax.nc
+	OBSclim2BClocal_5x5_monthly_197301_from_daily_all_relax.nc
+	OBSclim2BClocal_uSCN_5x5_monthly_197301_from_daily_day_relax.nc
+	OBSclim2BClocal_uSCN_5x5_monthly_197301_from_daily_night_relax.nc
+	OBSclim2BClocal_uSCN_5x5_monthly_197301_from_daily_all_relax.nc
+	...for each uncertainty
+	
+   5.2.1) Merge the day and night monthly 5by5s to create both (supercedes 'all')	
+-> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/merge_day_night.py
+   RUN for January 1973 to December 2015 no clims (loops through each month)
+-> python2.7 merge_day_night.py --suffix relax --months --start_year 1973 --end_year 2015 --start_month 01 --end_month 12 --doBCtotal (--doBChgt, --doBCinst,
+--ShipOnly)
+   This will then need to be done for each uncertainty using the correct --doUXXX suffix in addition to --doBCtotal and --ShipOnly
+   --doUSCN --doUHGT --doUR --doUM --doUC --doUTOT --doUSLR 
+        -> TWEAK:
+	-> REQUIRES:
+	utils.py
+	set_paths_and_vars.py - set file paths and some universal variables.
+        -> INPUTS:
+	BCtotal
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocal/
+	OBSclim2BClocal_5x5_monthly_197301_from_daily_day_relax.nc
+	OBSclim2BClocal_5x5_monthly_197301_from_daily_night_relax.nc
+	BChgt
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocalHGT/
+	OBSclim2BClocal_5x5_monthly_197301_from_daily_day_relax.nc
+	OBSclim2BClocal_5x5_monthly_197301_from_daily_night_relax.nc
+	BCscn
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocalINST/
+	OBSclim2BClocal_5x5_monthly_197301_from_daily_day_relax.nc
+	OBSclim2BClocal_5x5_monthly_197301_from_daily_night_relax.nc
+	BCtotal ShipOnly
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocalship/
+	OBSclim2BClocal_5x5_monthly_197301_from_daily_day_relax.nc
+	OBSclim2BClocal_5x5_monthly_197301_from_daily_night_relax.nc
+	OBSclim2BClocal_uSCN_5x5_monthly_197301_from_daily_day_relax.nc
+	OBSclim2BClocal_uSCN_5x5_monthly_197301_from_daily_night_relax.nc
+	...and all other uncertainty sources
+        -> OUTPUTS
+	BCtotal
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocal/OBSclim2BClocal_5x5_monthly_197301_from_daily_both_relax.nc
+	BChgt
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocalHGT/OBSclim2BClocal_5x5_monthly_197301_from_daily_both_relax.nc
+	BCscn
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocalINST/OBSclim2BClocal_5x5_monthly_197301_from_daily_both_relax.nc
+	BCtotal --ShipOnly
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocalship/OBSclim2BClocal_5x5_monthly_197301_from_daily_both_relax.nc
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocalship/OBSclim2BClocal_uSCN_5x5_monthly_197301_from_daily_both_relax.nc
+	...and all other uncertainty sources
+
+   5.2.2) Package all individual year/month files into one big gridded file
+   If this is an update (any start year other than 1973) then this merges with the existing gridded file
+   At the moment it keeps the uncertainty fields seperate so that I do not need to then edit all down stream processing code. I may do this later.
+-> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/make_complete_datafiles.py (could the climatology and renorm-if-ERA be rolled
+into this?)
+   RUN for Jan 1973 to Dec 2015 for months 
+   both
+-> python2.7 make_complete_data_files.py --suffix relax --months --daily --period both --start_year 1973 --end_year 2015 --start_month 01 --end_month 12 --doBCtotal (--doBChgt, --doBCscn)   
+   day
+-> python2.7 make_complete_data_files.py --suffix relax --months --daily --period day --start_year 1973 --end_year 2015 --start_month 01 --end_month 12 --doBCtotal (--doBChgt, --doBCscn)  
+   night
+-> python2.7 make_complete_data_files.py --suffix relax --months --daily --period night --start_year 1973 --end_year 2015 --start_month 01 --end_month 12 --doBCtotal (--doBChgt, --doBCscn)
+   Do this for each uncertainty field too AFTER doing the data grids first - this should append to to existing data file
+   Use --doUSCN (or other uncertainty sources) with --doBCtotal and --ShipOnly
+   --doUSCN --doUHGT --doUR --doUM --doUC --doUTOT --doUSLR 
+        -> TWEAK:
+	-> REQUIRES:
+	utils.py
+	set_paths_and_vars.py - set file paths and some universal variables.
+	-> INPUTS:
+	BCtotal
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocal/
+	OBSclim2BClocal_5x5_monthly_197301_from_daily_day_relax.nc
+	OBSclim2BClocal_5x5_monthly_197301_from_daily_night_relax.nc
+        OBSclim2BClocal_5x5_monthly_197301_from_daily_both_relax.nc
+	BCtotal --ShipOnly
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocalship/
+	OBSclim2BClocal_5x5_monthly_197301_from_daily_day_relax.nc
+	OBSclim2BClocal_5x5_monthly_197301_from_daily_night_relax.nc
+        OBSclim2BClocal_5x5_monthly_197301_from_daily_both_relax.nc
+	OBSclim2BClocal_uSCN_5x5_monthly_197301_from_daily_day_relax.nc
+	OBSclim2BClocal_uSCN_5x5_monthly_197301_from_daily_night_relax.nc
+        OBSclim2BClocal_uSCN_5x5_monthly_197301_from_daily_both_relax.nc
+	...and all other uncertainty sources
+	-> OUTPUTS:
+	BCtotal
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocal/
+	OBSclim2BClocal_5x5_monthly_from_daily_day_relax.nc
+	OBSclim2BClocal_5x5_monthly_from_daily_night_relax.nc
+        OBSclim2BClocal_5x5_monthly_from_daily_both_relax.nc
+	BCtotal ShipOnly
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocalship/
+	OBSclim2BClocal_5x5_monthly_from_daily_day_relax.nc
+	OBSclim2BClocal_5x5_monthly_from_daily_night_relax.nc
+        OBSclim2BClocal_5x5_monthly_from_daily_both_relax.nc
+	OBSclim2BClocal_uSCN_5x5_monthly_from_daily_day_relax.nc
+	OBSclim2BClocal_uSCN_5x5_monthly_from_daily_night_relax.nc
+        OBSclim2BClocal_uSCN_5x5_monthly_from_daily_both_relax.nc
+	
+   5.2.3) Create monthly 5by5 climatologies and standard deviations
+-> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/make_5x5monthly_climatology.py
+   RUN for a 1981-2010 climatology
+    both
+-> python2.7 make_5x5monthly_climatology.py --suffix relax --start_year 1981 --end_year 2010 --period both --daily --doBCtotal (--doBChgt, --doBCscn) 
+    day
+-> python2.7 make_5x5monthly_climatology.py --suffix relax --start_year 1981 --end_year 2010 --period day --daily --doBCtotal (--doBChgt, --doBCscn) 
+    night
+-> python2.7 make_5x5monthly_climatology.py --suffix relax --start_year 1981 --end_year 2010 --period night --daily --doBCtotal (--doBChgt, --doBCscn) 
+   	-> TWEAK:
+	-> REQUIRES:
+	utils.py
+	set_paths_and_vars.py - set file paths and some universal variables.
+	-> INPUTS:
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2NBC/
+        OBSclim2NBC_5x5_monthly_from_daily_both_relax.nc
+	OBSclim2NBC_5x5_monthly_from_daily_day_relax.nc
+	OBSclim2NBC_5x5_monthly_from_daily_night_relax.nc
+	-> OUTPUTS:
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2NBC/
+	OBSclim2NBC_5x5_monthly_climatology_from_daily_both_relax.nc
+	OBSclim2NBC_5x5_monthly_stdev_from_daily_both_relax.nc
+	OBSclim2NBC_5x5_monthly_climatology_from_daily_day_relax.nc
+	OBSclim2NBC_5x5_monthly_stdev_from_daily_day_relax.nc
+	OBSclim2NBC_5x5_monthly_climatology_from_daily_night_relax.nc
+	OBSclim2NBC_5x5_monthly_stdev_from_daily_night_relax.nc
+
+   5.2.4) Renormalise the 5by5 monthly anomalies by the difference between the OBS mean over the 1981-2010 period and 0 (assume should be zero mean over
+   the 1981-2010 period.
+   This shouldn't affect the climatology or standard deviations!
+-> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/apply_5x5monthly_climatology.py
+   RUN 
+    both
+-> python2.7 apply_5x5monthly_climatology.py --suffix relax --period both --daily --doBCtotal (--doBChgt, --doBCscn) 
+    day
+-> python2.7 apply_5x5monthly_climatology.py --suffix relax --period day --daily --doBCtotal (--doBChgt, --doBCscn) 
+    night
+-> python2.7 apply_5x5monthly_climatology.py --suffix relax --period night --daily --doBCtotal (--doBChgt, --doBCscn) 
+	-> TWEAK:
+	Check that the output file name is still ok to use 'renorm19812010' - what is your climatology period?
+	-> REQUIRES:
+	utils.py
+	-> INPUTS:	
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocal/
+        OBSclim2BClocal_5x5_monthly_from_daily_both_relax.nc
+	OBSclim2BClocal_5x5_monthly_from_daily_day_relax.nc
+	OBSclim2BClocal_5x5_monthly_from_daily_night_relax.nc
+	OBSclim2BClocal_5x5_monthly_climatology_from_daily_both_relax.nc
+	OBSclim2BClocal_5x5_monthly_climatology_from_daily_day_relax.nc
+	OBSclim2BClocal_5x5_monthly_climatology_from_daily_night_relax.nc
+	-> OUTPUTS:
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocal/
+        OBSclim2BClocal_5x5_monthly_renorm19812010_anomalies_from_daily_both_relax.nc
+	OBSclim2BClocal_5x5_monthly_renorm19812010_anomalies_from_daily_day_relax.nc
+	OBSclim2BClocal_5x5_monthly_renorm19812010_anomalies_from_daily_night_relax.nc
+  
+   5.2.5) Interpolate monthly 5by5 climatologies to pentad 1by1 and infill where possible
+-> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/InterpClimtoPentad1by1.py
+   RUN for second iteration OBSclim1NBC q:
+-> python2.7 InterpClimtoPentad1by1.py --doWHAT bcT --varee q
+	-> REQUIRES:
+	-> TWEAK:	
+	version = 'beta1'
+    	StClim = 1981
+    	EdClim = 2010
+	-> INPUTS:
+    	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocal/
+	OBSclim2BClocal_5x5_monthly_climatology_from_daily_both_relax.nc
+    	OBSclim2BClocal_5x5_monthly_stdev_from_daily_both_relax.nc  
+	-> OUTPUTS:
+    	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocal/
+	q2m_OBSclim2BClocal_5x5_monthly_climatology_stdev_from_daily_both_relax_INFILLED.nc
+    	q2m_OBSclim2BClocal_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+#	COPY 1x1_pentad to:
+#	/data/local/hadkw/HADCRUH2/MARINE/otherdata/q2m_OBSclim2NBC_1x1_pentad_climatology_stdev_from_5x5_monthly_both_relax_INFILLED.nc
+
+   5.2.6) Create actual total uncertainty combining all elements - this will be larger than uTOT which was combined at the ob level and therefore has no
+   correlation. THIS ONLY WORKS ON OBSclim2BClocal_*_5by5_monthly_from_daily_both/day/night_relax in GRIDSOBSclim2BClocalship!!!
+-> /data/local/hadkw/HADCRUH2/MARINE/EUSTACEMDS/EUSTACE_SST_MAT/CreateRealTotalUncertainty.py
+THIS IS PYTHON 3 so for now:
+-> module load scitools/experimental
+-> python CreateRealTotalUncertainty.py --period both
+-> python CreateRealTotalUncertainty.py --period day
+-> python CreateRealTotalUncertainty.py --period night
+        -> TWEAK:
+	-> REQUIRES:
+	-> INPUTS:
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocalship/
+	both
+	OBSclim2BClocal_uHGT_5x5_monthly_from_daily_both_relax.nc
+	OBSclim2BClocal_uSCN_5x5_monthly_from_daily_both_relax.nc
+	OBSclim2BClocal_uR_5x5_monthly_from_daily_both_relax.nc
+	OBSclim2BClocal_uM_5x5_monthly_from_daily_both_relax.nc
+	OBSclim2BClocal_uC_5x5_monthly_from_daily_both_relax.nc
+	day
+	OBSclim2BClocal_uHGT_5x5_monthly_from_daily_day_relax.nc
+	OBSclim2BClocal_uSCN_5x5_monthly_from_daily_day_relax.nc
+	OBSclim2BClocal_uR_5x5_monthly_from_daily_day_relax.nc
+	OBSclim2BClocal_uM_5x5_monthly_from_daily_day_relax.nc
+	OBSclim2BClocal_uC_5x5_monthly_from_daily_day_relax.nc
+	night
+	OBSclim2BClocal_uHGT_5x5_monthly_from_daily_night_relax.nc
+	OBSclim2BClocal_uSCN_5x5_monthly_from_daily_night_relax.nc
+	OBSclim2BClocal_uR_5x5_monthly_from_daily_night_relax.nc
+	OBSclim2BClocal_uM_5x5_monthly_from_daily_night_relax.nc
+	OBSclim2BClocal_uC_5x5_monthly_from_daily_night_relax.nc
+	-> OUTPUTS:
+	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocal/
+	OBSclim2BClocal_uALL_5x5_monthly_from_daily_both_relax.nc
+	OBSclim2BClocal_uALL_5x5_monthly_from_daily_night_relax.nc
+        OBSclim2BClocal_uALL_5x5_monthly_from_daily_both_relax.nc   
+   
+5.3) OPTIONAL make up global average files and plot
+-> /data/local/hadkw/HADCRUH/MARINE/EUSTACEMDS/SUSTACE_SST_MAT/global_average_timeseries.py
+   RUN for first iteration ERAclimNBC q:
+-> python2.7 global_average_timeseries.py --suffix relax --doBCtotal (--doBChgt, --doBCscn) 
+	-> REQUIRES:
+	utils.py
+	set_paths_and_vars.py - set file paths and some universal variables.
+	-> TWEAK:
+	set plots = true in set_paths_and_vars.py	
+	-> INPUTS:
+    	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocal/
+	OBSclim2BClocal_5x5_monthly_renorm19812010_anomalies_from_daily_both_relax.nc
+	OBSclim2BClocal_5x5_monthly_renorm19812010_anomalies_from_daily_day_relax.nc
+	OBSclim2BClocal_5x5_monthly_renorm19812010_anomalies_from_daily_night_relax.nc
+	-> OUTPUTS:
+	data:
+    	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/GRIDSOBSclim2BClocal/
+	OBSclim2BClocal_5x5_monthly_renorm19812010_anomalies_from_daily_both_relax_specific_humidity_ts.nc
+	OBSclim2BClocal_5x5_monthly_renorm19812010_anomalies_from_daily_day_relax_specific_humidity_ts.nc
+	OBSclim2BClocal_5x5_monthly_renorm19812010_anomalies_from_daily_night_relax_specific_humidity_ts.nc
+	plots:
+    	/project/hadobs2/hadisdh/marine/ICOADS.3.0.0/PLOTSOBSclim2BClocal/
+	OBSclim2BClocal_5x5_monthly_renorm19812010_anomalies_from_daily_both_relax_specific_humidity_ts.png
+	OBSclim2BClocal_5x5_monthly_renorm19812010_anomalies_from_daily_day_relax_specific_humidity_ts.png
+	OBSclim2BClocal_5x5_monthly_renorm19812010_anomalies_from_daily_night_relax_specific_humidity_ts.png
+
+NOTE: We may wish to create an interpolated bias corrected climatology but no point clim checking non-bias corrected data 
+with bias corrected climatology!
+
+  
+    
+6.1) Grid to monthly 5by5 (no renormalise?) the selected raw obs
+
+
+    
+THings to check
+Distribution of QC removals after each iteration - any improvement?
+% of data removed from QC - 
+OBS clim and sd compared with ERA - are StDevs smaller? Do we need to grow the
+threshold?
+
+Testing gridding_cam.py and reading in QC flags bud vs no bud
+OBSclim1NBC THRESH5_5 1973 01
+"ATclim":0,"ATrep":0,"DPTclim":0,"DPTssat":0,"DPTrep":0,"DPTrepsat":0
+All Obs:  144580
+Good Obs:  133801
+Bad Obs:  10779
+'ATbud': 0, 'ATclim': 0, 'ATrep': 0, 'DPTrepsat': 0, 'DPTclim': 0, 'DPTbud': 0, 'DPTssat': 0, 'DPTrep': 0
+All Obs:  144580
+Good Obs:  111137
+Bad Obs:  33443
+
+OBSclim1NBC THRESH3_5 1973 01
+"ATclim":0,"ATrep":0,"DPTclim":0,"DPTssat":0,"DPTrep":0,"DPTrepsat":0
+All Obs:  144580
+Good Obs:  110910
+Bad Obs:  33670
+'ATbud': 0, 'ATclim': 0, 'ATrep': 0, 'DPTrepsat': 0, 'DPTclim': 0, 'DPTbud': 0, 'DPTssat': 0, 'DPTrep': 0
+All Obs:  144580
+Good Obs:  64398
+Bad Obs:  80182
+
+IT IS DEFINITELY WORKING!!! I think the thing is that in any case it removes the most offensive data
+which makes the biggest difference to the grids. Any additional removal is removing stuff closer to the
+centre of the distribution and so makes little difference to large scale averages. I think this makes me
+want to go with the least conservative one for now but I'll check out how the removal of buddy from both
+is working
+
+Will probably go with THRESH5_5 all the way which means rerunning everything really.
+
+
