@@ -1201,8 +1201,36 @@ with bias corrected climatology!
 
   
     
-6.1) Grid to monthly 5by5 (no renormalise?) the selected raw obs
+6.1) Create HadISDH grids ready for publishing
+->/home/h04/hadkw/HadISDH_Code/MARINE_BUILD/EUSTACE_SST_MAT/Create_HadISDHMarine_finalgrids.py
+ This takes the actuals from 
+ OBSclim2BClocal_5x5_monthly_from_daily_both_relax.nc
+ the anomalies from: 
+ OBSclim2BClocal_5x5_monthly_renorm19812010_anomalies_from_daily_both_relax.nc
+ and the uncertainties, climatologies, standard deviations, number of obs
+ creates:
+ HadISDH.marine<var>.<version> etc.
+ 
+7. Move to general HadISDH code base for conversion for CEDA and trend, timeseries, regional average uncertainty processing
+/home/h04/hadkw/HadISDH_Code/HADISDH_BUILD/
+->hadisdh_error_calculations.py
+->MakeAreaAvgTS.py
+->MakeGridTrends.py - run with spice: submit_spice_MakeGridTrend.bash
+/home/h04/hadkw/HadISDH_Code/CLIMEXPLORER/PYTHON/
+->Convert_CEDAESGF_JAN2016.py and WriteNetCDF_CEDAESGF_JAN2016.py
+->PlotAnyMap_JUN2015.py
+->PlotGlobRegionsTimeSeries_MAR2018.py
+->PlotTrendMap_MAR2015.py
 
+8. Upload to HadOBS and CEDA
+Make update document and submit to CEDA document archive
+submit files to CEDA
+Update HadOBS
+Update Climate Dashboard
+Tweet @metofficehadobs
+Blog hadisdh.blogspot.com
+Tarball old version files and images (from HadOBS) and put on mass
+ /adhoc/users/kate.willett/HADISDH/HadISDH_marine_<version>_tarczf
 
     
 THings to check
