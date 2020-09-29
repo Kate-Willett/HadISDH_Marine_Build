@@ -98,6 +98,16 @@
 # VERSION/RELEASE NOTES
 # -----------------------
 # 
+# Version 2 (29 Sep 2020)
+# ---------
+#  
+# Enhancements
+# Output netCDF files should now be 1.6 compliant - no missing_value or non standard units
+#  
+# Changes
+#  
+# Bug fixes
+#
 # Version 1 (25 January 2018)
 # ---------
 #  
@@ -179,7 +189,7 @@ def Write_Netcdf_Variable_All(outfile, var, vlong, vunit, vaxis, RefPeriod, TheM
 
     nc_var.long_name = vlong
     nc_var.units = vunit
-    nc_var.missing_value = TheMDI
+    #nc_var.missing_value = TheMDI # not compatible with netCDF 1.6
     nc_var.reference_period = RefPeriod
     
     # We're not using masked arrays here - hope that's not a problem
@@ -272,7 +282,7 @@ def Write_NetCDF_All(filename, data_vals, data_counts, clim_vals, clim_counts,
     nc_var = outfile.createVariable('month', np.dtype('int'), ('month'), zlib = True) # with compression!!!
     nc_var.long_name = "month of year"
     nc_var.units = "month"
-    nc_var.standard_name = "time in months"
+    #nc_var.standard_name = "time in months" # not compatible with cf compliance
     #nc_var.start_year = str(StartYear)
     #nc_var.end_year = str(EndYear)
     nc_var.start_month = '1'
@@ -304,16 +314,20 @@ def Write_NetCDF_All(filename, data_vals, data_counts, clim_vals, clim_counts,
     # create variables anomalies
     Write_Netcdf_Variable_All(outfile, var_name+'_anoms', long_anoms, unit, 'T', RefPeriod, TheMDI, data_vals[1])
     # create variables n_grids
-    Write_Netcdf_Variable_All(outfile, var_name+'_n_grids', 'Number of 1by1 daily grids within gridbox', 'standard', 'T', RefPeriod, -1, data_counts[0])
+#    Write_Netcdf_Variable_All(outfile, var_name+'_n_grids', 'Number of 1by1 daily grids within gridbox', 'standard', 'T', RefPeriod, -1, data_counts[0])
+    Write_Netcdf_Variable_All(outfile, var_name+'_n_grids', 'Number of 1by1 daily grids within gridbox', 1, 'T', RefPeriod, -1, data_counts[0])
     # create variables n_obs
-    Write_Netcdf_Variable_All(outfile, var_name+'_n_obs', 'Number of observations within gridbox', 'standard', 'T', RefPeriod, -1, data_counts[1])
+#    Write_Netcdf_Variable_All(outfile, var_name+'_n_obs', 'Number of observations within gridbox', 'standard', 'T', RefPeriod, -1, data_counts[1])
+    Write_Netcdf_Variable_All(outfile, var_name+'_n_obs', 'Number of observations within gridbox', 1, 'T', RefPeriod, -1, data_counts[1])
 
     # create variables climatology
     Write_Netcdf_Variable_All(outfile, var_name+'_clims', 'Monthly climatological mean', unit, 'T', RefPeriod, TheMDI, clim_vals[0])
     # create variables climatololgy n_grids
-    Write_Netcdf_Variable_All(outfile, var_name+'_clims_n_grids', 'Number of 1by1 daily grids within gridbox climatology', 'standard', 'T', RefPeriod, -1, clim_counts[0])
+#    Write_Netcdf_Variable_All(outfile, var_name+'_clims_n_grids', 'Number of 1by1 daily grids within gridbox climatology', 'standard', 'T', RefPeriod, -1, clim_counts[0])
+    Write_Netcdf_Variable_All(outfile, var_name+'_clims_n_grids', 'Number of 1by1 daily grids within gridbox climatology', 1, 'T', RefPeriod, -1, clim_counts[0])
     # create variables climatology n_obs
-    Write_Netcdf_Variable_All(outfile, var_name+'_clims_n_obs', 'Number of observations within gridbox climatology', 'standard', 'T', RefPeriod, -1, clim_counts[1])
+#    Write_Netcdf_Variable_All(outfile, var_name+'_clims_n_obs', 'Number of observations within gridbox climatology', 'standard', 'T', RefPeriod, -1, clim_counts[1])
+    Write_Netcdf_Variable_All(outfile, var_name+'_clims_n_obs', 'Number of observations within gridbox climatology', 1, 'T', RefPeriod, -1, clim_counts[1])
     # create variables climatological stdev
     Write_Netcdf_Variable_All(outfile, var_name+'_clim_std', 'Monthly climatological standard deviation', unit, 'T', RefPeriod, TheMDI, clim_vals[1])
     # create variables climatological stdev n_grids
@@ -393,7 +407,7 @@ def Write_NetCDF_All(filename, data_vals, data_counts, clim_vals, clim_counts,
         outfile.__setattr__(attr, attributes[attr])
  
     outfile.file_created = dt.datetime.strftime(dt.datetime.now(), "%Y-%m-%d, %H:%M")
-    outfile.Conventions = 'CF-1.5' 
+    outfile.Conventions = 'CF-1.6'  # this should now be true - check https://cfconventions.org/compliance-checker.html
     outfile.Metadata_Conventions = 'Unidata Dataset Discovery v1.0,CF Discrete Sampling Geometries Conventions'
     outfile.featureType = 'gridded'
     
