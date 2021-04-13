@@ -8,8 +8,8 @@
 '''
 Author: Robert Dunn
 Created: March 2016
-Last update: 12 April 2016
-Location: /project/hadobs2/hadisdh/marine/PROGS/Build
+Last update: 11 Feb 2021
+Location: /home/h04/hadkw/HadISDH_Code/MARINE_BUILD/EUSTACE_SST_MARINE/
 
 -----------------------
 CODE PURPOSE AND OUTPUT
@@ -56,6 +56,22 @@ Plots to appear in
 -----------------------
 VERSION/RELEASE NOTES
 -----------------------
+
+Version 4 (11 Feb 2021) Kate Willett
+---------
+ 
+Enhancements
+
+Changes
+This now creates new actuals (rather than anomalies from Actuals-climatology) by adding climatology (read in existing) and adding to 
+renormalised anomalies. This is desireable because we want to use the renormalised anomalies and not the actuals - climatology to 
+take advantage of the gridded anomalies that are more robust to sampling bias than the actuals. Also, by creating gridded actuals from 
+gridded anomalies + climatology we're reducing the effects of sampling bias from gridded actuals.
+ 
+Bug fixes
+
+
+
 
 Version 3 (11 May 2020) Kate Willett
 ---------
@@ -206,7 +222,20 @@ def apply_climatology(suffix = "relax", period = "both", daily = False,
         obs = obs_file.variables[var.name][:]
         clims = clim_file.variables[var.name][:]
 
-        anomalies = obs - np.tile(clims, (obs.shape[0]/12.,1,1)) # make to same shape
+        # NEW BIT TO SET ACTUALS TO RENORMALISED ANOMALIES + CLIMATOLOGY
+        # If we're working with the actuals:
+        if ('anomalies' not in var.name):
+
+            obsanoms = obs_file.variables[var.name+'_anomalies'][:]
+            climsanoms = clim_file.variables[var.name+'_anomalies'][:]
+
+            renormanomalies = obsanoms - np.tile(climsanoms, (obsanoms.shape[0]/12,1,1)) # make to same shape
+            anomalies = renormanomalies + np.tile(clims, (renormanomalies.shape[0]/12,1,1)) # make to same shape
+
+        # If we're working with the anomalies
+        else:
+
+            anomalies = obs - np.tile(clims, (obs.shape[0]/12,1,1)) # make to same shape
 
         all_anoms += [anomalies]
 

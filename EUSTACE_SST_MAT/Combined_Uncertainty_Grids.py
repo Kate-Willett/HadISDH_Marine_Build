@@ -120,6 +120,17 @@
 # VERSION/RELEASE NOTES
 # -----------------------
 # 
+# Version 2 (18 January 2021)
+# ---------
+#  
+# Enhancements
+#  
+# Changes
+# Now passes start and end years and start and end climatology years to gridbox_sampling_uncertainty.py
+#  
+# Bug fixes
+#  
+#
 # Version 1 (18 January 2018)
 # ---------
 #  
@@ -551,6 +562,10 @@ def main(argv):
     AnomsVarStandard = [i+' anomalies' for i in VarStandard[0:7]]
     var_loop = ['T','Td','q','e','RH','Tw','DPD']
     units_loop = ['degrees C','degrees C','g/kg','hPa','%rh','degrees C','degrees C','standard']
+    
+    # Climatology
+    ClimStart = 1981
+    ClimEnd = 2010
 
 #    var_loop = ['T']
     
@@ -568,7 +583,9 @@ def main(argv):
 
     # Input Files
     FilAnoms = 'OBSclim2BClocal_5x5_monthly_renorm19812010_anomalies_from_daily_'+timings+'_relax.nc'
-    FilAbs = 'OBSclim2BClocal_5x5_monthly_from_daily_'+timings+'_relax.nc'
+    FilAbs = 'OBSclim2BClocal_5x5_monthly_renorm19812010_anomalies_from_daily_'+timings+'_relax.nc'
+    # It was this file but now (Feb 2021) I;ve changed the actuals in renorm19812010 files to be renormed anoms+clims
+#    FilAbs = 'OBSclim2BClocal_5x5_monthly_from_daily_'+timings+'_relax.nc'
     FilUR = 'OBSclim2BClocal_uR_5x5_monthly_from_daily_'+timings+'_relax.nc'
     FilUC = 'OBSclim2BClocal_uC_5x5_monthly_from_daily_'+timings+'_relax.nc'
     FilUM = 'OBSclim2BClocal_uM_5x5_monthly_from_daily_'+timings+'_relax.nc'
@@ -577,17 +594,17 @@ def main(argv):
 
     # Output Files
 #    # If running as hadobs
-#    OutFilUTotObs = WorkingDir+'OBSclim2BClocal_uOBS_5x5_monthly_from_daily_'+timings+'_relax.nc'
-#    OutFilUSamp = WorkingDir+'OBSclim2BClocal_uSAMP_5x5_monthly_from_daily_'+timings+'_relax.nc'
-#    OutFilUsbarSQ = WorkingDir+'OBSclim2BClocal_usbarSQ_5x5_monthly_from_daily_'+timings+'_relax.nc'
-#    OutFilUrbar = WorkingDir+'OBSclim2BClocal_urbar_5x5_monthly_from_daily_'+timings+'_relax.nc'
-#    OutFilUFull = WorkingDir+'OBSclim2BClocal_uFULL_5x5_monthly_from_daily_'+timings+'_relax.nc'
-    # If running as hadkw
-    OutFilUTotObs = 'TMPDIR/OBSclim2BClocal_uOBS_5x5_monthly_from_daily_'+timings+'_relax.nc'
-    OutFilUSamp = 'TMPDIR/OBSclim2BClocal_uSAMP_5x5_monthly_from_daily_'+timings+'_relax.nc'
-    OutFilUsbarSQ = 'TMPDIR/OBSclim2BClocal_usbarSQ_5x5_monthly_from_daily_'+timings+'_relax.nc'
-    OutFilUrbar = 'TMPDIR/OBSclim2BClocal_urbar_5x5_monthly_from_daily_'+timings+'_relax.nc'
-    OutFilUFull = 'TMPDIR/OBSclim2BClocal_uFULL_5x5_monthly_from_daily_'+timings+'_relax.nc'
+    OutFilUTotObs = WorkingDir+'OBSclim2BClocal_uOBS_5x5_monthly_from_daily_'+timings+'_relax.nc'
+    OutFilUSamp = WorkingDir+'OBSclim2BClocal_uSAMP_5x5_monthly_from_daily_'+timings+'_relax.nc'
+    OutFilUsbarSQ = WorkingDir+'OBSclim2BClocal_usbarSQ_5x5_monthly_from_daily_'+timings+'_relax.nc'
+    OutFilUrbar = WorkingDir+'OBSclim2BClocal_urbar_5x5_monthly_from_daily_'+timings+'_relax.nc'
+    OutFilUFull = WorkingDir+'OBSclim2BClocal_uFULL_5x5_monthly_from_daily_'+timings+'_relax.nc'
+#    # If running as hadkw
+#    OutFilUTotObs = 'TMPDIR/OBSclim2BClocal_uOBS_5x5_monthly_from_daily_'+timings+'_relax.nc'
+#    OutFilUSamp = 'TMPDIR/OBSclim2BClocal_uSAMP_5x5_monthly_from_daily_'+timings+'_relax.nc'
+#    OutFilUsbarSQ = 'TMPDIR/OBSclim2BClocal_usbarSQ_5x5_monthly_from_daily_'+timings+'_relax.nc'
+#    OutFilUrbar = 'TMPDIR/OBSclim2BClocal_urbar_5x5_monthly_from_daily_'+timings+'_relax.nc'
+#    OutFilUFull = 'TMPDIR/OBSclim2BClocal_uFULL_5x5_monthly_from_daily_'+timings+'_relax.nc'
     
     # Set up necessary dates - dates for output are just counts of months from 0 to 54?...
     StYr = int(year1)
@@ -642,7 +659,7 @@ def main(argv):
     
         print("Working on ... ",var)
         # Calculate the sampling uncertainty - make this stand alone so that it can be called by HadISDH-land!!!
-        SESQArr, rbarArr, sbarSQArr = gsu.calc_sampling_unc(TmpDataList[v],LatList,LonList,MeanNPointsArr,NPointsArr,MDI,IsMarine)
+        SESQArr, rbarArr, sbarSQArr = gsu.calc_sampling_unc(TmpDataList[v],LatList,LonList,MeanNPointsArr,NPointsArr,MDI,IsMarine,StYr,EdYr,ClimStart,ClimEnd)
         SampUncAnomsList.append(SESQArr)
         sbarSQAnomsList.append(sbarSQArr)
         rbarAnomsList.append(rbarArr)
@@ -677,7 +694,7 @@ def main(argv):
     
         print("Working on ... ",var)
         # Calculate the sampling uncertainty - make this stand alone so that it can be called by HadISDH-land!!!
-        SESQArr, rbarArr, sbarSQArr = gsu.calc_sampling_unc(TmpDataList[v],LatList,LonList,MeanNPointsArr,NPointsArr,MDI,IsMarine)
+        SESQArr, rbarArr, sbarSQArr = gsu.calc_sampling_unc(TmpDataList[v],LatList,LonList,MeanNPointsArr,NPointsArr,MDI,IsMarine,StYr,EdYr,ClimStart,ClimEnd)
         SampUncAbsList.append(SESQArr)
         sbarSQAbsList.append(sbarSQArr)
         rbarAbsList.append(rbarArr)

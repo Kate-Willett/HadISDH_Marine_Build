@@ -147,13 +147,13 @@ from ReadNetCDF import GetGrid4
 from GetNiceTimes import MakeDaysSince
 
 # Set up variables
-NowMon = 'JAN'
-NowYear = '2020'
+#NowMon = 'JAN'
+#NowYear = '2020'
 ClimStart = 1981
 ClimEnd = 2010
 RefPeriod = str(ClimStart)+' to '+str(ClimEnd)
 ClimPeriod = str(ClimStart)[2:4]+str(ClimEnd)[2:4]
-Version = '1.0.0.2019f'
+Version = '1.1.0.2020f'
 
 ################################################################################################################
 # SUBROUTINES #
@@ -192,9 +192,9 @@ def Write_Netcdf_Variable_All(outfile, var, vlong, vunit, vaxis, RefPeriod, TheM
     #nc_var.missing_value = TheMDI # not compatible with netCDF 1.6
     nc_var.reference_period = RefPeriod
     
-    # We're not using masked arrays here - hope that's not a problem
-    nc_var.valid_min = np.min(data_arr[np.where(data_arr != TheMDI)]) 
-    nc_var.valid_max = np.max(data_arr[np.where(data_arr != TheMDI)]) 
+#    # We're not using masked arrays here - hope that's not a problem
+#    nc_var.valid_min = np.min(data_arr[np.where(data_arr != TheMDI)]) 
+#    nc_var.valid_max = np.max(data_arr[np.where(data_arr != TheMDI)]) 
    
     # If there is no time dimension
     if (len(np.shape(data_arr)) == 2):
@@ -272,6 +272,7 @@ def Write_NetCDF_All(filename, data_vals, data_counts, clim_vals, clim_counts,
     nc_var.long_name = "time"
     nc_var.units = "days since 1973-1-1 00:00:00"
     nc_var.standard_name = "time"
+    nc_var.calendar = 'gregorian',
     nc_var.start_year = str(start_year)
     nc_var.end_year = str(end_year)
     nc_var.start_month = '1'
@@ -315,25 +316,25 @@ def Write_NetCDF_All(filename, data_vals, data_counts, clim_vals, clim_counts,
     Write_Netcdf_Variable_All(outfile, var_name+'_anoms', long_anoms, unit, 'T', RefPeriod, TheMDI, data_vals[1])
     # create variables n_grids
 #    Write_Netcdf_Variable_All(outfile, var_name+'_n_grids', 'Number of 1by1 daily grids within gridbox', 'standard', 'T', RefPeriod, -1, data_counts[0])
-    Write_Netcdf_Variable_All(outfile, var_name+'_n_grids', 'Number of 1by1 daily grids within gridbox', 1, 'T', RefPeriod, -1, data_counts[0])
+    Write_Netcdf_Variable_All(outfile, var_name+'_n_grids', 'Number of 1by1 daily grids within gridbox', '1', 'T', RefPeriod, -1, data_counts[0])
     # create variables n_obs
 #    Write_Netcdf_Variable_All(outfile, var_name+'_n_obs', 'Number of observations within gridbox', 'standard', 'T', RefPeriod, -1, data_counts[1])
-    Write_Netcdf_Variable_All(outfile, var_name+'_n_obs', 'Number of observations within gridbox', 1, 'T', RefPeriod, -1, data_counts[1])
+    Write_Netcdf_Variable_All(outfile, var_name+'_n_obs', 'Number of observations within gridbox', '1', 'T', RefPeriod, -1, data_counts[1])
 
     # create variables climatology
     Write_Netcdf_Variable_All(outfile, var_name+'_clims', 'Monthly climatological mean', unit, 'T', RefPeriod, TheMDI, clim_vals[0])
     # create variables climatololgy n_grids
 #    Write_Netcdf_Variable_All(outfile, var_name+'_clims_n_grids', 'Number of 1by1 daily grids within gridbox climatology', 'standard', 'T', RefPeriod, -1, clim_counts[0])
-    Write_Netcdf_Variable_All(outfile, var_name+'_clims_n_grids', 'Number of 1by1 daily grids within gridbox climatology', 1, 'T', RefPeriod, -1, clim_counts[0])
+    Write_Netcdf_Variable_All(outfile, var_name+'_clims_n_grids', 'Number of 1by1 daily grids within gridbox climatology', '1', 'T', RefPeriod, -1, clim_counts[0])
     # create variables climatology n_obs
 #    Write_Netcdf_Variable_All(outfile, var_name+'_clims_n_obs', 'Number of observations within gridbox climatology', 'standard', 'T', RefPeriod, -1, clim_counts[1])
-    Write_Netcdf_Variable_All(outfile, var_name+'_clims_n_obs', 'Number of observations within gridbox climatology', 1, 'T', RefPeriod, -1, clim_counts[1])
+    Write_Netcdf_Variable_All(outfile, var_name+'_clims_n_obs', 'Number of observations within gridbox climatology', '1', 'T', RefPeriod, -1, clim_counts[1])
     # create variables climatological stdev
     Write_Netcdf_Variable_All(outfile, var_name+'_clim_std', 'Monthly climatological standard deviation', unit, 'T', RefPeriod, TheMDI, clim_vals[1])
     # create variables climatological stdev n_grids
-    Write_Netcdf_Variable_All(outfile, var_name+'_clim_std_n_grids', 'Number of 1by1 daily grids within gridbox climatological standard deviation', 'standard', 'T', RefPeriod, -1, clim_counts[2])
+    Write_Netcdf_Variable_All(outfile, var_name+'_clim_std_n_grids', 'Number of 1by1 daily grids within gridbox climatological standard deviation', '1', 'T', RefPeriod, -1, clim_counts[2])
     # create variables climatological stdev n_obs
-    Write_Netcdf_Variable_All(outfile, var_name+'_clim_std_n_obs', 'Number of observations within gridbox climatological standard deviation', 'standard', 'T', RefPeriod, -1, clim_counts[3])
+    Write_Netcdf_Variable_All(outfile, var_name+'_clim_std_n_obs', 'Number of observations within gridbox climatological standard deviation', '1', 'T', RefPeriod, -1, clim_counts[3])
 
     # create variables height unc actuals
     Write_Netcdf_Variable_All(outfile, var_name+'_abs_uHGT', long_abs+' height adjustment uncertainty (2 sigma)', unit, 'T', RefPeriod, TheMDI, uH_vals[0])
@@ -409,7 +410,7 @@ def Write_NetCDF_All(filename, data_vals, data_counts, clim_vals, clim_counts,
     outfile.file_created = dt.datetime.strftime(dt.datetime.now(), "%Y-%m-%d, %H:%M")
     outfile.Conventions = 'CF-1.6'  # this should now be true - check https://cfconventions.org/compliance-checker.html
     outfile.Metadata_Conventions = 'Unidata Dataset Discovery v1.0,CF Discrete Sampling Geometries Conventions'
-    outfile.featureType = 'gridded'
+#    outfile.featureType = 'gridded'
     
     outfile.close()
 
@@ -497,7 +498,9 @@ def main(argv):
 
     # Input Files
     FilAnoms = 'OBSclim2BClocal_5x5_monthly_renorm19812010_anomalies_from_daily_'+timings+'_relax.nc'
-    FilAbs = 'OBSclim2BClocal_5x5_monthly_from_daily_'+timings+'_relax.nc'
+# changed FilAbs as I've now created 'better' actuals by adding renormed anoms to clim 
+    FilAbs = 'OBSclim2BClocal_5x5_monthly_renorm19812010_anomalies_from_daily_'+timings+'_relax.nc'
+#    FilAbs = 'OBSclim2BClocal_5x5_monthly_from_daily_'+timings+'_relax.nc'
     FilClim = 'OBSclim2BClocal_5x5_monthly_climatology_from_daily_'+timings+'_relax.nc'
     FilStd = 'OBSclim2BClocal_5x5_monthly_stdev_from_daily_'+timings+'_relax.nc'
     FilUR = 'OBSclim2BClocal_uR_5x5_monthly_from_daily_'+timings+'_relax.nc'
@@ -512,14 +515,14 @@ def main(argv):
     FilUFULL = 'OBSclim2BClocal_uFULL_5x5_monthly_from_daily_'+timings+'_relax.nc'
 
     # Output File
-#    # if running as hadobs
+    # if running as hadobs
 #    OutFilBit1 = WorkingDir+'HadISDH.marine' # add <var> from var_loop
     # if running as hadkw
     OutFilBit1 = 'TMPDIR/HadISDH.marine' # add <var> from var_loop
     if platform == 'ship': 
-        OutFilBit2 = '.'+Version+'_BClocalSHIP5by5'+timings+'_anoms'+ClimPeriod+'_'+NowMon+NowYear+'_cf.nc'
+        OutFilBit2 = '.'+Version+'_BClocalSHIP5by5'+timings+'_anoms'+ClimPeriod+'.nc'
     else:
-        OutFilBit2 = '.'+Version+'_BClocal5by5'+timings+'_anoms'+ClimPeriod+'_'+NowMon+NowYear+'_cf.nc'
+        OutFilBit2 = '.'+Version+'_BClocal5by5'+timings+'_anoms'+ClimPeriod+'.nc'
     
     # Set up necessary dates - dates for output are just counts of months from 0 to 54?...
     StYr = int(year1)

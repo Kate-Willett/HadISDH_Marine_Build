@@ -8,7 +8,7 @@
 # -----------------------
 # CODE PURPOSE AND OUTPUT
 # -----------------------
-# This code creates the gridbox sampling uncertainty for each gridbox based on
+# This code creates the gridbox sampling uncertainty (1 sigma***) for each gridbox based on
 # monthly mean variability, correlation and the number of stations/pseudostations
 # 
 # It can be used with land or marine HadISDH data
@@ -64,7 +64,7 @@
 # -----------------------
 # HOW TO RUN THE CODE
 # -----------------------
-# >module load scitools/experimental-current
+# >module load scitools/default-current
 # >python 
 # >import gridbox_sampling_uncertainty as gsu 
 # > SESQArr, rbarArr, sbarSQArr = gsu.calc_sampling_unc(TheAnomsArr,TheLatsArr,TheLonsArr,TheMeanNPointsArr,TheNPointsArr,TheMDI,IsMarine)
@@ -100,6 +100,22 @@
 # VERSION/RELEASE NOTES
 # -----------------------
 # 
+## Version 2 (18 January 2021)
+# ---------
+#  
+# Enhancements
+#  
+# Changes
+# Now has start and end year and start and end climatology year passed into it so nothing is hardcoded within
+# Now uses HadCRUT.4.3.0.0.land_fraction.nc instead of new_coverpercent08.nc to provide land fraction (now 0-1, not 0-100)
+# because this has far more detail of islands and inland waters and is used for the land data.
+#  
+# Bug fixes
+# A check to make sure latitude order is same for data and land mask
+# Added in case where >=120 months of data but no data for that particular point in time - was resulting in missing data when other missing data points were infilled.
+# NOW NEED TO MASK TO ONLY PRESENT DATA I THINK WHEN USING. I WANT TO DO THIS FOR LAND SO WILL ADD TO f13_GriHadISDHFLAT.py IF I DECIDE TO DO THIS FOR MARINE TOO THEN BRING INTO THIS CODE
+#
+
 # Version 1 (24 January 2018)
 # ---------
 #  
@@ -141,7 +157,7 @@ from ReadNetCDF import GetGrid4
 ################################################################################################################
 # calc_sampling_unc #
 ##################################################
-def calc_sampling_unc(TheAnomsArr,TheLatsArr,TheLonsArr,TheMeanNPointsArr,TheNPointsArr,TheMDI,IsMarine):
+def calc_sampling_unc(TheAnomsArr,TheLatsArr,TheLonsArr,TheMeanNPointsArr,TheNPointsArr,TheMDI,IsMarine,StYr,EdYr,ClimStart,ClimEnd):
     '''Applies the Jones et al 1997 sampling uncertainty methodology for gridded data with n_stations info
     TheAnomsArr: times,lat,lon array of anomalies with TheMDI missing data
     TheLatsArr: nlats array of gridbox latitude centres from SOUTH to NORTH???
@@ -150,6 +166,10 @@ def calc_sampling_unc(TheAnomsArr,TheLatsArr,TheLonsArr,TheMeanNPointsArr,TheNPo
     TheNPointsArr: times,lat,lon array of nstations or npoints making up the gridbox average
     TheMDI: scalar missing data ID
     IsMarine: boolean true for marine data and false for land data
+    StYr: integer start year
+    EdYr: integer end year
+    ClimStart: integer start year of climatology
+    ClimEnd: integer end year of climatology
     
     This code hardwires:
     StYr = 1973 # Start year of dataset (assumes Jan to Dec complete for each year)
@@ -162,20 +182,30 @@ def calc_sampling_unc(TheAnomsArr,TheLatsArr,TheLonsArr,TheMeanNPointsArr,TheNPo
     sbarSQArr: lat, lon array of mean station variance within gridbox with TheMDI missing data  - forced to be 10 if cannot be evaluated (large)'''
       
 # Open land sea mask and set up - reverse lats?
-    Filee = '/project/hadobs2/hadisdh/marine/otherdata/new_coverpercentjul08.nc'
-    ReadInfo = ['pct_land']
-    LatInfo = ['latitudes']
-    LonInfo = ['longitudes']
+#    Filee = '/project/hadobs2/hadisdh/marine/otherdata/new_coverpercentjul08.nc'
+    Filee = '/project/hadobs2/hadisdh/marine/otherdata/HadCRUT.4.3.0.0.land_fraction.nc'
+#    ReadInfo = ['pct_land']
+    ReadInfo = ['land_area_fraction']
+#    LatInfo = ['latitudes']
+#    LonInfo = ['longitudes']
+    LatInfo = ['latitude']
+    LonInfo = ['longitude']
     PctLandTmp = GetGrid(Filee,ReadInfo,LatInfo,LonInfo)
-    PctLand = PctLandTmp[0]
-    # This comes out as (lats{87.5N to 87.5S],lons[-177.5W to 177.5E]) and is 100&% over land
+#    PctLand = PctLandTmp[0]
+    PctLand = np.reshape(PctLandTmp[0],(len(TheLatsArr),len(TheLonsArr)))
+    # OLD: This comes out as (lats{87.5N to 87.5S],lons[-177.5W to 177.5E]) and is 100&% over land
+    # NEW: This comes out as (lats{-87.5S to 87.5N],lons[-177.5W to 177.5E]) and is 100&% over land
+    # If lats for data are not S to N then need to flip
+    if (TheLatsArr[0] > 0.): # then PctLand needs flipping
+    
+        PctLand = np.flip(PctLand,axis=0)
     
 # Set up time infor
     Ntims = len(TheAnomsArr[:,0,0])
-    StYr = 1973
-    ClimStart = 1981
-    ClimEnd = 2010
-    EdYr = int(StYr + (Ntims / 12)) - 1
+#    StYr = 1973
+#    ClimStart = 1981
+#    ClimEnd = 2010
+#    EdYr = int(StYr + (Ntims / 12)) - 1
     ClimMonSt = (ClimStart - StYr) * 12 # start point of climatology in months
     ClimMonEd = ((ClimEnd + 1) - StYr) * 12 # end point of climatology in months
 
@@ -383,6 +413,15 @@ def calc_sampling_unc(TheAnomsArr,TheLatsArr,TheLonsArr,TheMeanNPointsArr,TheNPo
                 if (len(GotCounts) > 0): 
 #                    print('GotCounts: ',TheNPointsArr[GotCounts[0:5],Nlt,Nln])
                     SESQArr[GotCounts,Nlt,Nln] = ((sbarSQArr[Nlt,Nln] * rbarArr[Nlt,Nln] * (1. - rbarArr[Nlt,Nln])) / (1. + ((TheNPointsArr[GotCounts,Nlt,Nln] - 1.) * rbarArr[Nlt,Nln]))) #for IDL and HadISDH-land this was *2 for 2sigma
+
+# ADDED CATCH FOR WHERE THERE ARE NO DATA POINTS AT THAT POINT BUT ENOUGH TO CALCULATE CLIMATOLOGY AT OTHERS. THIS WAS AN ERROR I THINK - CREATING MISSING GRIDBOXES
+                # Where we do not have data default to sbarSQ * rbar (SHOULD BE LARGER!)
+                GotZeros = np.where(TheNPointsArr[:,Nlt,Nln] == 0)[0]
+                if (len(GotZeros) > 0): 
+                
+                    SESQArr[GotZeros,Nlt,Nln] = (sbarSQArr[Nlt,Nln] * rbarArr[Nlt,Nln]) 
+                
+# 
 #
 #                print("Sampling Unc results where there are data: ")
 #                print("ShatSQ (climatological variance of gridbox) = ",ShatSQArr[Nlt,Nln])
@@ -412,10 +451,15 @@ def calc_sampling_unc(TheAnomsArr,TheLatsArr,TheLonsArr,TheMeanNPointsArr,TheNPo
                 #print(len(GoodPointsCAND))		
                 #print(IsMarine)		
                 #print(PctLand[Nlt,Nln])		
-                if (len(GoodPointsCAND) == 0) & (IsMarine) & (PctLand[Nlt,Nln] >= 99.9): # just being cautious about funny floating point things
+#                if (len(GoodPointsCAND) == 0) & (IsMarine) & (PctLand[Nlt,Nln] >= 99.9): # just being cautious about funny floating point things
+#                    continue
+#		# if we're working with land but its 100% marine then ignore gridbox
+#                if (len(GoodPointsCAND) == 0) & (not IsMarine) & (PctLand[Nlt,Nln] < 0.0001): # just being cautious about funny floating point things
+#                    continue
+                if (len(GoodPointsCAND) == 0) & (IsMarine) & (PctLand[Nlt,Nln] > 0.99999): # just being cautious about funny floating point things
                     continue
-		# if we're working with marine but its 100% land then ignore gridbox
-                if (len(GoodPointsCAND) == 0) & (not IsMarine) & (PctLand[Nlt,Nln] < 0.0001): # just being cautious about funny floating point things
+		# if we're working with land but its 100% marine then ignore gridbox
+                if (len(GoodPointsCAND) == 0) & (not IsMarine) & (PctLand[Nlt,Nln] < 0.00001): # just being cautious about funny floating point things
                     continue
 		
                 print("Location: ",ln,lt)	
@@ -462,9 +506,11 @@ def calc_sampling_unc(TheAnomsArr,TheLatsArr,TheLonsArr,TheMeanNPointsArr,TheNPo
                         
                         #print("LONS: ",Nln_2,LnPt," LATS: ",Nlt_2,LtPt,rbarArr[LtPt,LnPt],sbarSQArr[LtPt,LnPt])
 
-                        # Now fill with rbar and SbarSQ IF they are sensible / not guessed values (filled with 0.1 and 10 respectively below)
+                        # Now fill with rbar and SbarSQ IF they are sensible / not guessed values (filled with 0.8 and 10 respectively below)
 			# The CANDIDATE gridbox should be TheMDI because it won't have been set above
-                        if (rbarArr[LtPt,LnPt] > TheMDI) & (rbarArr[LtPt,LnPt] != 0.1):
+#                        if (rbarArr[LtPt,LnPt] > TheMDI) & (rbarArr[LtPt,LnPt] != 0.1): 
+# THIS WAS WRONG AS WE'RE NOW SETTING rbar to 0.8 SO OK TO USE - OTHERWISE WE MIGHT REMOVE VALID 0.8 values....
+                        if (rbarArr[LtPt,LnPt] > TheMDI) :
                             GBrbarArr[Nlt_2,Nln_2] = rbarArr[LtPt,LnPt]
                         if (sbarSQArr[LtPt,LnPt] > TheMDI) & (sbarSQArr[LtPt,LnPt] != 10):
                             GBsbarSQArr[Nlt_2,Nln_2] = sbarSQArr[LtPt,LnPt]
@@ -572,11 +618,13 @@ def calc_sampling_unc(TheAnomsArr,TheLatsArr,TheLonsArr,TheMeanNPointsArr,TheNPo
                 # Now get SE^2 = (sbar^2*rbar)	WHEN n>0 and when n=0
 		# It seems strange that SESQ is larger when intersite correlation (rbar) is higher - I would have thoought the opposite.
 		# So for gridboxes where we do not know rbar - is the worst case scenario a highly correlating gridbox? - THIS NEEDS A REVISIT
+                # Where we have data (but less than 120 months) then use that information
                 GotCounts = np.where(TheNPointsArr[:,Nlt,Nln] > 0)[0]
                 if (len(GotCounts) > 0): 
                 
                     SESQArr[GotCounts,Nlt,Nln] = ((sbarSQArr[Nlt,Nln] * rbarArr[Nlt,Nln] * (1. - rbarArr[Nlt,Nln])) / (1. + ((TheNPointsArr[GotCounts,Nlt,Nln] - 1.) * rbarArr[Nlt,Nln]))) # for IDL and HadISDH-land this was *2 for 2sigma
 
+                # Where we do not have data default to sbarSQ * rbar (SHOULD BE LARGER!)
                 GotZeros = np.where(TheNPointsArr[:,Nlt,Nln] == 0)[0]
                 if (len(GotZeros) > 0): 
                 
@@ -590,6 +638,8 @@ def calc_sampling_unc(TheAnomsArr,TheLatsArr,TheLonsArr,TheMeanNPointsArr,TheNPo
                 #pdb.set_trace()
 		# DO NOT *2 BECAUSE WE WANT 1SIGMA ERRORS
 
+# ADDED IN MASKING OF SAMPLING ERROR TO ACTUAL DATA POINTS
 
+    SESQArr[np.where(TheAnomsArr == TheMDI)] = TheMDI
 
     return SESQArr,rbarArr,sbarSQArr 

@@ -416,6 +416,17 @@ def combine_files(suffix = "relax", pentads = False, do3hr = False, months = Fal
                     else:
                         nc_var = ncdf_file.variables[var.name]
 
+
+                    # CHECK day night LATS - both lats are flipped in merge_day_night but day an dnight are still -87.5 to 87,5 whereas existing full data is 87,5 to -87.,5
+                    ## KATE modified - switching the latitudes on day and night data for consistency with both
+                    if period == "day" or period == "night":
+                        # invert latitudes - happens later
+                        #pdb.set_trace()
+                        nc_var = nc_var[:][:,::-1,:]
+			#all_data = all_data[:,:,::-1,:] # variable, time, latitude, longitude
+                    # end
+
+
                     try:
                         var.data = utils.ma_append(var.data, nc_var[:], axis = 0)
 
@@ -432,6 +443,7 @@ def combine_files(suffix = "relax", pentads = False, do3hr = False, months = Fal
                             n_grids = ncdf_file.variables["n_grids"][:]
 
 
+# If its a both then lats are ok so no flipping (97.5 to -87.5)
                 if y == 0 and month == start_month and period == "both":
                     lat_centres = ncdf_file.variables["latitude"]
                     latitudes = lat_centres + (lat_centres[1] - lat_centres[0])/2.
@@ -443,7 +455,7 @@ def combine_files(suffix = "relax", pentads = False, do3hr = False, months = Fal
                 if y == 0 and month == start_month and period != "both":
                     lat_centres = ncdf_file.variables["latitude"]
                     # THIS IS - RATHER THAN + READY TO FLIP THE LATS
-		    latitudes = lat_centres - (lat_centres[1] - lat_centres[0])/2.
+		    latitudes = lat_centres - (lat_centres[1] - lat_centres[0])/2.###
 
                     lon_centres = ncdf_file.variables["longitude"]
                     longitudes = lon_centres + (lon_centres[1] - lon_centres[0])/2.
@@ -457,11 +469,14 @@ def combine_files(suffix = "relax", pentads = False, do3hr = False, months = Fal
         for v, var in enumerate(OBS_ORDER):
             all_data[v, :, :, :] = var.data
 
-# KATE modified - switching the latitudes on day and night data for consistency with both
+# CHECK day night LATS
+## DO WE REALLY NEED TO DO THIS?
+## KATE modified - switching the latitudes on day and night data for consistency with both
         if period == "day" or period == "night":
             # invert latitudes
             latitudes = latitudes[::-1]
-            all_data = all_data[:,:,::-1,:] # variable, time, latitude, longitude
+# The flipping is done for each month now to avoid issues when we update 
+#           all_data = all_data[:,:,::-1,:] # variable, time, latitude, longitude
 # end
 
         all_data.fill_value = var.data.fill_value
